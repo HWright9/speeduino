@@ -29,8 +29,8 @@ class table_axis_iterator
 public:
 
     /** @brief Construct */
-    table_axis_iterator(const table3d_axis_t *pStart, const table3d_axis_t *pEnd, int8_t stride, axis_domain domain)
-     : _pAxis(pStart), _pAxisEnd(pEnd), _stride(stride), _domain(domain)
+    table_axis_iterator(table3d_axis_t *pStart, const table3d_axis_t *pEnd, axis_domain domain)
+     : _pAxis(pStart), _pAxisEnd(pEnd), _stride(pEnd>pStart ? stride_inc : stride_dec), _domain(domain)
     {
     }
 
@@ -39,7 +39,7 @@ public:
     /** @brief Advance the iterator
      * @param steps The number of elements to move the iterator
     */
-    inline table_axis_iterator& advance(table3d_dim_t steps)
+    inline table_axis_iterator& advance(int8_t steps)
     {
         _pAxis = _pAxis + (_stride * steps);
         return *this;
@@ -60,7 +60,7 @@ public:
     /** @brief Dereference the iterator */
     inline table3d_axis_t& operator*()
     {
-        return *const_cast<table3d_axis_t *>(_pAxis);
+        return *_pAxis;
     }
     /** @copydoc table_axis_iterator::operator*()  */
     inline const table3d_axis_t& operator*() const
@@ -68,24 +68,16 @@ public:
         return *_pAxis;
     }    
     
-    /** @brief Reverse the iterator direction
-     * 
-     * Iterate from the end to the start. <b>This is only meant to be called on a freshly constructed iterator.</b>
-     */
-    inline table_axis_iterator& reverse()
-    {
-        const table3d_axis_t *_pOldAxis = _pAxis;
-        _pAxis = _pAxisEnd - _stride;
-        _pAxisEnd = _pOldAxis - _stride;
-        _stride = (int8_t)(_stride * -1);
-        return *this;
-    }
-
 private:
-    const table3d_axis_t *_pAxis;
+
+    enum stride {
+        stride_inc = 1,
+        stride_dec = -1
+    };
+    table3d_axis_t *_pAxis;
     const table3d_axis_t *_pAxisEnd;
-    int8_t _stride;
-    axis_domain _domain;
+    const stride _stride;
+    const axis_domain _domain;
 };
 
 #define TABLE3D_TYPENAME_AXIS(size, domain) table3d ## size ## domain ## _axis
@@ -102,10 +94,15 @@ private:
         */ \
         table3d_axis_t axis[size]; \
         \
-        /** @brief Iterate over the axis elements */ \
+        /** @brief Iterate over the axis elements, from smallest to largest */ \
         inline table_axis_iterator begin() \
         {  \
-            return table_axis_iterator(axis+(size-1), axis-1, -1, domain); \
+            return table_axis_iterator(axis+size-1, axis-1, domain); \
+        } \
+        /** @brief Iterate over the axis elements, from largest to smallest */ \
+        inline table_axis_iterator rbegin() \
+        {  \
+            return table_axis_iterator(axis, axis+size, domain); \
         } \
     };
 

@@ -330,7 +330,7 @@ void doUpdates()
     configPage2.injAngRPM[3] = 65;
 
     //Introdced a DFCO delay option. Default it to 0
-    configPage2.dfcoDelay = 0;
+    configPage2.dfcoStartDelay = 0;
     //Introdced a minimum temperature for DFCO. Default it to 40C
     configPage2.dfcoMinCLT = 80; //CALIBRATION_TEMPERATURE_OFFSET is 40
 
@@ -525,12 +525,12 @@ void doUpdates()
     configPage2.fanEnable = configPage6.fanUnused; // PWM Fan mode added, but take the previous setting of Fan in use.
 
     //TPS resolution increased to 0.5%
+    configPage9.tpsMidPoint *=2;
     //configPage2.taeThresh *= 2;
     configPage2.idleAdvTPS *= 2;
     configPage2.iacTPSlimit *= 2;
     configPage4.floodClear *= 2;
     configPage4.dfcoTPSThresh *= 2;
-    configPage6.egoTPSMax *= 2;
     configPage10.lnchCtrlTPS *= 2;
     configPage10.wmiTPS *= 2;
     configPage10.n2o_minTPS *= 2;

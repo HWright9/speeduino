@@ -26,7 +26,6 @@
 #define VSS_GEAR_HYSTERESIS 10
 #define VSS_SAMPLES         4 //Must be a power of 2 and smaller than 255
 
-#define TPS_READ_FREQUENCY  30 //ONLY VALID VALUES ARE 15 or 30!!!
 
 /*
 #if defined(CORE_AVR)
@@ -52,9 +51,7 @@ unsigned long EMAPrunningValue; //As above but for EMAP
 unsigned int MAPcount; //Number of samples taken in the current MAP cycle
 uint32_t MAPcurRev; //Tracks which revolution we're sampling on
 bool auxIsEnabled;
-byte TPSlast; /**< The previous TPS reading */
-unsigned long TPS_time; //The time the TPS sample was taken
-unsigned long TPSlast_time; //The time the previous TPS sample was taken
+uint8_t tpsHistory[AE_TPS_DOT_HIST_BINS]; // History of TPS reads used for TPSdot moving average
 byte MAPlast; /**< The previous MAP reading */
 unsigned long MAP_time; //The time the MAP sample was taken
 unsigned long MAPlast_time; //The time the previous MAP sample was taken
@@ -67,14 +64,7 @@ byte mapErrorCount = 0;
 byte iatErrorCount = 0;
 byte cltErrorCount = 0;
 
-/**
- * @brief Simple low pass IIR filter macro for the analog inputs
- * This is effectively implementing the smooth filter from playground.arduino.cc/Main/Smooth
- * But removes the use of floats and uses 8 bits of fixed precision.
- */
-#define ADC_FILTER(input, alpha, prior) (((long)input * (256 - alpha) + ((long)prior * alpha))) >> 8
-
-static inline void instanteneousMAPReading() __attribute__((always_inline));
+static inline void instanteneousMAPReading(bool=true) __attribute__((always_inline));
 static inline void readMAP() __attribute__((always_inline));
 static inline void validateMAP();
 void initialiseADC();
@@ -89,11 +79,12 @@ byte getFuelPressure();
 byte getOilPressure();
 uint16_t readAuxanalog(uint8_t analogPin);
 uint16_t readAuxdigital(uint8_t digitalPin);
+uint16_t filterADC(uint32_t input, uint32_t alpha, uint32_t prior); // replaces inline macro ADC_FILTER
 void readCLT(bool=true); //Allows the option to override the use of the filter
-void readIAT();
+void readIAT(bool=true); //Allows the option to override the use of the filter
 void readO2();
-void readBat();
-void readBaro();
+void readBat(bool=true); //Allows the option to override the use of the filter
+void readBaro(bool=true); //Allows the option to override the use of the filter
 
 #if defined(ANALOG_ISR)
 volatile int AnChannel[15];

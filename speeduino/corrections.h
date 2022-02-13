@@ -20,7 +20,7 @@ byte correctionBatVoltage(); //Battery voltage correction
 byte correctionIATDensity(); //Inlet temp density correction
 byte correctionBaro(); //Barometric pressure correction
 byte correctionLaunch(); //Launch control correction
-bool correctionDFCO(); //Decelleration fuel cutoff
+byte correctionDFCO(); //Decelleration fuel cutoff
 
 
 int8_t correctionsIgn(int8_t advance);
@@ -39,18 +39,29 @@ int8_t correctionKnock(int8_t);
 
 uint16_t correctionsDwell(uint16_t dwell);
 
+void correctionsFuel_Individual(void);
+void correctionFuelStaging(void);
+void correctionEGOBank2(void);
+void correctionFuelTrim(void);
+void correctionFuelInjOpen(void);
+void correctionFuelPWLimit(void);
+
 extern int MAP_rateOfChange;
 extern int TPS_rateOfChange;
 extern byte activateMAPDOT; //The mapDOT value seen when the MAE was activated. 
 extern byte activateTPSDOT; //The tpsDOT value seen when the MAE was activated. 
 
-extern uint16_t AFRnextCycle;
 extern unsigned long knockStartTime;
 extern byte lastKnockCount;
 extern int16_t knockWindowMin; //The current minimum crank angle for a knock pulse to be valid
 extern int16_t knockWindowMax;//The current maximum crank angle for a knock pulse to be valid
 extern uint16_t aseTaperStart;
-extern uint16_t dfcoStart;
 extern uint16_t idleAdvStart;
+
+#define DFCO_OFF 0
+#define DFCO_ENABLE_DELAY 1
+#define DFCO_RAMP_IN 2
+#define DFCO_ACTIVE 3
+#define DFCO_RAMP_OUT 4
 
 #endif // CORRECTIONS_H

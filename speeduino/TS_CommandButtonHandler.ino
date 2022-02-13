@@ -294,7 +294,7 @@ void TS_CommandButtonsHandler(uint16_t buttonCommand)
 
     //Calculate the RPM to speed ratio for each gear
     case TS_CMD_VSS_RATIO1:
-      if(currentStatus.vss > 0)
+      if((currentStatus.vss > 0) && (currentStatus.RPM > 0))
       {
         configPage2.vssRatio1 = (currentStatus.vss * 10000UL) / currentStatus.RPM;
         writeConfig(1); // Need to manually save the new config value as it will not trigger a burn in tunerStudio due to use of ControllerPriority
@@ -303,7 +303,7 @@ void TS_CommandButtonsHandler(uint16_t buttonCommand)
       break;
 
     case TS_CMD_VSS_RATIO2:
-      if(currentStatus.vss > 0)
+      if((currentStatus.vss > 0) && (currentStatus.RPM > 0))
       {
         configPage2.vssRatio2 = (currentStatus.vss * 10000UL) / currentStatus.RPM;
         writeConfig(1); // Need to manually save the new config value as it will not trigger a burn in tunerStudio due to use of ControllerPriority
@@ -312,7 +312,7 @@ void TS_CommandButtonsHandler(uint16_t buttonCommand)
       break;
 
     case TS_CMD_VSS_RATIO3:
-      if(currentStatus.vss > 0)
+      if((currentStatus.vss > 0) && (currentStatus.RPM > 0))
       {
         configPage2.vssRatio3 = (currentStatus.vss * 10000UL) / currentStatus.RPM;
         writeConfig(1); // Need to manually save the new config value as it will not trigger a burn in tunerStudio due to use of ControllerPriority
@@ -321,7 +321,7 @@ void TS_CommandButtonsHandler(uint16_t buttonCommand)
       break;
 
     case TS_CMD_VSS_RATIO4: 
-      if(currentStatus.vss > 0)
+      if((currentStatus.vss > 0) && (currentStatus.RPM > 0))
       {
         configPage2.vssRatio4 = (currentStatus.vss * 10000UL) / currentStatus.RPM;
         writeConfig(1); // Need to manually save the new config value as it will not trigger a burn in tunerStudio due to use of ControllerPriority
@@ -330,7 +330,7 @@ void TS_CommandButtonsHandler(uint16_t buttonCommand)
       break;
 
     case TS_CMD_VSS_RATIO5:
-      if(currentStatus.vss > 0)
+      if((currentStatus.vss > 0) && (currentStatus.RPM > 0))
       {
         configPage2.vssRatio5 = (currentStatus.vss * 10000UL) / currentStatus.RPM;
         writeConfig(1); // Need to manually save the new config value as it will not trigger a burn in tunerStudio due to use of ControllerPriority
@@ -339,7 +339,7 @@ void TS_CommandButtonsHandler(uint16_t buttonCommand)
       break;
 
     case TS_CMD_VSS_RATIO6:
-      if(currentStatus.vss > 0)
+      if((currentStatus.vss > 0) && (currentStatus.RPM > 0))
       {
         configPage2.vssRatio6 = (currentStatus.vss * 10000UL) / currentStatus.RPM;
         writeConfig(1); // Need to manually save the new config value as it will not trigger a burn in tunerStudio due to use of ControllerPriority

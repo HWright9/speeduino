@@ -53,6 +53,7 @@ struct table2D knockWindowDurationTable;
 struct table2D oilPressureProtectTable;
 struct table2D wmiAdvTable; //6 bin wmi correction table for timing advance (2D)
 struct table2D fanPWMTable;
+struct table2D ego_IntegralTable; /// For ego Integral Control (2D)
 
 /// volatile inj*_pin_port and  inj*_pin_mask vars are for the direct port manipulation of the injectors, coils and aux outputs.
 volatile PORT_TYPE *inj1_pin_port;
@@ -140,6 +141,7 @@ volatile unsigned int toothHistoryIndex = 0; ///< Current index to @ref toothHis
 unsigned long currentLoopTime; /**< The time (in uS) that the current mainloop started */
 unsigned long previousLoopTime; /**< The time (in uS) that the previous mainloop started */
 volatile uint16_t ignitionCount; /**< The count of ignition events that have taken place since the engine started */
+bool O2_Readflag; /**< Flag to indicate O2 has been updated since the last main time based loop by O2 algo  */
 #if defined(CORE_SAMD21)
   PinStatus primaryTriggerEdge;
   PinStatus secondaryTriggerEdge;
@@ -206,7 +208,7 @@ byte pinIdle1;    //Single wire idle control
 byte pinIdle2;    //2 wire idle control (Not currently used)
 byte pinIdleUp;   //Input for triggering Idle Up
 byte pinIdleUpOutput; //Output that follows (normal or inverted) the idle up pin
-byte pinCTPS;     //Input for triggering closed throttle state
+byte pinCTPS;     //Input for triggering closed throttle state or pin for dual sensor TPS (Mutually exclusive)
 byte pinFuel2Input;  //Input for switching to the 2nd fuel table
 byte pinSpark2Input; //Input for switching to the 2nd ignition table
 byte pinSpareTemp1;  // Future use only
@@ -268,4 +270,7 @@ uint16_t iatCalibration_values[32];
 struct table2D iatCalibrationTable;
 uint16_t o2Calibration_bins[32];
 uint8_t o2Calibration_values[32];
-struct table2D o2CalibrationTable; 
+struct table2D o2CalibrationTable;
+
+uint8_t egoIntAFR_XBins[] = {97, 124, 127, 130, 157}; // Fixed Axis for lookup Y = 10X +127. -3.0, -0.3, 0.0, 0.3, 3.0
+uint8_t egoIntAFR_Values[5]; // Dynamically populated

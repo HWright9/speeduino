@@ -89,6 +89,14 @@ void setup()
   initialisationComplete = false; //Tracks whether the initialiseAll() function has run completely
   initialiseAll();
 }
+
+inline uint16_t applyFuelTrimToPW(trimTable3d *pTrimTable, int16_t fuelLoad, int16_t RPM, uint16_t currentPW)
+{
+    unsigned long pw1percent = 100 + get3DTableValue(pTrimTable, fuelLoad, RPM) - OFFSET_FUELTRIM;
+    if (pw1percent != 100) { return div100(pw1percent * currentPW); }
+    return currentPW;
+}
+
 /** Speeduino main loop.
  * 
  * Main loop chores (roughly in  order they are preformed):
@@ -177,7 +185,7 @@ void loop()
     {
       currentStatus.longRPM = getRPM(); //Long RPM is included here
       currentStatus.RPM = currentStatus.longRPM;
-      currentStatus.RPMdiv100 = divu100(currentStatus.RPM);
+      currentStatus.RPMdiv100 = div100(currentStatus.RPM);
       FUEL_PUMP_ON();
       currentStatus.fuelPumpOn = true; //Not sure if this is needed.
     }
@@ -559,7 +567,6 @@ void loop()
           //injector3StartAngle = calculateInjector3StartAngle(PWdivTimerPerDegree);
           injector2StartAngle = calculateInjectorStartAngle(PWdivTimerPerDegree, channel2InjDegrees);
           injector3StartAngle = calculateInjectorStartAngle(PWdivTimerPerDegree, channel3InjDegrees);
-
           break;
         //4 cylinders
         case 4:

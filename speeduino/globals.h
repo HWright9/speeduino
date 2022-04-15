@@ -45,7 +45,7 @@
 
   #if defined(__AVR_ATmega2561__)
     //This is a workaround to avoid having to change all the references to higher ADC channels. We simply define the channels (Which don't exist on the 2561) as being the same as A0-A7
-    //These Analog inputs should never be used on any 2561 board defintion (Because they don't exist on the MCU), so it will not cause any isses
+    //These Analog inputs should never be used on any 2561 board definition (Because they don't exist on the MCU), so it will not cause any issues
     #define A8  A0
     #define A9  A1
     #define A10  A2
@@ -173,8 +173,7 @@
 #define TPS_MODE_DUALSENSOR 2  // Dual sensors with a common crossover TPS% Value
 #define TPS_MODE_DISABLED   3  // No TPS (Defaults to 25%)
 
-
-//Define bit positions within engine virable
+//Define bit positions within engine variable
 #define BIT_ENGINE_RUN      0   // Engine running
 #define BIT_ENGINE_CRANK    1   // Engine cranking
 #define BIT_ENGINE_ASE      2   // after start enrichment (ASE)
@@ -182,14 +181,14 @@
 #define BIT_ENGINE_ACC      4   // in acceleration mode (TPS accel)
 #define BIT_ENGINE_DCC      5   // in deceleration mode
 #define BIT_ENGINE_MAPACC   6   // MAP acceleration mode
-#define BIT_ENGINE_MAPDCC   7   // MAP decelleration mode
+#define BIT_ENGINE_MAPDCC   7   // MAP deceleration mode
 
 //Define masks for Status1
 #define BIT_STATUS1_INJ1           0  //inj1
 #define BIT_STATUS1_INJ2           1  //inj2
 #define BIT_STATUS1_INJ3           2  //inj3
 #define BIT_STATUS1_INJ4           3  //inj4
-#define BIT_STATUS1_DFCO           4  //Decelleration fuel cutoff
+#define BIT_STATUS1_DFCO           4  //Deceleration fuel cutoff
 #define BIT_STATUS1_BOOSTCUT       5  //Fuel component of MAP based boost cut out
 #define BIT_STATUS1_TOOTHLOG1READY 6  //Used to flag if tooth log 1 is ready
 #define BIT_STATUS1_TOOTHLOG2READY 7  //Used to flag if tooth log 2 is ready (Log is not currently used)
@@ -232,10 +231,11 @@
 #define BIT_STATUS4_VVT1_ERROR    1 //VVT1 cam angle within limits or not
 #define BIT_STATUS4_VVT2_ERROR    2 //VVT2 cam angle within limits or not
 #define BIT_STATUS4_FAN           3 //Fan Status
-#define BIT_STATUS4_EGO_RESET     4 //EGO Ready
+#define BIT_STATUS4_BURNPENDING   4
 #define BIT_STATUS4_EGO_FROZEN    5 //EGO Frozen
 #define BIT_STATUS4_EGO1_INTCORR  6 //EGO Bank1 Integral Correcting
 #define BIT_STATUS4_EGO2_INTCORR  7 //EGO Bank2 Integral Correcting
+
 
 #define VALID_MAP_MAX 1022 //The largest ADC value that is valid for the MAP sensor
 #define VALID_MAP_MIN 2 //The smallest ADC value that is valid for the MAP sensor
@@ -262,6 +262,9 @@
 #define INJ_SEMISEQUENTIAL 1
 #define INJ_BANKED          2
 #define INJ_SEQUENTIAL      3
+
+#define INJ_PAIR_13_24      0
+#define INJ_PAIR_14_23      1
 
 #define OUTPUT_CONTROL_DIRECT   0
 #define OUTPUT_CONTROL_MC33810  10
@@ -584,7 +587,7 @@ extern int ignition8StartAngle;
 
 extern bool initialisationComplete; //Tracks whether the setup() function has run completely
 extern byte fpPrimeTime; //The time (in seconds, based on currentStatus.secl) that the fuel pump started priming
-extern uint16_t softStartTime; //The time (in 0.1 seconds, based on seclx10) that the soft limiter started
+extern uint8_t softLimitTime; //The time (in 0.1 seconds, based on seclx10) that the soft limiter started
 extern volatile uint16_t mainLoopCount;
 extern unsigned long revolutionTime; //The time in uS that one revolution would take at current speed (The time tooth 1 was last seen, minus the time it was seen prior to that)
 extern volatile unsigned long timer5_overflow_count; //Increments every time counter 5 overflows. Used for the fast version of micros()
@@ -598,7 +601,6 @@ extern volatile bool fpPrimed; //Tracks whether or not the fuel pump priming has
 extern volatile bool injPrimed; //Tracks whether or not the injector priming has been completed yet
 extern volatile unsigned int toothHistoryIndex;
 extern unsigned long currentLoopTime; /**< The time (in uS) that the current mainloop started */
-extern unsigned long previousLoopTime; /**< The time (in uS) that the previous mainloop started */
 extern volatile uint16_t ignitionCount; /**< The count of ignition events that have taken place since the engine started */
 extern bool O2_Readflag; /**< Flag to indicate O2 has been updated since the last main time based loop by O2 algo  */
 //The below shouldn't be needed and probably should be cleaned up, but the Atmel SAM (ARM) boards use a specific type for the trigger edge values rather than a simple byte/int
@@ -652,7 +654,7 @@ struct statuses {
   long MAP;     ///< Manifold absolute pressure. Has to be a long for PID calcs (Boost control)
   int16_t EMAP; ///< EMAP ... (See @ref config6.useEMAP for EMAP enablement)
   int16_t EMAPADC;
-  byte baro;   ///< Barometric pressure is simply the inital MAP reading, taken before the engine is running. Alternatively, can be taken from an external sensor
+  byte baro;   ///< Barometric pressure is simply the initial MAP reading, taken before the engine is running. Alternatively, can be taken from an external sensor
   byte TPS;    /**< The current TPS reading (0% - 100%). Is the tpsADC value after the calibration is applied */
   byte tpsADC; /**< byte (valued: 0-255) representation of the TPS. Downsampled from the original 10-bit (0-1023) reading, but before any calibration is applied */
   byte tps2ADC; /**< byte (valued: 0-255) representation of the TPS2 sensor. Downsampled from the original 10-bit (0-1023) reading, but before any calibration is applied */
@@ -678,7 +680,7 @@ struct statuses {
   int8_t advance1;    /**< The advance value from ignition table 1 */
   int8_t advance2;    /**< The advance value from ignition table 2 */
   uint16_t corrections; /**< The total current corrections % amount */
-  uint16_t AEamount;    /**< The amount of accleration enrichment currently being applied. 100=No change. Varies above 255 */
+  uint16_t AEamount;    /**< The amount of acceleration enrichment currently being applied. 100=No change. Varies above 255 */
   byte egoCorrection; /**< The amount of closed loop AFR enrichment currently being applied */
   byte ego2Correction; /**< The amount of closed loop AFR enrichment currently being applied on the 2nd bank */
   byte wueCorrection; /**< The amount of warmup enrichment currently being applied */
@@ -690,7 +692,6 @@ struct statuses {
   byte fuelTempCorrection; /**< Amount of correction being applied to compensate for fuel temperature */
   int8_t flexIgnCorrection;/**< Amount of additional advance being applied based on flex. Note the type as this allows for negative values */
   byte afrTarget;    /**< Current AFR Target looked up from AFR target table (x10 ? See @ref afrTable)*/
-  byte idleDuty;     /**< The current idle duty cycle amount if PWM idle is selected and active */
   byte CLIdleTarget; /**< The target idle RPM (when closed loop idle control is active) */
   bool idleUpActive; /**< Whether the externally controlled idle up is currently active */
   bool CTPSActive;   /**< Whether the externally controlled closed throttle position sensor is currently active */
@@ -726,7 +727,7 @@ struct statuses {
   byte idleLoad;      ///< Either the current steps or current duty cycle for the idle control
   uint16_t canin[16]; ///< 16bit raw value of selected canin data for channels 0-15
   uint8_t current_caninchannel = 0; /**< Current CAN channel, defaults to 0 */
-  uint16_t crankRPM = 400; /**< The actual cranking RPM limit. This is derived from the value in the config page, but saves us multiplying it everytime it's used (Config page value is stored divided by 10) */
+  uint16_t crankRPM = 400; /**< The actual cranking RPM limit. This is derived from the value in the config page, but saves us multiplying it every time it's used (Config page value is stored divided by 10) */
   volatile byte status3; ///< Status bits (See BIT_STATUS3_* defines on top of this file)
   int16_t flexBoostCorrection; /**< Amount of boost added based on flex */
   byte nitrous_status;
@@ -829,7 +830,7 @@ struct config2 {
   //config3 in ini
   byte engineType : 1;  ///< Engine crank/ign phasing type: 0=even fire, 1=odd fire
   byte flexEnabled : 1; ///< Enable Flex fuel sensing (pin / interrupt)
-  byte legacyMAP  : 1;  ///< Legacy MAP reading behavior
+  byte legacyMAP  : 1;  ///< Legacy MAP reading behaviour
   byte baroCorr : 1;    // Unused ?
   byte injLayout : 2;   /**< Injector Layout - 0=INJ_PAIRED (number outputs == number cyls/2, timed over 1 crank rev), 1=INJ_SEMISEQUENTIAL (like paired, but number outputs == number cyls, only for 4 cyl),
                          2=INJ_BANKED (2 outputs are used), 3=INJ_SEQUENTIAL (number ouputs == number cyls, timed over full cycle, 2 crank revs) */
@@ -1026,7 +1027,8 @@ struct config4 {
 
   int16_t vvt2CL0DutyAng;
   byte vvt2PWMdir : 1;
-  byte unusedBits4 : 7;
+  byte inj4cylPairing : 2;
+  byte unusedBits4 : 5;
   byte ANGLEFILTER_VVT;
   byte FILTER_FLEX;
   byte vvtMinClt;
@@ -1205,10 +1207,10 @@ struct config9 {
   byte dfcoDsblwClutch: 1; //DFCO Disable when clutch pressed (Launch Input)
   byte dfcoExitFuelTime: 1; // Selects if short (two engine cycles) or long (dfcoRampInTime) for dfcoExitFuel;
   
-  byte coolantProtEnbl : 1;
+  byte hardRevMode : 2;
   byte coolantProtRPM[3];
   byte coolantProtTemp[3];
-  
+ 
   byte unused10_182;
   
   byte egoIntDelay;       // ego integral delay x control loops
@@ -1258,7 +1260,7 @@ struct config10 {
   uint16_t stagedInjSizeSec; //Bytes 30-31
   byte lnchCtrlTPS; //Byte 32
 
-  uint8_t flexBoostBins[6]; //Byets 33-38
+  uint8_t flexBoostBins[6]; //Bytes 33-38
   int16_t flexBoostAdj[6];  //kPa to be added to the boost target @ current ethanol (negative values allowed). Bytes 39-50
   uint8_t flexFuelBins[6]; //Bytes 51-56
   uint8_t flexFuelAdj[6];   //Fuel % @ current ethanol (typically 100% @ 0%, 163% @ 100%). Bytes 57-62

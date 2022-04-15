@@ -17,7 +17,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 /** @file
- * Speeduino initialization and main loop.
+ * Speeduino initialisation and main loop.
  */
 #include <stdint.h> //developer.mbed.org/handbook/C-Data-Types
 //************************************************
@@ -25,7 +25,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "speeduino.h"
 #include "scheduler.h"
 #include "comms.h"
-#include "newComms.h"
+#include "comms_legacy.h"
 #include "cancomms.h"
 #include "maths.h"
 #include "corrections.h"
@@ -100,7 +100,7 @@ inline uint16_t applyFuelTrimToPW(trimTable3d *pTrimTable, int16_t fuelLoad, int
 /** Speeduino main loop.
  * 
  * Main loop chores (roughly in  order they are preformed):
- * - Check if serial comms or tooth logging are in progress (send or reveive, prioritize communication)
+ * - Check if serial comms or tooth logging are in progress (send or receive, prioritise communication)
  * - Record loop timing vars
  * - Check tooth time, update @ref statuses (currentStatus) variables
  * - Read sensors
@@ -127,7 +127,11 @@ void loop()
       //Perform the same check for the tooth and composite logs
       if( toothLogSendInProgress == true)
       {
-        if(Serial.availableForWrite() > 16) { sendToothLog(inProgressOffset); }
+        if(Serial.availableForWrite() > 16) 
+        { 
+          if(legacySerial == true) { sendToothLog_legacy(inProgressOffset); }
+          else { sendToothLog(inProgressOffset); }
+        }
       }
       if( compositeLogSendInProgress == true)
       {
@@ -138,14 +142,14 @@ void loop()
         if(Serial.availableForWrite() > 16) { continueSerialTransmission(); }
       }
 
-      //Check for any new requets from serial.
+      //Check for any new requests from serial.
       //if ( (Serial.available()) > 0) { command(); }
       if ( (Serial.available()) > 0) { parseSerial(); }
       
       else if(cmdPending == true)
       {
         //This is a special case just for the tooth and composite loggers
-        if (currentCommand == 'T') { command(); }
+        if (currentCommand == 'T') { legacySerialCommand(); }
       }
 
       //Check for any CAN comms requiring action 
@@ -178,10 +182,9 @@ void loop()
     //Displays currently disabled
     // if (configPage2.displayType && (mainLoopCount & 255) == 1) { updateDisplay();}
 
-    previousLoopTime = currentLoopTime;
     currentLoopTime = micros_safe();
     unsigned long timeToLastTooth = (currentLoopTime - toothLastToothTime);
-    if ( (timeToLastTooth < MAX_STALL_TIME) || (toothLastToothTime > currentLoopTime) ) //Check how long ago the last tooth was seen compared to now. If it was more than half a second ago then the engine is probably stopped. toothLastToothTime can be greater than currentLoopTime if a pulse occurs between getting the lastest time and doing the comparison
+    if ( (timeToLastTooth < MAX_STALL_TIME) || (toothLastToothTime > currentLoopTime) ) //Check how long ago the last tooth was seen compared to now. If it was more than half a second ago then the engine is probably stopped. toothLastToothTime can be greater than currentLoopTime if a pulse occurs between getting the latest time and doing the comparison
     {
       currentStatus.longRPM = getRPM(); //Long RPM is included here
       currentStatus.RPM = currentStatus.longRPM;
@@ -194,6 +197,7 @@ void loop()
       //We reach here if the time between teeth is too great. This VERY likely means the engine has stopped
       currentStatus.RPM = 0;
       currentStatus.BaseFuel = 0;
+      currentStatus.RPMdiv100 = 0;
       currentStatus.PW1 = 0;
       currentStatus.PW2 = 0;
       currentStatus.PW3 = 0;
@@ -294,6 +298,8 @@ void loop()
       //And check whether the tooth log buffer is ready
       if(toothHistoryIndex > TOOTH_LOG_SIZE) { BIT_SET(currentStatus.status1, BIT_STATUS1_TOOTHLOG1READY); }
 
+      
+
     }
     if(BIT_CHECK(LOOP_TIMER, BIT_TIMER_10HZ)) //10 hertz
     {
@@ -301,8 +307,8 @@ void loop()
       //updateFullStatus();
       checkProgrammableIO();
 
-      if( (isEepromWritePending() == true) && (serialReceivePending == false) && (deferEEPROMWrites == false)) { writeAllConfig(); } //Check for any outstanding EEPROM writes.
-
+      //if( (isEepromWritePending() == true) && (serialReceivePending == false) && (micros() > deferEEPROMWritesUntil)) { writeAllConfig(); } //Used for slower EEPROM writes (Currently this runs in the 30Hz block)
+      
       currentStatus.vss = getSpeed();
       currentStatus.gear = getGear();
 
@@ -320,13 +326,18 @@ void loop()
       vvtControl();
       //Water methanol injection
       wmiControl();
-      //FOR TEST PURPOSES ONLY!!!
-      //if(vvt2_pwm_value < vvt_pwm_max_count) { vvt2_pwm_value++; }
-      //else { vvt2_pwm_value = 1; }
+      #if TPS_READ_FREQUENCY == 30
+        readTPS();
+      #endif
+      readO2();
+      readO2_2();
 
       #ifdef SD_LOGGING
         if(configPage13.onboard_log_file_rate == LOGGER_RATE_30HZ) { writeSDLogEntry(); }
       #endif
+
+      //Check for any outstanding EEPROM writes.
+      if( (isEepromWritePending() == true) && (serialReceivePending == false) && (micros() > deferEEPROMWritesUntil)) { writeAllConfig(); } 
     }
     if (BIT_CHECK(LOOP_TIMER, BIT_TIMER_4HZ))
     {
@@ -347,7 +358,7 @@ void loop()
       if(auxIsEnabled == true)
       {
         //TODO dazq to clean this right up :)
-        //check through the Aux input channels if enabed for Can or local use
+        //check through the Aux input channels if enabled for Can or local use
         for (byte AuxinChan = 0; AuxinChan <16 ; AuxinChan++)
         {
           currentStatus.current_caninchannel = AuxinChan;          
@@ -405,14 +416,13 @@ void loop()
     {
       BIT_CLEAR(TIMER_mask, BIT_TIMER_1HZ);
       readBaro(); //Infrequent baro readings are not an issue.
-      deferEEPROMWrites = false; //Reset the slow EEPROM writes flag so that EEPROM burns will return to normal speed. This is set true in NewComms whenever there is a large chunk write to prvent mega2560s halting due to excess EEPROM burn times. 
 
       if ( (configPage10.wmiEnabled > 0) && (configPage10.wmiIndicatorEnabled > 0) )
       {
         // water tank empty
         if (BIT_CHECK(currentStatus.status4, BIT_STATUS4_WMI_EMPTY) > 0)
         {
-          // flash with 1sec inverval
+          // flash with 1sec interval
           digitalWrite(pinWMIIndicator, !digitalRead(pinWMIIndicator));
         }
         else
@@ -524,7 +534,6 @@ void loop()
       
       correctionsFuel_Individual(); // Perform all the individual injector trims, ego control and staging etc.
       // END PULSEWIDTH CALCULATIONS
-
 
       //***********************************************************************************************
       //BEGIN INJECTION TIMING
@@ -768,7 +777,7 @@ void loop()
         | A Note on tempCrankAngle and tempStartAngle:
         |   The use of tempCrankAngle/tempStartAngle is described below. It is then used in the same way for channels 2, 3 and 4+ on both injectors and ignition
         |   Essentially, these 2 variables are used to realign the current crank angle and the desired start angle around 0 degrees for the given cylinder/output
-        |   Eg: If cylinder 2 TDC is 180 degrees after cylinder 1 (Eg a standard 4 cylidner engine), then tempCrankAngle is 180* less than the current crank angle and
+        |   Eg: If cylinder 2 TDC is 180 degrees after cylinder 1 (Eg a standard 4 cylinder engine), then tempCrankAngle is 180* less than the current crank angle and
         |       tempStartAngle is the desired open time less 180*. Thus the cylinder is being treated relative to its own TDC, regardless of its offset
         |
         |   This is done to avoid problems with very short of very long times until tempStartAngle.
@@ -916,7 +925,7 @@ void loop()
       if ( configPage4.ignCranklock && BIT_CHECK(currentStatus.engine, BIT_ENGINE_CRANK) && (decoderHasFixedCrankingTiming == true) )
       {
         fixedCrankingOverride = currentStatus.dwell * 3;
-        //This is a safety step to prevent the ignition start time occuring AFTER the target tooth pulse has already occcured. It simply moves the start time forward a little, which is compensated for by the increase in the dwell time
+        //This is a safety step to prevent the ignition start time occurring AFTER the target tooth pulse has already occurred. It simply moves the start time forward a little, which is compensated for by the increase in the dwell time
         if(currentStatus.RPM < 250)
         {
           ignition1StartAngle -= 5;

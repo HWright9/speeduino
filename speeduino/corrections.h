@@ -5,6 +5,8 @@ All functions in the gamma file return
 #ifndef CORRECTIONS_H
 #define CORRECTIONS_H
 
+#define IGN_IDLE_THRESHOLD 200 //RPM threshold (below CL idle target) for when ign based idle control will engage
+
 void initialiseCorrections();
 
 uint16_t correctionsFuel();
@@ -57,6 +59,8 @@ extern int16_t knockWindowMin; //The current minimum crank angle for a knock pul
 extern int16_t knockWindowMax;//The current maximum crank angle for a knock pulse to be valid
 extern uint16_t aseTaperStart;
 extern uint16_t idleAdvStart;
+extern uint8_t dfcoTaper;
+
 
 #define DFCO_OFF 0
 #define DFCO_ENABLE_DELAY 1

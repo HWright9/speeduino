@@ -4767,7 +4767,7 @@ void triggerPri_Vmax()
     return;
   }
   else if (validTrigger == false){ 
-    validTrigger == true;//We reset this every time to ensure we only filter when needed.
+    validTrigger = true;//We reset this every time to ensure we only filter when needed.
   }
 }
 

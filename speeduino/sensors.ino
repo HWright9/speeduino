@@ -217,25 +217,39 @@ static inline void readMAP()
         break;
 
       case 1:
-        //Average of a cycle
+      //Average of a cycle
 
-        if ( (currentStatus.RPMdiv100 > configPage2.mapSwitchPoint) && (currentStatus.hasSync == true) && (currentStatus.startRevolutions > 1) ) //If the engine isn't running and RPM below switch point, fall back to instantaneous reads
+      if ( (currentStatus.RPMdiv100 > configPage2.mapSwitchPoint) && (currentStatus.hasSync == true) && (currentStatus.startRevolutions > 1) ) //If the engine isn't running and RPM below switch point, fall back to instantaneous reads
+      {
+        if( (MAPcurRev == currentStatus.startRevolutions) || ( (MAPcurRev+1) == currentStatus.startRevolutions) ) //2 revolutions are looked at for 4 stroke. 2 stroke not currently catered for.
         {
-          if( (MAPcurRev == currentStatus.startRevolutions) || ( (MAPcurRev+1) == currentStatus.startRevolutions) ) //2 revolutions are looked at for 4 stroke. 2 stroke not currently catered for.
+          #if defined(ANALOG_ISR_MAP)
+            tempReading = AnChannel[pinMAP-A0];
+          #else
+            tempReading = analogRead(pinMAP);
+            tempReading = analogRead(pinMAP);
+          #endif
+
+          //Error check
+          if( (tempReading < VALID_MAP_MAX) && (tempReading > VALID_MAP_MIN) )
           {
-            #if defined(ANALOG_ISR_MAP)
-              tempReading = AnChannel[pinMAP-A0];
-            #else
-              tempReading = analogRead(pinMAP);
-              tempReading = analogRead(pinMAP);
-            #endif
+            currentStatus.mapADC = filterADC(tempReading, configPage4.ADCFILTER_MAP, currentStatus.mapADC);
+            MAPrunningValue += currentStatus.mapADC; //Add the current reading onto the total
+            MAPcount++;
+          }
+          else { mapErrorCount += 1; }
+
+          //Repeat for EMAP if it's enabled
+          if(configPage6.useEMAP == true)
+          {
+            tempReading = analogRead(pinEMAP);
+            tempReading = analogRead(pinEMAP);
 
             //Error check
             if( (tempReading < VALID_MAP_MAX) && (tempReading > VALID_MAP_MIN) )
             {
-              currentStatus.mapADC = filterADC(tempReading, configPage4.ADCFILTER_MAP, currentStatus.mapADC);
-              MAPrunningValue += currentStatus.mapADC; //Add the current reading onto the total
-              MAPcount++;
+              currentStatus.EMAPADC = filterADC(tempReading, configPage4.ADCFILTER_MAP, currentStatus.EMAPADC);
+              EMAPrunningValue += currentStatus.EMAPADC; //Add the current reading onto the total
             }
             else { mapErrorCount += 1; }
           }
@@ -251,79 +265,37 @@ static inline void readMAP()
             MAPlast_time = MAP_time;
             MAP_time = micros();
 
-            //Repeat for EMAP if it's enabled
+            currentStatus.mapADC = ldiv(MAPrunningValue, MAPcount).quot;
+            currentStatus.MAP = fastMap10Bit(currentStatus.mapADC, configPage2.mapMin, configPage2.mapMax); //Get the current MAP value
+            validateMAP();
+
+            //If EMAP is enabled, the process is identical to the above
             if(configPage6.useEMAP == true)
             {
-              tempReading = analogRead(pinEMAP);
-              tempReading = analogRead(pinEMAP);
-
-              //Error check
-              if( (tempReading < VALID_MAP_MAX) && (tempReading > VALID_MAP_MIN) )
-              {
-                currentStatus.EMAPADC = filterADC(tempReading, configPage4.ADCFILTER_MAP, currentStatus.EMAPADC);
-                EMAPrunningValue += currentStatus.EMAPADC; //Add the current reading onto the total
-              }
-              else { mapErrorCount += 1; }
+              currentStatus.EMAPADC = ldiv(EMAPrunningValue, MAPcount).quot; //Note that the MAP count can be reused here as it will always be the same count.
+              currentStatus.EMAP = fastMap10Bit(currentStatus.EMAPADC, configPage2.EMAPMin, configPage2.EMAPMax);
+              if(currentStatus.EMAP < 0) { currentStatus.EMAP = 0; } //Sanity check
             }
           }
-          else
-          {
-            //Reaching here means that the last cylce has completed and the MAP value should be calculated
-            //Sanity check
-            if( (MAPrunningValue != 0) && (MAPcount != 0) )
-            {
-              //Update the calculation times and last value. These are used by the MAP based Accel enrich
-              MAPlast = currentStatus.MAP;
-              MAPlast_time = MAP_time;
-              MAP_time = micros();
+          else { instanteneousMAPReading(); }
 
-              currentStatus.mapADC = ldiv(MAPrunningValue, MAPcount).quot;
-              currentStatus.MAP = fastMap10Bit(currentStatus.mapADC, configPage2.mapMin, configPage2.mapMax); //Get the current MAP value
-              validateMAP();
-
-              //If EMAP is enabled, the process is identical to the above
-              if(configPage6.useEMAP == true)
-              {
-                currentStatus.EMAPADC = ldiv(EMAPrunningValue, MAPcount).quot; //Note that the MAP count can be reused here as it will always be the same count.
-                currentStatus.EMAP = fastMap10Bit(currentStatus.EMAPADC, configPage2.EMAPMin, configPage2.EMAPMax);
-                if(currentStatus.EMAP < 0) { currentStatus.EMAP = 0; } //Sanity check
-              }
-            }
-            else { instanteneousMAPReading(); }
-
-            MAPcurRev = currentStatus.startRevolutions; //Reset the current rev count
-            MAPrunningValue = 0;
-            EMAPrunningValue = 0; //Can reset this even if EMAP not used
-            MAPcount = 0;
-          }
-        }
-        else 
-        {
-          instanteneousMAPReading();
-          MAPrunningValue = currentStatus.mapADC; //Keep updating the MAPrunningValue to give it head start when switching to cycle average.
-          if(configPage6.useEMAP == true)
-          {
-            EMAPrunningValue = currentStatus.EMAPADC;
-          }
-          else { mapErrorCount += 1; }
-        }
-        else
-        {
-          //Reaching here means that the last cycle has completed and the MAP value should be calculated
-
-          //Update the calculation times and last value. These are used by the MAP based Accel enrich
-          MAPlast = currentStatus.MAP;
-          MAPlast_time = MAP_time;
-          MAP_time = micros();
-
-          currentStatus.mapADC = MAPrunningValue;
-          currentStatus.MAP = fastMap10Bit(currentStatus.mapADC, configPage2.mapMin, configPage2.mapMax); //Get the current MAP value
           MAPcurRev = currentStatus.startRevolutions; //Reset the current rev count
-          MAPrunningValue = 1023; //Reset the latest value so the next reading will always be lower
-
-          validateMAP();
+          MAPrunningValue = 0;
+          EMAPrunningValue = 0; //Can reset this even if EMAP not used
+          MAPcount = 0;
         }
-        break;
+      }
+      else 
+      {
+        instanteneousMAPReading();
+        MAPrunningValue = currentStatus.mapADC; //Keep updating the MAPrunningValue to give it head start when switching to cycle average.
+        if(configPage6.useEMAP == true)
+        {
+          EMAPrunningValue = currentStatus.EMAPADC;
+        }
+        MAPcount = 1;
+      }
+      break;
 
       case 2:
         //Minimum reading in a cycle
@@ -344,15 +316,9 @@ static inline void readMAP()
             }
             else { mapErrorCount += 1; }
           }
-          else { mapErrorCount += 1; }
-        }
         else
         {
-          //Reaching here means that the  next ignition event has occurred and the MAP value should be calculated
-          //Sanity check
-          if( (MAPrunningValue != 0) && (MAPcount != 0) && (MAPcurRev < ignitionCount) )
-          {
-            //Reaching here means that the last cylce has completed and the MAP value should be calculated
+          //Reaching here means that the last cycle has completed and the MAP value should be calculated
 
             //Update the calculation times and last value. These are used by the MAP based Accel enrich
             MAPlast = currentStatus.MAP;
@@ -398,7 +364,7 @@ static inline void readMAP()
           }
           else
           {
-            //Reaching here means that the  next ignition event has occured and the MAP value should be calculated
+            //Reaching here means that the  next ignition event has occurred and the MAP value should be calculated
             //Sanity check
             if( (MAPrunningValue != 0) && (MAPcount != 0) && (MAPcurRev < ignitionCount) )
             {

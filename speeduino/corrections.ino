@@ -80,7 +80,6 @@ void initialiseCorrections()
   O2_SensorIsRichPrev = O2_SensorIsRich;
   O2_2ndSensorIsRich = false;
   O2_2ndSensorIsRichPrev = O2_2ndSensorIsRich;
-  BIT_SET(currentStatus.status4, BIT_STATUS4_EGO_RESET);
   BIT_SET(currentStatus.status4, BIT_STATUS4_EGO_FROZEN);
   ego_FuelLoadPrev = currentStatus.fuelLoad;
   currentStatus.knockActive = false;
@@ -196,12 +195,13 @@ uint16_t correctionsFuel()
   currentStatus.batCorrection = correctionBatVoltage();
   if (configPage2.battVCorMode == BATTV_COR_MODE_OPENTIME)
   {
-    inj_opentime_uS = configPage2.injOpen * currentStatus.batCorrection; // Apply voltage correction to injector open time.
+    inj_opentime_uS = (configPage2.injOpen * currentStatus.batCorrection) / 10 ; // Apply voltage correction to injector open time.
     currentStatus.batCorrection = 100; // This is to ensure that the correction is not applied twice. There is no battery correction fator as we have instead changed the open time
   }
   if (configPage2.battVCorMode == BATTV_COR_MODE_WHOLE)
   {
     if (currentStatus.batCorrection != 100) { sumCorrections = div100(sumCorrections * currentStatus.batCorrection); }  
+    inj_opentime_uS = configPage2.injOpen * 10; // Set injector open time here so it's in one place
   }
 
   currentStatus.iatCorrection = correctionIATDensity();
@@ -218,9 +218,9 @@ uint16_t correctionsFuel()
 
   currentStatus.launchCorrection = correctionLaunch();
   if (currentStatus.launchCorrection != 100) { sumCorrections = div100(sumCorrections * currentStatus.launchCorrection); }
-
-  bitWrite(currentStatus.status1, BIT_STATUS1_DFCO, correctionDFCO());
-  if ( BIT_CHECK(currentStatus.status1, BIT_STATUS1_DFCO) == 1 ) { sumCorrections = 0; }
+  
+  result = correctionDFCO();
+  if (result != 100) { sumCorrections = div100(sumCorrections * result); }
 
   if(sumCorrections > 1500) { sumCorrections = 1500; } //This is the maximum allowable increase during cranking
   return (uint16_t)sumCorrections;
@@ -817,7 +817,6 @@ byte correctionAFRClosedLoop()
           ((configPage2.egoResetwfuelLoad == false) ||
            (currentStatus.fuelLoad <= (int16_t)configPage6.egoFuelLoadMax))) // Ignore this criteria if cal set to freeze (false).
       {
-        BIT_CLEAR(currentStatus.status4, BIT_STATUS4_EGO_RESET); 
         
         if(runSecsX10 >= ego_FreezeEndTime) // Check the algo freeze conditions are not active.
         {
@@ -967,7 +966,6 @@ byte correctionAFRClosedLoop()
   	  } // End Conditions not to reset ego
   	  else 
       { //Reset closed loop. Also activate freeze delay to for when we re-enable.
-        BIT_SET(currentStatus.status4, BIT_STATUS4_EGO_RESET);
         BIT_SET(currentStatus.status4, BIT_STATUS4_EGO_FROZEN);
         BIT_CLEAR(currentStatus.status4, BIT_STATUS4_EGO1_INTCORR);
         BIT_CLEAR(currentStatus.status4, BIT_STATUS4_EGO2_INTCORR);
@@ -989,7 +987,6 @@ byte correctionAFRClosedLoop()
       } 
       else 
       {// Engine speed probably stopped or recranking so don't apply EGO during crank.
-        BIT_SET(currentStatus.status4, BIT_STATUS4_EGO_RESET);
         BIT_SET(currentStatus.status4, BIT_STATUS4_EGO_FROZEN);
         BIT_CLEAR(currentStatus.status4, BIT_STATUS4_EGO1_INTCORR);
         BIT_CLEAR(currentStatus.status4, BIT_STATUS4_EGO2_INTCORR);
@@ -1007,7 +1004,6 @@ byte correctionAFRClosedLoop()
   } //End egoType
   else
   { // No O2 sensors or incorrect config to run closed loop O2
-    BIT_SET(currentStatus.status4, BIT_STATUS4_EGO_RESET);
     BIT_SET(currentStatus.status4, BIT_STATUS4_EGO_FROZEN);
     BIT_CLEAR(currentStatus.status4, BIT_STATUS4_EGO1_INTCORR);
     BIT_CLEAR(currentStatus.status4, BIT_STATUS4_EGO2_INTCORR);

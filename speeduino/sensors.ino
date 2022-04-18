@@ -402,6 +402,10 @@ static inline void readMAP()
 
 void readTPS(bool useFilter)
 {
+
+  TPSlast = currentStatus.TPS;
+  TPSlast_time = TPS_time;
+  
   //Check whether the closed throttle position sensor is active (shared calibrations with dual sensor so can only have one or the other.)
   if ( (configPage2.CTPSEnabled == true) && (configPage2.tpsType != TPS_MODE_DUALSENSOR) )
   {

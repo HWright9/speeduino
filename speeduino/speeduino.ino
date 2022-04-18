@@ -249,8 +249,6 @@ void loop()
     if (BIT_CHECK(LOOP_TIMER, BIT_TIMER_15HZ)) //Every 32 loops
     {
       BIT_CLEAR(TIMER_mask, BIT_TIMER_15HZ);
-      if (configPage2.fuelAlgorithm != LOAD_SOURCE_TPS) { readTPS(); } // if not used for primary load TPS can be slower.
-	  
       #if TPS_READ_FREQUENCY == 15
         readTPS();
       #endif   

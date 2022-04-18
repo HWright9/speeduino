@@ -376,7 +376,6 @@ uint16_t correctionAccel()
   int16_t accelValue = 100;
   int16_t MAP_change = 0;
   int16_t TPS_change = 0;
-  int8_t tpsDOTTimeFiltIdx = 2;
 
   if(configPage2.aeMode == AE_MODE_MAP)
   {
@@ -389,11 +388,11 @@ uint16_t correctionAccel()
   }
   else if(configPage2.aeMode == AE_MODE_TPS)
   {
-    if((configPage2.tpsDOTTimeFilt < AE_TPS_DOT_HIST_BINS) ) { tpsDOTTimeFiltIdx = configPage2.tpsDOTTimeFilt; } // Protection for array indexing if eeprom not set. 
     //Get the TPS rate change
-    TPS_change = (currentStatus.TPS - tpsHistory[tpsDOTTimeFiltIdx]); // This is 100ms moving window (@30hz TPSread) or 200ms (@15Hz TPSread)
-    TPS_rateOfChange = (TPS_READ_FREQUENCY * TPS_change) / (2*(AE_TPS_DOT_HIST_BINS - tpsDOTTimeFiltIdx)); //This is the % per second that the TPS has moved
-    if (TPS_rateOfChange >= 0) { currentStatus.tpsDOT = TPS_rateOfChange / 10; } //The TAE bins are divided by 20 in order to allow them to be stored in a byte. Faster as this than divu10
+    TPS_change = (currentStatus.TPS - TPSlast);
+    //TPS_rateOfChange = ldiv(1000000, (TPS_time - TPSlast_time)).quot * TPS_change; //This is the % per second that the TPS has moved
+    TPS_rateOfChange = (TPS_READ_FREQUENCY * TPS_change) / 2; //This is the % per second that the TPS has moved, adjustd for the 0.5% resolution of the TPS
+    if(TPS_rateOfChange >= 0) { currentStatus.tpsDOT = TPS_rateOfChange / 10; } //The TAE bins are divided by 10 in order to allow them to be stored in a byte and then by 2 due to TPS being 0.5% resolution (0-200)
     else { currentStatus.tpsDOT = 0; } //Prevent overflow as tpsDOT is signed
   }
   

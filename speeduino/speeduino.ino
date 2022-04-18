@@ -251,13 +251,10 @@ void loop()
       BIT_CLEAR(TIMER_mask, BIT_TIMER_15HZ);
       if (configPage2.fuelAlgorithm != LOAD_SOURCE_TPS) { readTPS(); } // if not used for primary load TPS can be slower.
 	  
-      if (O2_Readflag == false) 
-      { // O2 has not been updated since the last loop by O2 algo (engine cycle based) so update it here to enfore a minimum update rate for logging etc.
-        readO2(); // Moved HRW
-        readO2_2(); // Moved HRW
-      }
-      else { O2_Readflag = false; } // Reset flag to see if O2 algo reads the O2 next loop.
-      
+      #if TPS_READ_FREQUENCY == 15
+        readTPS();
+      #endif   
+	        
       readBat();
 	  
       #if  defined(CORE_TEENSY35)       
@@ -319,7 +316,6 @@ void loop()
     if(BIT_CHECK(LOOP_TIMER, BIT_TIMER_30HZ)) //30 hertz
     {
       BIT_CLEAR(TIMER_mask, BIT_TIMER_30HZ);
-      if (configPage2.fuelAlgorithm == LOAD_SOURCE_TPS) { readTPS(); } // Read TPS fast if it's for primary load
       //Most boost tends to run at about 30Hz, so placing it here ensures a new target time is fetched frequently enough
       boostControl();
       //VVT may eventually need to be synced with the cam readings (ie run once per cam rev) but for now run at 30Hz
@@ -329,8 +325,13 @@ void loop()
       #if TPS_READ_FREQUENCY == 30
         readTPS();
       #endif
-      readO2();
-      readO2_2();
+      
+      if (O2_Readflag == false) //This might be a little redundant now that O2 is reading at 30hz instead of 4 Hz
+      { // O2 has not been updated since the last loop by O2 algo (engine cycle based) so update it here to enfore a minimum update rate for logging etc. 
+        readO2(); // Moved HRW
+        readO2_2(); // Moved HRW
+      }
+      else { O2_Readflag = false; } // Reset flag to see if O2 algo reads the O2 next loop.
 
       #ifdef SD_LOGGING
         if(configPage13.onboard_log_file_rate == LOGGER_RATE_30HZ) { writeSDLogEntry(); }
@@ -1194,7 +1195,6 @@ void loop()
 uint16_t Calc_BaseFuel(int REQ_FUEL, byte VE, long MAP, uint16_t corrections)
 {
   //Standard float version of the calculation
-  //return (REQ_FUEL * (float)(VE/100.0) * (float)(MAP/100.0) * (float)(TPS/100.0) * (float)(corrections/100.0) + injOpen);
   //return (REQ_FUEL * (float)(VE/100.0) * (float)(MAP/100.0) * (float)(TPS/100.0) * (float)(corrections/100.0);
   //Note: The MAP and TPS portions are currently disabled, we use VE and corrections only
   uint16_t iVE, iCorrections;

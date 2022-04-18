@@ -314,8 +314,6 @@
 #define PROTECT_CUT_BOTH    3
 #define PROTECT_IO_ERROR    7
 
-#define AE_TPS_DOT_HIST_BINS 3
-
 #define AE_MODE_TPS         0
 #define AE_MODE_MAP         1
 
@@ -931,7 +929,6 @@ struct config2 {
   byte tpsType : 2; ///< TPS Sensor Type 
   byte egoResetwAFR : 1;  ///<ego freeze or reset output when AFR target less than min
   byte egoResetwfuelLoad : 1;  ///<ego freeze or reset output when fuel load greater than max
-  byte tpsDOTTimeFilt : 2; /// Time base for calculating TPS Dot, 0 = 3 loops ago, 1 = 2 loops ago, 2 3 loops ago.
 
 #if defined(CORE_AVR)
   };

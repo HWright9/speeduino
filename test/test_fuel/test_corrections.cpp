@@ -130,52 +130,82 @@ void setup_DFCO_on()
   currentStatus.RPM = 4000; //Set the current simulated RPM to a level above the DFCO rpm threshold
   currentStatus.TPS = 0; //Set the simulated TPS to 0 
   currentStatus.coolant = 80;
+  currentStatus.gear = 2; // Set get to 2
+  currentStatus.vss = 30; // Set to 30km/h
+  
   configPage4.dfcoRPM = 150; //DFCO enable RPM = 1500
   configPage4.dfcoTPSThresh = 1;
   configPage4.dfcoHyster = 50;
   configPage2.dfcoMinCLT = 40; //Actually 0 with offset
-  configPage2.dfcoDelay = 10;
+  configPage2.dfcoStartDelay = 10;
+  configPage9.dfcoRampInTime = 6;
+  configPage9.dfcoRampOutTime = 4;
+  configPage9.dfcoExitFuelTime = 0; // DFCO exit for 2 engine cycles
+  configPage9.dfcoExitFuel = 130; //130% fuel correction
+  configPage9.dfcoDsblwClutch = 0; // Bypass clutch check
+  configPage9.dfcoAdv = 20; // Check spark advance, actually 5deg
+  
+  configPage9.dfcoEnblGear1 = 0;
+  configPage9.dfcoEnblGear2 = 1;
+  configPage9.dfcoEnblGear3 = 1;
+  configPage9.dfcoEnblGear4 = 1;
+  configPage9.dfcoEnblGear5 = 1;
+  configPage9.dfcoEnblGear6 = 1;
+  
+  configPage9.dfcoMinVss = 25; // 25km/h
 
-  dfcoTaper = 1;
+  runSecsX10 = 1;
+  dfcoStateStrtTm = runSecsX10;
   correctionDFCO();
-  dfcoTaper = 20;
+  runSecsX10 = 20; // To move time onwards to 2sec to enable start delays
 }
 
 void test_corrections_dfco_on(void)
 {
   //Test under ideal conditions that DFCO goes active
   setup_DFCO_on();
-
-  TEST_ASSERT_TRUE(correctionDFCO());
+  
+  TEST_ASSERT_EQUAL(0, correctionDFCO());
 }
 void test_corrections_dfco_off_RPM()
 {
   //Test that DFCO comes on and then goes off when the RPM drops below threshold
   setup_DFCO_on();
 
-  TEST_ASSERT_TRUE(correctionDFCO()); //Make sure DFCO is on initially
+  TEST_ASSERT_EQUAL(0, correctionDFCO()); //Make sure DFCO is on initially
+  configPage9.dfcoRampOutTime = 0; // Instant ramp out of DFCO for this test
   currentStatus.RPM = 1000; //Set the current simulated RPM below the threshold + hyster
-  TEST_ASSERT_FALSE(correctionDFCO()); //Test DFCO is now off
+  TEST_ASSERT_EQUAL(100, correctionDFCO()); //Test DFCO is now off
 }
 void test_corrections_dfco_off_TPS()
 {
   //Test that DFCO comes on and then goes off when the TPS goes above the required threshold (ie not off throttle)
   setup_DFCO_on();
 
-  TEST_ASSERT_TRUE(correctionDFCO()); //Make sure DFCO is on initially
+  TEST_ASSERT_EQUAL(0, correctionDFCO()); //Make sure DFCO is on initially
+  configPage9.dfcoRampOutTime = 0; // Instant ramp out of DFCO for this test
   currentStatus.TPS = 10; //Set the current simulated TPS to be above the threshold
-  TEST_ASSERT_FALSE(correctionDFCO()); //Test DFCO is now off
+  TEST_ASSERT_EQUAL(100, correctionDFCO()); //Test DFCO is now off
 }
 void test_corrections_dfco_off_delay()
 {
   //Test that DFCO comes will not activate if there has not been a long enough delay
-  //The steup function below simulates a 2 second delay
+  //The setup function below simulates a 2 second delay
   setup_DFCO_on();
 
   //Set the threshold to be 2.5 seconds, above the simulated delay of 2s
-  configPage2.dfcoDelay = 250;
+  configPage2.dfcoStartDelay = 250;
 
-  TEST_ASSERT_FALSE(correctionDFCO()); //Make sure DFCO does not come on
+  TEST_ASSERT_EQUAL(100, correctionDFCO()); //Test DFCO does not come on
+}
+
+void test_corrections_dfco_spark_adv()
+{
+  //Test that DFCO spark advance is achieved
+  //The setup function below simulates 5deg advance.
+  setup_DFCO_on();
+
+  TEST_ASSERT_EQUAL(configPage9.dfcoAdv, correctionDFCOEntryExit()); //Test DFCO spark equals calibrated value
 }
 
 void test_corrections_dfco()
@@ -184,4 +214,5 @@ void test_corrections_dfco()
   RUN_TEST(test_corrections_dfco_off_RPM);
   RUN_TEST(test_corrections_dfco_off_TPS);
   RUN_TEST(test_corrections_dfco_off_delay);
+  RUN_TEST(test_corrections_dfco_spark_adv);
 }

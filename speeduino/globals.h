@@ -925,10 +925,15 @@ struct config2 {
   byte idleAdvVss;
   byte mapSwitchPoint;
 
-  byte unused2_95;
+  byte canBMWCluster : 1;
+  byte canVAGCluster : 1;
+  byte enableCluster1 : 1;
+  byte enableCluster2 : 1;
+  byte unusedClusterBits : 4;
   byte tpsType : 2; ///< TPS Sensor Type 
   byte egoResetwAFR : 1;  ///<ego freeze or reset output when AFR target less than min
   byte egoResetwfuelLoad : 1;  ///<ego freeze or reset output when fuel load greater than max
+
 
 #if defined(CORE_AVR)
   };

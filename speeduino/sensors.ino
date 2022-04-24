@@ -157,69 +157,65 @@ static inline void validateMAP()
   }
 }
 
-static inline void instanteneousMAPReading(bool useFilter)
+static inline void instanteneousMAPReading()
 {
-  if (configPage10.useSensorMAP == true)
+  //Update the calculation times and last value. These are used by the MAP based Accel enrich
+  MAPlast = currentStatus.MAP;
+  MAPlast_time = MAP_time;
+  MAP_time = micros();
+
+  unsigned int tempReading;
+  //Instantaneous MAP readings
+  #if defined(ANALOG_ISR_MAP)
+    tempReading = AnChannel[pinMAP-A0];
+  #else
+    tempReading = analogRead(pinMAP);
+    tempReading = analogRead(pinMAP);
+  #endif
+  //Error checking
+  if( (tempReading >= VALID_MAP_MAX) || (tempReading <= VALID_MAP_MIN) ) { mapErrorCount += 1; }
+  else { mapErrorCount = 0; }
+
+  //During startup a call is made here to get the baro reading. In this case, we can't apply the ADC filter
+  if(initialisationComplete == true) { currentStatus.mapADC = ADC_FILTER(tempReading, configPage4.ADCFILTER_MAP, currentStatus.mapADC); } //Very weak filter
+  else { currentStatus.mapADC = tempReading; } //Baro reading (No filter)
+
+  currentStatus.MAP = fastMap10Bit(currentStatus.mapADC, configPage2.mapMin, configPage2.mapMax); //Get the current MAP value
+  if(currentStatus.MAP < 0) { currentStatus.MAP = 0; } //Sanity check
+  
+  //Repeat for EMAP if it's enabled
+  if(configPage6.useEMAP == true)
   {
-    //Update the calculation times and last value. These are used by the MAP based Accel enrich
-    MAPlast = currentStatus.MAP;
-    MAPlast_time = MAP_time;
-    MAP_time = micros();
+    tempReading = analogRead(pinEMAP);
+    tempReading = analogRead(pinEMAP);
 
-    unsigned int tempReading;
-    //Instantaneous MAP readings
-    #if defined(ANALOG_ISR_MAP)
-      tempReading = AnChannel[pinMAP-A0];
-    #else
-      tempReading = analogRead(pinMAP);
-      tempReading = analogRead(pinMAP);
-    #endif
-    //Error checking
-    if( (tempReading >= VALID_MAP_MAX) || (tempReading <= VALID_MAP_MIN) ) { mapErrorCount += 1; }
-    else { mapErrorCount = 0; }
-
-    //During startup a call is made here to get the baro reading. In this case, we can't apply the ADC filter
-    if(useFilter == true) { currentStatus.mapADC = filterADC(tempReading, configPage4.ADCFILTER_MAP, currentStatus.mapADC); } //Very weak filter
-    else { currentStatus.mapADC = tempReading; } //Baro reading (No filter)
-
-    currentStatus.MAP = fastMap10Bit(currentStatus.mapADC, configPage2.mapMin, configPage2.mapMax); //Get the current MAP value
-    if(currentStatus.MAP < 0) { currentStatus.MAP = 0; } //Sanity check
-    
-    //Repeat for EMAP if it's enabled
-    if(configPage6.useEMAP == true)
-    {
-      tempReading = analogRead(pinEMAP);
-      tempReading = analogRead(pinEMAP);
-
-      //Error check
-      if( (tempReading < VALID_MAP_MAX) && (tempReading > VALID_MAP_MIN) )
-        {
-          currentStatus.EMAPADC = filterADC(tempReading, configPage4.ADCFILTER_MAP, currentStatus.EMAPADC);
-        }
-      else { mapErrorCount += 1; }
-      currentStatus.EMAP = fastMap10Bit(currentStatus.EMAPADC, configPage2.EMAPMin, configPage2.EMAPMax);
-      if(currentStatus.EMAP < 0) { currentStatus.EMAP = 0; } //Sanity check
-    }
+    //Error check
+    if( (tempReading < VALID_MAP_MAX) && (tempReading > VALID_MAP_MIN) )
+      {
+        currentStatus.EMAPADC = ADC_FILTER(tempReading, configPage4.ADCFILTER_MAP, currentStatus.EMAPADC);
+      }
+    else { mapErrorCount += 1; }
+    currentStatus.EMAP = fastMap10Bit(currentStatus.EMAPADC, configPage2.EMAPMin, configPage2.EMAPMax);
+    if(currentStatus.EMAP < 0) { currentStatus.EMAP = 0; } //Sanity check
   }
+
 }
 
 static inline void readMAP()
 {
-  if (configPage10.useSensorMAP == true)
+  unsigned int tempReading;
+  //MAP Sampling system
+  switch(configPage2.mapSample)
   {
-    unsigned int tempReading;
-    //MAP Sampling system
-    switch(configPage2.mapSample)
-    {
-      case 0:
-        //Instantaneous MAP readings
-        instanteneousMAPReading();
-        break;
+    case 0:
+      //Instantaneous MAP readings
+      instanteneousMAPReading();
+      break;
 
-      case 1:
+    case 1:
       //Average of a cycle
 
-      if ( (currentStatus.RPMdiv100 > configPage2.mapSwitchPoint) && (currentStatus.hasSync == true) && (currentStatus.startRevolutions > 1) ) //If the engine isn't running and RPM below switch point, fall back to instantaneous reads
+      if ( (currentStatus.RPMdiv100 > configPage2.mapSwitchPoint) && ((currentStatus.hasSync == true) || BIT_CHECK(currentStatus.status3, BIT_STATUS3_HALFSYNC)) && (currentStatus.startRevolutions > 1) ) //If the engine isn't running and RPM below switch point, fall back to instantaneous reads
       {
         if( (MAPcurRev == currentStatus.startRevolutions) || ( (MAPcurRev+1) == currentStatus.startRevolutions) ) //2 revolutions are looked at for 4 stroke. 2 stroke not currently catered for.
         {
@@ -233,7 +229,7 @@ static inline void readMAP()
           //Error check
           if( (tempReading < VALID_MAP_MAX) && (tempReading > VALID_MAP_MIN) )
           {
-            currentStatus.mapADC = filterADC(tempReading, configPage4.ADCFILTER_MAP, currentStatus.mapADC);
+            currentStatus.mapADC = ADC_FILTER(tempReading, configPage4.ADCFILTER_MAP, currentStatus.mapADC);
             MAPrunningValue += currentStatus.mapADC; //Add the current reading onto the total
             MAPcount++;
           }
@@ -248,7 +244,7 @@ static inline void readMAP()
             //Error check
             if( (tempReading < VALID_MAP_MAX) && (tempReading > VALID_MAP_MIN) )
             {
-              currentStatus.EMAPADC = filterADC(tempReading, configPage4.ADCFILTER_MAP, currentStatus.EMAPADC);
+              currentStatus.EMAPADC = ADC_FILTER(tempReading, configPage4.ADCFILTER_MAP, currentStatus.EMAPADC);
               EMAPrunningValue += currentStatus.EMAPADC; //Add the current reading onto the total
             }
             else { mapErrorCount += 1; }
@@ -297,188 +293,153 @@ static inline void readMAP()
       }
       break;
 
-      case 2:
-        //Minimum reading in a cycle
-        if (currentStatus.RPMdiv100 > configPage2.mapSwitchPoint) //If the engine isn't running and RPM below switch point, fall back to instantaneous reads
+    case 2:
+      //Minimum reading in a cycle
+      if (currentStatus.RPMdiv100 > configPage2.mapSwitchPoint) //If the engine isn't running and RPM below switch point, fall back to instantaneous reads
+      {
+        if( (MAPcurRev == currentStatus.startRevolutions) || ((MAPcurRev+1) == currentStatus.startRevolutions) ) //2 revolutions are looked at for 4 stroke. 2 stroke not currently catered for.
         {
-          if( (MAPcurRev == currentStatus.startRevolutions) || ((MAPcurRev+1) == currentStatus.startRevolutions) ) //2 revolutions are looked at for 4 stroke. 2 stroke not currently catered for.
+          #if defined(ANALOG_ISR_MAP)
+            tempReading = AnChannel[pinMAP-A0];
+          #else
+            tempReading = analogRead(pinMAP);
+            tempReading = analogRead(pinMAP);
+          #endif
+          //Error check
+          if( (tempReading < VALID_MAP_MAX) && (tempReading > VALID_MAP_MIN) )
           {
-            #if defined(ANALOG_ISR_MAP)
-              tempReading = AnChannel[pinMAP-A0];
-            #else
-              tempReading = analogRead(pinMAP);
-              tempReading = analogRead(pinMAP);
-            #endif
-            //Error check
-            if( (tempReading < VALID_MAP_MAX) && (tempReading > VALID_MAP_MIN) )
-            {
-              if( (unsigned long)tempReading < MAPrunningValue ) { MAPrunningValue = (unsigned long)tempReading; } //Check whether the current reading is lower than the running minimum
-            }
-            else { mapErrorCount += 1; }
+            if( (unsigned long)tempReading < MAPrunningValue ) { MAPrunningValue = (unsigned long)tempReading; } //Check whether the current reading is lower than the running minimum
           }
+          else { mapErrorCount += 1; }
+        }
         else
         {
           //Reaching here means that the last cycle has completed and the MAP value should be calculated
 
+          //Update the calculation times and last value. These are used by the MAP based Accel enrich
+          MAPlast = currentStatus.MAP;
+          MAPlast_time = MAP_time;
+          MAP_time = micros();
+
+          currentStatus.mapADC = MAPrunningValue;
+          currentStatus.MAP = fastMap10Bit(currentStatus.mapADC, configPage2.mapMin, configPage2.mapMax); //Get the current MAP value
+          MAPcurRev = currentStatus.startRevolutions; //Reset the current rev count
+          MAPrunningValue = 1023; //Reset the latest value so the next reading will always be lower
+
+          validateMAP();
+        }
+      }
+      else 
+      {
+        instanteneousMAPReading();
+        MAPrunningValue = currentStatus.mapADC;  //Keep updating the MAPrunningValue to give it head start when switching to cycle minimum.
+      }
+      break;
+
+    case 3:
+      //Average of an ignition event
+      if ( (currentStatus.RPMdiv100 > configPage2.mapSwitchPoint) && ((currentStatus.hasSync == true) || BIT_CHECK(currentStatus.status3, BIT_STATUS3_HALFSYNC)) && (currentStatus.startRevolutions > 1) && (! currentStatus.engineProtectStatus) ) //If the engine isn't running, fall back to instantaneous reads
+      {
+        if( (MAPcurRev == ignitionCount) ) //Watch for a change in the ignition counter to determine whether we're still on the same event
+        {
+          #if defined(ANALOG_ISR_MAP)
+            tempReading = AnChannel[pinMAP-A0];
+          #else
+            tempReading = analogRead(pinMAP);
+            tempReading = analogRead(pinMAP);
+          #endif
+
+          //Error check
+          if( (tempReading < VALID_MAP_MAX) && (tempReading > VALID_MAP_MIN) )
+          {
+            currentStatus.mapADC = ADC_FILTER(tempReading, configPage4.ADCFILTER_MAP, currentStatus.mapADC);
+            MAPrunningValue += currentStatus.mapADC; //Add the current reading onto the total
+            MAPcount++;
+          }
+          else { mapErrorCount += 1; }
+        }
+        else
+        {
+          //Reaching here means that the  next ignition event has occurred and the MAP value should be calculated
+          //Sanity check
+          if( (MAPrunningValue != 0) && (MAPcount != 0) && (MAPcurRev < ignitionCount) )
+          {
             //Update the calculation times and last value. These are used by the MAP based Accel enrich
             MAPlast = currentStatus.MAP;
             MAPlast_time = MAP_time;
             MAP_time = micros();
 
-            currentStatus.mapADC = MAPrunningValue;
+            currentStatus.mapADC = ldiv(MAPrunningValue, MAPcount).quot;
             currentStatus.MAP = fastMap10Bit(currentStatus.mapADC, configPage2.mapMin, configPage2.mapMax); //Get the current MAP value
-            MAPcurRev = currentStatus.startRevolutions; //Reset the current rev count
-            MAPrunningValue = 1023; //Reset the latest value so the next reading will always be lower
-
             validateMAP();
           }
+          else { instanteneousMAPReading(); }
+
+          MAPcurRev = ignitionCount; //Reset the current event count
+          MAPrunningValue = 0;
+          MAPcount = 0;
         }
-        else 
-        {
-          instanteneousMAPReading();
-          MAPrunningValue = currentStatus.mapADC;  //Keep updating the MAPrunningValue to give it head start when switching to cycle minimum.
-        }
-        break;
+      }
+      else 
+      {
+        instanteneousMAPReading();
+        MAPrunningValue = currentStatus.mapADC; //Keep updating the MAPrunningValue to give it head start when switching to ignition event average.
+        MAPcount = 1;
+      }
+      break; 
 
-      case 3:
-        //Average of an ignition event
-        if ( (currentStatus.RPMdiv100 > configPage2.mapSwitchPoint) && (currentStatus.hasSync == true) && (currentStatus.startRevolutions > 1) && (! currentStatus.engineProtectStatus) ) //If the engine isn't running, fall back to instantaneous reads
-        {
-          if( (MAPcurRev == ignitionCount) ) //Watch for a change in the ignition counter to determine whether we're still on the same event
-          {
-            #if defined(ANALOG_ISR_MAP)
-              tempReading = AnChannel[pinMAP-A0];
-            #else
-              tempReading = analogRead(pinMAP);
-              tempReading = analogRead(pinMAP);
-            #endif
-
-            //Error check
-            if( (tempReading < VALID_MAP_MAX) && (tempReading > VALID_MAP_MIN) )
-            {
-              currentStatus.mapADC = filterADC(tempReading, configPage4.ADCFILTER_MAP, currentStatus.mapADC);
-              MAPrunningValue += currentStatus.mapADC; //Add the current reading onto the total
-              MAPcount++;
-            }
-            else { mapErrorCount += 1; }
-          }
-          else
-          {
-            //Reaching here means that the  next ignition event has occurred and the MAP value should be calculated
-            //Sanity check
-            if( (MAPrunningValue != 0) && (MAPcount != 0) && (MAPcurRev < ignitionCount) )
-            {
-              //Update the calculation times and last value. These are used by the MAP based Accel enrich
-              MAPlast = currentStatus.MAP;
-              MAPlast_time = MAP_time;
-              MAP_time = micros();
-
-              currentStatus.mapADC = ldiv(MAPrunningValue, MAPcount).quot;
-              currentStatus.MAP = fastMap10Bit(currentStatus.mapADC, configPage2.mapMin, configPage2.mapMax); //Get the current MAP value
-              validateMAP();
-            }
-            else { instanteneousMAPReading(); }
-
-            MAPcurRev = ignitionCount; //Reset the current event count
-            MAPrunningValue = 0;
-            MAPcount = 0;
-          }
-        }
-        else 
-        {
-          instanteneousMAPReading();
-          MAPrunningValue = currentStatus.mapADC; //Keep updating the MAPrunningValue to give it head start when switching to ignition event average.
-          MAPcount = 1;
-        }
-        break; 
-
-      default:
-      //Instantaneous MAP readings (Just in case)
-      instanteneousMAPReading();
-      break;
-    }
-  }   
+    default:
+    //Instantaneous MAP readings (Just in case)
+    instanteneousMAPReading();
+    break;
+  }
 }
 
 void readTPS(bool useFilter)
 {
-
   TPSlast = currentStatus.TPS;
   TPSlast_time = TPS_time;
-  
-  //Check whether the closed throttle position sensor is active (shared calibrations with dual sensor so can only have one or the other.)
-  if ( (configPage2.CTPSEnabled == true) && (configPage2.tpsType != TPS_MODE_DUALSENSOR) )
+  #if defined(ANALOG_ISR)
+    byte tempTPS = fastMap1023toX(AnChannel[pinTPS-A0], 255); //Get the current raw TPS ADC value and map it into a byte
+  #else
+    analogRead(pinTPS);
+    byte tempTPS = fastMap1023toX(analogRead(pinTPS), 255); //Get the current raw TPS ADC value and map it into a byte
+  #endif
+  //The use of the filter can be overridden if required. This is used on startup to disable priming pulse if flood clear is wanted
+  if(useFilter == true) { currentStatus.tpsADC = ADC_FILTER(tempTPS, configPage4.ADCFILTER_TPS, currentStatus.tpsADC); }
+  else { currentStatus.tpsADC = tempTPS; }
+  byte tempADC = currentStatus.tpsADC; //The tempADC value is used in order to allow TunerStudio to recover and redo the TPS calibration if this somehow gets corrupted
+
+  if(configPage2.tpsMax > configPage2.tpsMin)
+  {
+    //Check that the ADC values fall within the min and max ranges (Should always be the case, but noise can cause these to fluctuate outside the defined range).
+    if (currentStatus.tpsADC < configPage2.tpsMin) { tempADC = configPage2.tpsMin; }
+    else if(currentStatus.tpsADC > configPage2.tpsMax) { tempADC = configPage2.tpsMax; }
+    currentStatus.TPS = map(tempADC, configPage2.tpsMin, configPage2.tpsMax, 0, 200); //Take the raw TPS ADC value and convert it into a TPS% based on the calibrated values
+  }
+  else
+  {
+    //This case occurs when the TPS +5v and gnd are wired backwards, but the user wishes to retain this configuration.
+    //In such a case, tpsMin will be greater then tpsMax and hence checks and mapping needs to be reversed
+
+    tempADC = 255 - currentStatus.tpsADC; //Reverse the ADC values
+    uint16_t tempTPSMax = 255 - configPage2.tpsMax;
+    uint16_t tempTPSMin = 255 - configPage2.tpsMin;
+
+    //All checks below are reversed from the standard case above
+    if (tempADC > tempTPSMax) { tempADC = tempTPSMax; }
+    else if(tempADC < tempTPSMin) { tempADC = tempTPSMin; }
+    currentStatus.TPS = map(tempADC, tempTPSMin, tempTPSMax, 0, 200);
+  }
+
+  //Check whether the closed throttle position sensor is active
+  if(configPage2.CTPSEnabled == true)
   {
     if(configPage2.CTPSPolarity == 0) { currentStatus.CTPSActive = !digitalRead(pinCTPS); } //Normal mode (ground switched)
     else { currentStatus.CTPSActive = digitalRead(pinCTPS); } //Inverted mode (5v activates closed throttle position sensor)
   }
-  else { currentStatus.CTPSActive = false; }
-    
-  //Get ADC Values if enabled
-  if (configPage2.tpsType != TPS_MODE_DISABLED)
-  {
-    byte tempADC = 0;
-    byte tempADC2 = 0;
-    
-    #if defined(ANALOG_ISR)
-      byte tempTPS = fastMap1023toX(AnChannel[pinTPS-A0], 255); //Get the current raw TPS ADC value and map it into a byte
-    #else
-      analogRead(pinTPS);
-      byte tempTPS = fastMap1023toX(analogRead(pinTPS), 255); //Get the current raw TPS ADC value and map it into a byte
-    #endif
-    //The use of the filter can be overridden if required. This is used on startup to disable priming pulse if flood clear is wanted
-    if(useFilter == true) { currentStatus.tpsADC = filterADC(tempTPS, configPage4.ADCFILTER_TPS, currentStatus.tpsADC); }
-    else { currentStatus.tpsADC = tempTPS; }
-
-    tempADC = currentStatus.tpsADC; //The tempADC value is used in order to allow TunerStudio to recover and redo the TPS calibration if this somehow gets corrupted
-    
-    //Check that the ADC values fall within the min and max ranges (Should always be the case, but noise can cause these to fluctuate outside the defined range).
-    if (currentStatus.tpsADC < configPage2.tpsMin) { tempADC = configPage2.tpsMin; }
-    else if(currentStatus.tpsADC > configPage2.tpsMax) { tempADC = configPage2.tpsMax; }
-    
-    if (configPage2.tpsType == TPS_MODE_DUALSENSOR )
-    {
-      #if defined(ANALOG_ISR)
-        byte tempTPS2 = fastMap1023toX(AnChannel[pinCTPS-A0], 255); //Get the current raw TPS ADC value and map it into a byte
-      #else
-        analogRead(pinCTPS);
-        byte tempTPS2 = fastMap1023toX(analogRead(pinCTPS), 255); //Get the current raw TPS ADC value and map it into a byte
-      #endif
-      //The use of the filter can be overridden if required. This is used on startup to disable priming pulse if flood clear is wanted
-      if(useFilter == true) { currentStatus.tps2ADC = filterADC(tempTPS2, configPage4.ADCFILTER_TPS, currentStatus.tps2ADC); }
-      else { currentStatus.tps2ADC = tempTPS2; }
-
-      tempADC2 = currentStatus.tps2ADC; //The tempADC2 value is used in order to allow TunerStudio to recover and redo the TPS calibration if this somehow gets corrupted
-      
-      //Check that the ADC values fall within the min and max ranges (Should always be the case, but noise can cause these to fluctuate outside the defined range).
-      if (currentStatus.tps2ADC < configPage9.tps2Min) { tempADC2 = configPage9.tps2Min; }
-      else if(currentStatus.tps2ADC > configPage9.tps2Max) { tempADC2 = configPage9.tps2Max; }
-    }
-
-    /* Map ADC to TPS depending on the sensor type */   
-    if (configPage2.tpsType == TPS_MODE_2POINT) // Traditional linear TPS, supports reversed connection.
-    {     
-      if(configPage2.tpsMax > configPage2.tpsMin) { currentStatus.TPS = map(tempADC, configPage2.tpsMin, configPage2.tpsMax, 0, 200); } //Take the raw TPS ADC value and convert it into a TPS% based on the calibrated values
-      else { currentStatus.TPS = map(tempADC, configPage2.tpsMin, configPage2.tpsMax, 200, 0); } // Reversed connection support. 
-    }
-    
-    if (configPage2.tpsType == TPS_MODE_3POINT) // Single sensor 3 point calibration for non-linear TPS and dual slope. Does not support backwards TPS wiring.
-    {
-      if ( currentStatus.tpsADC < configPage9.tps2Min ) { currentStatus.TPS = map(tempADC, configPage2.tpsMin, configPage9.tps2Min, 0, configPage9.tpsMidPoint); }
-      else {currentStatus.TPS = map(tempADC, configPage9.tps2Min, configPage2.tpsMax, configPage9.tpsMidPoint, 200); }
-    }
-    
-    if (configPage2.tpsType == TPS_MODE_DUALSENSOR) // Two linear independent TPS sensors with an overlap in the range. Used on some BOSCH 4 wire TPS. Does not support backwards TPS wiring.
-    { //TPS 1 is 0% -> midpoint), TPS2 is (midpoint -> 100%)
-      if ( currentStatus.tpsADC < configPage2.tpsMax ) { currentStatus.TPS = map(tempADC, configPage2.tpsMin, configPage2.tpsMax, 0, configPage9.tpsMidPoint); }
-      else {currentStatus.TPS = map(tempADC2, configPage9.tps2Min, configPage9.tps2Max, configPage9.tpsMidPoint, 200); }
-    }
-  } // End TPS ADC enabled
-  else 
-  { 
-    if (currentStatus.CTPSActive == true) { currentStatus.TPS = 0; } // Works to help DFCO run when there is only a CTPS and TPS is set to disabled
-    else { currentStatus.TPS = 50; } // Disable value is fixed at 25.0% should not trip DFCO etc.
-  }
+  else { currentStatus.CTPSActive = 0; }
+  TPS_time = micros();
 }
 
 void readCLT(bool useFilter)
@@ -492,13 +453,13 @@ void readCLT(bool useFilter)
     //tempReading = fastMap1023toX(analogRead(pinCLT), 511); //Get the current raw CLT value
   #endif
   //The use of the filter can be overridden if required. This is used on startup so there can be an immediately accurate coolant value for priming
-  if(useFilter == true) { currentStatus.cltADC = filterADC(tempReading, configPage4.ADCFILTER_CLT, currentStatus.cltADC); }
+  if(useFilter == true) { currentStatus.cltADC = ADC_FILTER(tempReading, configPage4.ADCFILTER_CLT, currentStatus.cltADC); }
   else { currentStatus.cltADC = tempReading; }
   
   currentStatus.coolant = table2D_getValue(&cltCalibrationTable, currentStatus.cltADC) - CALIBRATION_TEMPERATURE_OFFSET; //Temperature calibration values are stored as positive bytes. We subtract 40 from them to allow for negative temperatures
 }
 
-void readIAT(bool useFilter)
+void readIAT()
 {
   unsigned int tempReading;
   #if defined(ANALOG_ISR)
@@ -508,14 +469,13 @@ void readIAT(bool useFilter)
     tempReading = analogRead(pinIAT);
     //tempReading = fastMap1023toX(analogRead(pinIAT), 511); //Get the current raw IAT value
   #endif
-  if(useFilter == true) { currentStatus.iatADC = filterADC(tempReading, configPage4.ADCFILTER_IAT, currentStatus.iatADC); }
-  else { currentStatus.iatADC = tempReading; }
+  currentStatus.iatADC = ADC_FILTER(tempReading, configPage4.ADCFILTER_IAT, currentStatus.iatADC);
   currentStatus.IAT = table2D_getValue(&iatCalibrationTable, currentStatus.iatADC) - CALIBRATION_TEMPERATURE_OFFSET;
 }
 
-void readBaro(bool useFilter)
+void readBaro()
 {
-  if ( configPage6.useSensorBaro == true )
+  if ( configPage6.useExtBaro != 0 )
   {
     int tempReading;
     // readings
@@ -526,16 +486,42 @@ void readBaro(bool useFilter)
       tempReading = analogRead(pinBaro);
     #endif
 
-    //currentStatus.baroADC = filterADC(tempReading, configPage4.ADCFILTER_BARO, currentStatus.baroADC); //Very weak filter
-    //Error check
-    if( (tempReading < VALID_MAP_MAX) && (tempReading > VALID_MAP_MIN) )
-    {
-      if(useFilter == true) { currentStatus.baroADC = filterADC(tempReading, configPage4.ADCFILTER_BARO, currentStatus.baroADC); }
-      else { currentStatus.baroADC = tempReading; }
-      currentStatus.baro = fastMap10Bit(currentStatus.baroADC, configPage2.baroMin, configPage2.baroMax); //Get the current MAP value
-    }
-  }  
+    if(initialisationComplete == true) { currentStatus.baroADC = ADC_FILTER(tempReading, configPage4.ADCFILTER_BARO, currentStatus.baroADC); }//Very weak filter
+    else { currentStatus.baroADC = tempReading; } //Baro reading (No filter)
 
+    currentStatus.baro = fastMap10Bit(currentStatus.baroADC, configPage2.baroMin, configPage2.baroMax); //Get the current MAP value
+  }
+  else
+  {
+    /*
+    * If no dedicated baro sensor is available, attempt to get a reading from the MAP sensor. This can only be done if the engine is not running. 
+    * 1. Verify that the engine is not running
+    * 2. Verify that the reading from the MAP sensor is within the possible physical limits
+    */
+
+    //Attempt to use the last known good baro reading from EEPROM as a starting point
+    byte lastBaro = readLastBaro();
+    if ((lastBaro >= BARO_MIN) && (lastBaro <= BARO_MAX)) //Make sure it's not invalid (Possible on first run etc)
+    { currentStatus.baro = lastBaro; } //last baro correction
+    else { currentStatus.baro = 100; } //Fall back position.
+
+    //Verify the engine isn't running by confirming RPM is 0 and it has been at least 1 second since the last tooth was detected
+    unsigned long timeToLastTooth = (micros() - toothLastToothTime);
+    if((currentStatus.RPM == 0) && (timeToLastTooth > 1000000UL))
+    {
+      instanteneousMAPReading(); //Get the current MAP value
+      /* 
+      * The highest sea-level pressure on Earth occurs in Siberia, where the Siberian High often attains a sea-level pressure above 105 kPa;
+      * with record highs close to 108.5 kPa.
+      * The lowest possible baro reading is based on an altitude of 3500m above sea level.
+      */
+      if ((currentStatus.MAP >= BARO_MIN) && (currentStatus.MAP <= BARO_MAX)) //Safety check to ensure the baro reading is within the physical limits
+      {
+        currentStatus.baro = currentStatus.MAP;
+        storeLastBaro(currentStatus.baro);
+      }
+    }
+  }
 }
 
 void readO2()
@@ -551,7 +537,7 @@ void readO2()
       tempReading = analogRead(pinO2);
       //tempReading = fastMap1023toX(analogRead(pinO2), 511); //Get the current O2 value.
     #endif
-    currentStatus.O2ADC = filterADC(tempReading, configPage4.ADCFILTER_O2, currentStatus.O2ADC);
+    currentStatus.O2ADC = ADC_FILTER(tempReading, configPage4.ADCFILTER_O2, currentStatus.O2ADC);
     //currentStatus.O2 = o2CalibrationTable[currentStatus.O2ADC];
     currentStatus.O2 = table2D_getValue(&o2CalibrationTable, currentStatus.O2ADC);
   }
@@ -565,9 +551,8 @@ void readO2()
 
 void readO2_2()
 {
-  if(configPage6.egoType > 0)
-  {
-  //Get the current O2 value of sensor 2.
+  //Second O2 currently disabled as its not being used
+  //Get the current O2 value.
   unsigned int tempReading;
   #if defined(ANALOG_ISR)
     tempReading = fastMap1023toX(AnChannel[pinO2_2-A0], 511); //Get the current O2 value.
@@ -576,17 +561,11 @@ void readO2_2()
     tempReading = analogRead(pinO2_2);
     //tempReading = fastMap1023toX(analogRead(pinO2_2), 511); //Get the current O2 value.
   #endif
-  currentStatus.O2_2ADC = filterADC(tempReading, configPage4.ADCFILTER_O2, currentStatus.O2_2ADC);
+  currentStatus.O2_2ADC = ADC_FILTER(tempReading, configPage4.ADCFILTER_O2, currentStatus.O2_2ADC);
   currentStatus.O2_2 = table2D_getValue(&o2CalibrationTable, currentStatus.O2_2ADC);
-  }
-  else
-  {
-	currentStatus.O2_2ADC = 0;
-	currentStatus.O2_2 = 0;
-  }
 }
 
-void readBat(bool useFilter)
+void readBat()
 {
   int tempReading;
   #if defined(ANALOG_ISR)
@@ -620,8 +599,7 @@ void readBat(bool useFilter)
     }
   }
 
-  if(useFilter == true) { currentStatus.battery10 = filterADC(tempReading, configPage4.ADCFILTER_BAT, currentStatus.battery10); }
-  else { currentStatus.battery10 = tempReading; }
+  currentStatus.battery10 = ADC_FILTER(tempReading, configPage4.ADCFILTER_BAT, currentStatus.battery10);
 }
 
 /**
@@ -671,7 +649,7 @@ uint16_t getSpeed()
     else 
       {
         tempSpeed = 3600000000UL / (pulseTime * configPage2.vssPulsesPerKm); //Convert the pulse gap into km/h
-        tempSpeed = filterADC(tempSpeed, configPage2.vssSmoothing, currentStatus.vss); //Apply speed smoothing factor
+        tempSpeed = ADC_FILTER(tempSpeed, configPage2.vssSmoothing, currentStatus.vss); //Apply speed smoothing factor
       }
     if(tempSpeed > 1000) { tempSpeed = currentStatus.vss; } //Safety check. This usually occurs when there is a hardware issue
 
@@ -712,7 +690,7 @@ byte getFuelPressure()
     tempReading = analogRead(pinFuelPressure);
 
     tempFuelPressure = fastMap10Bit(tempReading, configPage10.fuelPressureMin, configPage10.fuelPressureMax);
-    tempFuelPressure = filterADC(tempFuelPressure, ADCFILTER_PSI_DEFAULT, currentStatus.fuelPressure); //Apply smoothing factor
+    tempFuelPressure = ADC_FILTER(tempFuelPressure, ADCFILTER_PSI_DEFAULT, currentStatus.fuelPressure); //Apply smoothing factor
     //Sanity checks
     if(tempFuelPressure > configPage10.fuelPressureMax) { tempFuelPressure = configPage10.fuelPressureMax; }
     if(tempFuelPressure < 0 ) { tempFuelPressure = 0; } //prevent negative values, which will cause problems later when the values aren't signed.
@@ -734,7 +712,7 @@ byte getOilPressure()
 
 
     tempOilPressure = fastMap10Bit(tempReading, configPage10.oilPressureMin, configPage10.oilPressureMax);
-    tempOilPressure = filterADC(tempOilPressure, ADCFILTER_PSI_DEFAULT, currentStatus.oilPressure); //Apply smoothing factor
+    tempOilPressure = ADC_FILTER(tempOilPressure, ADCFILTER_PSI_DEFAULT, currentStatus.oilPressure); //Apply smoothing factor
     //Sanity check
     if(tempOilPressure > configPage10.oilPressureMax) { tempOilPressure = configPage10.oilPressureMax; }
     if(tempOilPressure < 0 ) { tempOilPressure = 0; } //prevent negative values, which will cause problems later when the values aren't signed.
@@ -753,7 +731,7 @@ void flexPulse()
   if(READ_FLEX() == true)
   {
     unsigned long tempPW = (micros() - flexStartTime); //Calculate the pulse width
-    flexPulseWidth = filterADC(tempPW, configPage4.FILTER_FLEX, flexPulseWidth);
+    flexPulseWidth = ADC_FILTER(tempPW, configPage4.FILTER_FLEX, flexPulseWidth);
     ++flexCounter;
   }
   else
@@ -813,16 +791,3 @@ uint16_t readAuxdigital(uint8_t digitalPin)
   tempReading = digitalRead(digitalPin); 
   return tempReading;
 } 
-
-uint16_t filterADC(uint32_t input, uint32_t alpha, uint32_t prior)
-{
-  uint16_t result = (uint16_t)prior;
-  if (input != prior) // only need to calculate filter if there is a difference
-  {
-    result = (((input * (256 - alpha)) + (prior * alpha))) >> 8;
-    if (result == (uint16_t)prior) { result = (uint16_t)input; } // Ensures filter convergence to input value with heavy filters. In practice when alpha filters are greater than 128.
-  }
-  // else result = prior = input. and nothing to do.
- 
-  return result;
-}

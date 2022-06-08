@@ -408,6 +408,42 @@ void readTPS(bool useFilter)
   
   //Check whether the closed throttle position sensor is active (shared calibrations with dual sensor so can only have one or the other.)
   if ( (configPage2.CTPSEnabled == true) && (configPage2.tpsType != TPS_MODE_DUALSENSOR) )
+  currentStatus.TPSlast = currentStatus.TPS;
+  #if defined(ANALOG_ISR)
+    byte tempTPS = fastMap1023toX(AnChannel[pinTPS-A0], 255); //Get the current raw TPS ADC value and map it into a byte
+  #else
+    analogRead(pinTPS);
+    byte tempTPS = fastMap1023toX(analogRead(pinTPS), 255); //Get the current raw TPS ADC value and map it into a byte
+  #endif
+  //The use of the filter can be overridden if required. This is used on startup to disable priming pulse if flood clear is wanted
+  if(useFilter == true) { currentStatus.tpsADC = ADC_FILTER(tempTPS, configPage4.ADCFILTER_TPS, currentStatus.tpsADC); }
+  else { currentStatus.tpsADC = tempTPS; }
+  byte tempADC = currentStatus.tpsADC; //The tempADC value is used in order to allow TunerStudio to recover and redo the TPS calibration if this somehow gets corrupted
+
+  if(configPage2.tpsMax > configPage2.tpsMin)
+  {
+    //Check that the ADC values fall within the min and max ranges (Should always be the case, but noise can cause these to fluctuate outside the defined range).
+    if (currentStatus.tpsADC < configPage2.tpsMin) { tempADC = configPage2.tpsMin; }
+    else if(currentStatus.tpsADC > configPage2.tpsMax) { tempADC = configPage2.tpsMax; }
+    currentStatus.TPS = map(tempADC, configPage2.tpsMin, configPage2.tpsMax, 0, 200); //Take the raw TPS ADC value and convert it into a TPS% based on the calibrated values
+  }
+  else
+  {
+    //This case occurs when the TPS +5v and gnd are wired backwards, but the user wishes to retain this configuration.
+    //In such a case, tpsMin will be greater then tpsMax and hence checks and mapping needs to be reversed
+
+    tempADC = 255 - currentStatus.tpsADC; //Reverse the ADC values
+    uint16_t tempTPSMax = 255 - configPage2.tpsMax;
+    uint16_t tempTPSMin = 255 - configPage2.tpsMin;
+
+    //All checks below are reversed from the standard case above
+    if (tempADC > tempTPSMax) { tempADC = tempTPSMax; }
+    else if(tempADC < tempTPSMin) { tempADC = tempTPSMin; }
+    currentStatus.TPS = map(tempADC, tempTPSMin, tempTPSMax, 0, 200);
+  }
+
+  //Check whether the closed throttle position sensor is active
+  if(configPage2.CTPSEnabled == true)
   {
     if(configPage2.CTPSPolarity == 0) { currentStatus.CTPSActive = !digitalRead(pinCTPS); } //Normal mode (ground switched)
     else { currentStatus.CTPSActive = digitalRead(pinCTPS); } //Inverted mode (5v activates closed throttle position sensor)

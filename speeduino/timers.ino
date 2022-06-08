@@ -32,6 +32,7 @@ void initialiseTimers()
   loop100ms = 0;
   loop250ms = 0;
   loopSec = 0;
+  tachoOutputFlag = DEACTIVE;
 }
 
 

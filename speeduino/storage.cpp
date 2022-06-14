@@ -137,7 +137,7 @@ static inline write_location write(table_axis_iterator it, write_location locati
 
 static inline write_location writeTable(const void *pTable, table_type_t key, write_location location)
 {
-  return write(y_begin(pTable, key).reverse(), 
+  return write(y_rbegin(pTable, key), 
                 write(x_begin(pTable, key), 
                   write(rows_begin(pTable, key), location)));
 }
@@ -385,7 +385,7 @@ static inline eeprom_address_t load(table_axis_iterator it, eeprom_address_t add
 
 static inline eeprom_address_t loadTable(void *pTable, table_type_t key, eeprom_address_t address)
 {
-  return load(y_begin(pTable, key).reverse(),
+  return load(y_rbegin(pTable, key),
                 load(x_begin(pTable, key), 
                   load(rows_begin(pTable, key), address)));
 }
@@ -546,8 +546,8 @@ uint32_t readPageCRC32(uint8_t pageNum)
 }
 
 /** Same as above, but writes the CRC32 for the calibration page rather than tune data
-@param pageNum - Calibration page number
-@param crcValue - CRC32 checksum
+@param calibrationPageNum - Calibration page number
+@param calibrationCRC - CRC32 checksum
 */
 void storeCalibrationCRC32(uint8_t calibrationPageNum, uint32_t calibrationCRC)
 {
@@ -572,7 +572,7 @@ void storeCalibrationCRC32(uint8_t calibrationPageNum, uint32_t calibrationCRC)
 }
 
 /** Retrieves and returns the 4 byte CRC32 checksum for a given calibration page from EEPROM.
-@param pageNum - Config page number
+@param calibrationPageNum - Config page number
 */
 uint32_t readCalibrationCRC32(uint8_t calibrationPageNum)
 {

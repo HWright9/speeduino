@@ -25,7 +25,7 @@ volatile bool tachoAlt = false;
 #define TACHO_PULSE_HIGH() *tach_pin_port |= (tach_pin_mask)
 #define TACHO_PULSE_LOW() *tach_pin_port &= ~(tach_pin_mask)
 #define TACHO_PULSE_TOGGLE() *tach_pin_port = *tach_pin_port^tach_pin_mask // Toggle Tacho
-enum TachoOutputStatus {INACTIVE, READY, ACTIVE}; //The 3 statuses that the tacho output pulse can have
+enum TachoOutputStatus {TACHO_INACTIVE, READY, ACTIVE}; //The 3 statuses that the tacho output pulse can have. NOTE: Cannot just use 'INACTIVE' as this is already defined within the Teensy Libs
 
 volatile uint8_t tachoEndTime; //The time (in ms) that the tacho pulse needs to end at
 volatile uint8_t tacho_ms_counter; // low value version of ms counter used for tacho output

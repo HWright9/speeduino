@@ -227,7 +227,6 @@
 #define BIT_STATUS3_NSQUIRTS2     6
 #define BIT_STATUS3_NSQUIRTS3     7
 
-#define BIT_STATUS4_WMI_EMPTY     0 //Indicates whether the WMI tank is empty
 #define BIT_STATUS4_VVT1_ERROR    1 //VVT1 cam angle within limits or not
 #define BIT_STATUS4_VVT2_ERROR    2 //VVT2 cam angle within limits or not
 #define BIT_STATUS4_FAN           3 //Fan Status
@@ -288,11 +287,6 @@
 
 #define EN_BOOST_CONTROL_BARO   0
 #define EN_BOOST_CONTROL_FIXED  1
-
-#define WMI_MODE_SIMPLE       0
-#define WMI_MODE_PROPORTIONAL 1
-#define WMI_MODE_OPENLOOP     2
-#define WMI_MODE_CLOSEDLOOP   3
 
 #define HARD_CUT_FULL       0
 #define HARD_CUT_ROLLING    1
@@ -501,7 +495,6 @@ extern struct table2D fuelTempTable;  //6 bin fuel temperature correction table 
 extern struct table2D knockWindowStartTable;
 extern struct table2D knockWindowDurationTable;
 extern struct table2D oilPressureProtectTable;
-extern struct table2D wmiAdvTable; //6 bin wmi correction table for timing advance (2D)
 extern struct table2D coolantProtectTable; //6 bin coolant temperature protection table for engine protection (2D)
 extern struct table2D fanPWMTable;
 extern struct table2D ego_IntegralTable; // For ego Integral Control (2D)
@@ -755,11 +748,12 @@ struct statuses {
   uint16_t vss;      /**< Current speed reading. Natively stored in kph and converted to mph in TS if required */
   bool idleUpOutputActive; /**< Whether the idle up output is currently active */
   byte gear;         /**< Current gear (Calculated from vss) */
-  byte fuelPressure; /**< Fuel pressure in PSI */
-  byte oilPressure;  /**< Oil pressure in PSI */
+  uint16_t fuelPressure; /**< Fuel pressure in kPa Absolute*/
+  int fuelPress_ADC; 
+  byte oilPressure;  /**< Oil pressure in KPa x 4 Absolute*/
+  int oilPress_ADC; 
   byte engineProtectStatus;
   byte fanDuty;
-  byte wmiPW;
   volatile byte status4; ///< Status bits (See BIT_STATUS4_* defines on top of this file)
   int16_t vvt2Angle; //Has to be a long for PID calcs (CL VVT control)
   byte vvt2TargetAngle;
@@ -1363,38 +1357,18 @@ struct config10 {
   byte unused11_165 : 3;
   
   int8_t fuelPressureMin;
-  byte fuelPressureMax;
+  uint16_t fuelPressureMax;
   int8_t oilPressureMin;
   byte oilPressureMax;
 
   byte oilPressureProtRPM[4];
   byte oilPressureProtMins[4];
-
-  byte wmiEnabled : 1; // Byte 149
-  byte wmiMode : 6;
   
-  byte wmiAdvEnabled : 1;
+  byte ADCFILTER_FPRESS;
+  byte ADCFILTER_OPRESS;
 
-  byte wmiTPS; // Byte 150
-  byte wmiRPM; // Byte 151
-  byte wmiMAP; // Byte 152
-  byte wmiMAP2; // Byte 153
-  byte wmiIAT; // Byte 154
-  int8_t wmiOffset; // Byte 155
-
-  byte wmiIndicatorEnabled : 1; // 156
-  byte wmiIndicatorPin : 6;
-  byte wmiIndicatorPolarity : 1;
-
-  byte wmiEmptyEnabled : 1; // 157
-  byte wmiEmptyPin : 6;
-  byte wmiEmptyPolarity : 1;
-
-  byte wmiEnabledPin; // 158
-
-  byte wmiAdvBins[6]; //Bytes 159-164
-  byte wmiAdvAdj[6];  //Additional advance (in degrees)
-                      //Bytes 165-170
+  byte unused10_152_170[18];
+  
   byte vvtCLminDuty;
   byte vvtCLmaxDuty;
   byte vvt2Pin : 6;
@@ -1577,9 +1551,6 @@ extern byte pinBaro; //Pin that an external barometric pressure sensor is attach
 extern byte pinResetControl; // Output pin used control resetting the Arduino
 extern byte pinFuelPressure;
 extern byte pinOilPressure;
-extern byte pinWMIEmpty; // Water tank empty sensor
-extern byte pinWMIIndicator; // No water indicator bulb
-extern byte pinWMIEnabled; // ON-OFF ouput to relay/pump/solenoid 
 extern byte pinMC33810_1_CS;
 extern byte pinMC33810_2_CS;
 #ifdef USE_SPI_EEPROM

@@ -147,9 +147,9 @@ byte getTSLogEntry(uint16_t byteNum)
     case 102: statusValue = lowByte(currentStatus.vss); break;
     case 103: statusValue = highByte(currentStatus.vss); break;
     case 104: statusValue = currentStatus.gear; break;
-    case 105: statusValue = currentStatus.fuelPressure; break;
-    case 106: statusValue = currentStatus.oilPressure; break;
-    case 107: statusValue = currentStatus.wmiPW; break;
+    case 105: statusValue = lowByte(currentStatus.fuelPressure); break; //2 bytes for fuelPressure
+    case 106: statusValue = highByte(currentStatus.fuelPressure); break;
+    case 107: statusValue = currentStatus.oilPressure; break;
     case 108: statusValue = currentStatus.status4; break;
     case 109: statusValue = lowByte(currentStatus.vvt2Angle); break; //2 bytes for vvt2Angle
     case 110: statusValue = highByte(currentStatus.vvt2Angle); break;
@@ -273,19 +273,18 @@ int16_t getReadableLogEntry(uint16_t logIndex)
     case 73: statusValue = currentStatus.gear; break;
     case 74: statusValue = currentStatus.fuelPressure; break;
     case 75: statusValue = currentStatus.oilPressure; break;
-    case 76: statusValue = currentStatus.wmiPW; break;
-    case 77: statusValue = currentStatus.status4; break;
-    case 78: statusValue = currentStatus.vvt2Angle; break; //2 bytes for vvt2Angle
-    case 79: statusValue = currentStatus.vvt2TargetAngle; break;
-    case 80: statusValue = currentStatus.vvt2Duty; break;
-    case 81: statusValue = currentStatus.outputsStatus; break;
-    case 82: statusValue = currentStatus.fuelTemp; break; //Fuel temperature from flex sensor
-    case 83: statusValue = currentStatus.fuelTempCorrection; break; //Fuel temperature Correction (%)
-    case 84: statusValue = currentStatus.advance1; break; //advance 1 (%)
-    case 85: statusValue = currentStatus.advance2; break; //advance 2 (%)
-    case 86: statusValue = currentStatus.TS_SD_Status; break; //SD card status
-    case 87: statusValue = currentStatus.EMAP; break;
-    case 88: statusValue = currentStatus.fanDuty; break;
+    case 76: statusValue = currentStatus.status4; break;
+    case 77: statusValue = currentStatus.vvt2Angle; break; //2 bytes for vvt2Angle
+    case 78: statusValue = currentStatus.vvt2TargetAngle; break;
+    case 79: statusValue = currentStatus.vvt2Duty; break;
+    case 80: statusValue = currentStatus.outputsStatus; break;
+    case 81: statusValue = currentStatus.fuelTemp; break; //Fuel temperature from flex sensor
+    case 82: statusValue = currentStatus.fuelTempCorrection; break; //Fuel temperature Correction (%)
+    case 83: statusValue = currentStatus.advance1; break; //advance 1 (%)
+    case 84: statusValue = currentStatus.advance2; break; //advance 2 (%)
+    case 85: statusValue = currentStatus.TS_SD_Status; break; //SD card status
+    case 86: statusValue = currentStatus.EMAP; break;
+    case 87: statusValue = currentStatus.fanDuty; break;
   }
 
   return statusValue;

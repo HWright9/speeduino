@@ -12,6 +12,8 @@
 #define ADCFILTER_BAT_DEFAULT  128
 #define ADCFILTER_MAP_DEFAULT   20 //This is only used on Instantaneous MAP readings and is intentionally very weak to allow for faster response
 #define ADCFILTER_BARO_DEFAULT  64
+#define FILTER_FPRESS_DEFAULT  128
+#define FILTER_OPRESS_DEFAULT  128
 
 #define ADCFILTER_PSI_DEFAULT  150 //not currently configurable at runtime, used for misc pressure sensors, oil, fuel, etc.
 
@@ -75,8 +77,8 @@ uint32_t vssGetPulseGap(byte);
 void vssPulse();
 uint16_t getSpeed();
 byte getGear();
-byte getFuelPressure();
-byte getOilPressure();
+void readFuelPressure(bool=true); //Allows the option to override the use of the filter
+void readOilPressure(bool=true); //Allows the option to override the use of the filter
 uint16_t readAuxanalog(uint8_t analogPin);
 uint16_t readAuxdigital(uint8_t digitalPin);
 uint16_t filterADC(uint32_t input, uint32_t alpha, uint32_t prior); // replaces inline macro ADC_FILTER

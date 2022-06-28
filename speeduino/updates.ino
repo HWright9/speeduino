@@ -403,19 +403,6 @@ void doUpdates()
     configPage10.oilPressureEnable = false;
     configPage10.fuelPressureEnable = false;
     
-    //wmi
-    configPage10.wmiEnabled = 0;
-    configPage10.wmiMode = 0;
-    configPage10.wmiOffset = 0;
-    configPage10.wmiIndicatorEnabled = 0;
-    configPage10.wmiEmptyEnabled = 0;
-    configPage10.wmiAdvEnabled = 0;
-    for(int i=0; i<6; i++)
-    {
-      configPage10.wmiAdvBins[i] = i*100/2;
-      configPage10.wmiAdvAdj[i] = OFFSET_IGNITION;
-    }
-
     //Programmable outputs added. Set all to disabled
     configPage13.outputPin[0] = 0;
     configPage13.outputPin[1] = 0;
@@ -532,7 +519,6 @@ void doUpdates()
     configPage4.floodClear *= 2;
     configPage4.dfcoTPSThresh *= 2;
     configPage10.lnchCtrlTPS *= 2;
-    configPage10.wmiTPS *= 2;
     configPage10.n2o_minTPS *= 2;
     if(configPage10.fuel2SwitchVariable == FUEL2_CONDITION_TPS) { configPage10.fuel2SwitchValue *= 2; }
     if(configPage10.spark2SwitchVariable == SPARK2_CONDITION_TPS) { configPage10.spark2SwitchVariable *= 2; }

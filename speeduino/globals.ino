@@ -52,7 +52,6 @@ struct table2D fuelTempTable;  ///< 6 bin flex fuel correction table for fuel ad
 struct table2D knockWindowStartTable;
 struct table2D knockWindowDurationTable;
 struct table2D oilPressureProtectTable;
-struct table2D wmiAdvTable; //6 bin wmi correction table for timing advance (2D)
 struct table2D coolantProtectTable;
 struct table2D fanPWMTable;
 struct table2D ego_IntegralTable; /// For ego Integral Control (2D)
@@ -242,9 +241,6 @@ byte pinBaro; //Pin that an al barometric pressure sensor is attached to (If use
 byte pinResetControl; // Output pin used control resetting the Arduino
 byte pinFuelPressure;
 byte pinOilPressure;
-byte pinWMIEmpty; // Water tank empty sensor
-byte pinWMIIndicator; // No water indicator bulb
-byte pinWMIEnabled; // ON-OFF output to relay/pump/solenoid 
 byte pinMC33810_1_CS;
 byte pinMC33810_2_CS;
 #ifdef USE_SPI_EEPROM

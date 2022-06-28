@@ -324,10 +324,10 @@ void sendcanValues(uint16_t offset, uint16_t packetLength, byte cmd, byte portTy
   fullStatus[100] = lowByte(currentStatus.vss); //speed reading from the speed sensor
   fullStatus[101] = highByte(currentStatus.vss);
   fullStatus[102] = currentStatus.gear; 
-  fullStatus[103] = currentStatus.fuelPressure;
-  fullStatus[104] = currentStatus.oilPressure;
-  fullStatus[105] = currentStatus.wmiPW;
-  fullStatus[106] = currentStatus.status4; // wmiEmptyBit(0), vvt1Error(1), vvt2Error(2), fanStatus(3), UnusedBits(4:7)
+  fullStatus[103] = highByte(currentStatus.fuelPressure);
+  fullStatus[104] = lowByte(currentStatus.fuelPressure);
+  fullStatus[105] = currentStatus.oilPressure;
+  fullStatus[106] = currentStatus.status4; // UnusedBit(0), vvt1Error(1), vvt2Error(2), fanStatus(3), UnusedBits(4:7)
   fullStatus[107] = (int8_t)currentStatus.vvt2Angle;
   fullStatus[108] = currentStatus.vvt2TargetAngle;
   fullStatus[109] = currentStatus.vvt2Duty;
@@ -507,8 +507,8 @@ if (PIDmode == 0x01)
 
           case 10:        // PID-0x0A , Fuel Pressure (Gauge) , range is 0 to 765 kPa , formula == A / 3)
             uint16_t temp_fuelpressure;
-            // Fuel pressure is in PSI. PSI to kPa is 6.89475729, but that needs to be divided by 3 for OBD2 formula. So 2.298.... 2.3 is close enough, so that in fraction.
-            temp_fuelpressure = (currentStatus.fuelPressure * 23) / 10;
+            // Fuel pressure is in kPa
+            temp_fuelpressure = currentStatus.fuelPressure;
             outMsg.buf[0] =  0x03;    // sending 3 byte
             outMsg.buf[1] =  0x41;    // 
             outMsg.buf[2] =  0x0A;    // pid code

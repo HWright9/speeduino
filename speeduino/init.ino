@@ -252,12 +252,6 @@ void initialiseAll()
     fanPWMTable.values = configPage9.PWMFanDuty;
     fanPWMTable.axisX = configPage6.fanPWMBins;
 
-    wmiAdvTable.valueSize = SIZE_BYTE;
-    wmiAdvTable.axisSize = SIZE_BYTE; //Set this table to use byte axis bins
-    wmiAdvTable.xSize = 6;
-    wmiAdvTable.values = configPage10.wmiAdvAdj;
-    wmiAdvTable.axisX = configPage10.wmiAdvBins;
-
     cltCalibrationTable.valueSize = SIZE_INT;
     cltCalibrationTable.axisSize = SIZE_INT;
     cltCalibrationTable.xSize = 32;
@@ -395,6 +389,10 @@ void initialiseAll()
         else { currentStatus.baro = 100; } //Final fall back position.
       }
     }
+    
+    //Read fuel and oil pressure with no filter (probably zero but can't assume for the running reset case).
+    readFuelPressure(false);
+    readOilPressure(false);
 
     //Check whether the flex sensor is enabled and if so, attach an interrupt for it
     if(configPage2.flexEnabled > 0)
@@ -463,8 +461,8 @@ void initialiseAll()
     toothLastToothTime = 0;
 
     //Lookup the current MAP reading for barometric pressure
-    instanteneousMAPReading();
-    readBaro();
+    //instanteneousMAPReading();
+    //readBaro();
     
     noInterrupts();
     initialiseTriggers();
@@ -1404,9 +1402,6 @@ void setPinMapping(byte boardID)
       pinResetControl = 43; //Reset control output
       pinBaro = A5;
       pinVSS = 20;
-      pinWMIEmpty = 46;
-      pinWMIIndicator = 44;
-      pinWMIEnabled = 42;
 
       #if defined(CORE_TEENSY35)
         pinInjector6 = 51;
@@ -1885,9 +1880,6 @@ void setPinMapping(byte boardID)
       pinFlex = 2; // Flex sensor
       pinResetControl = 43; //Reset control output
       pinVSS = 3; //VSS input pin
-      pinWMIEmpty = 31; //(placeholder)
-      pinWMIIndicator = 33; //(placeholder)
-      pinWMIEnabled = 35; //(placeholder)
       pinIdleUp = 37; //(placeholder)
       pinCTPS = A6; //(placeholder)
      #elif defined(STM32F407xx)
@@ -1933,9 +1925,6 @@ void setPinMapping(byte boardID)
       pinFlex = PD7; // Flex sensor
       pinResetControl = PB7; //Reset control output
       pinVSS = PB6; //VSS input pin
-      pinWMIEmpty = PD15; //(placeholder)
-      pinWMIIndicator = PD13; //(placeholder)
-      pinWMIEnabled = PE15; //(placeholder)
       pinIdleUp = PE14; //(placeholder)
       pinCTPS = PA6; //(placeholder)
      #endif
@@ -2663,10 +2652,6 @@ void setPinMapping(byte boardID)
   if ( (configPage2.vssPin != 0) && (configPage2.vssPin < BOARD_MAX_IO_PINS) ) { pinVSS = pinTranslate(configPage2.vssPin); }
   if ( (configPage10.fuelPressureEnable) && (configPage10.fuelPressurePin < BOARD_MAX_IO_PINS) ) { pinFuelPressure = pinTranslateAnalog(configPage10.fuelPressurePin); }
   if ( (configPage10.oilPressureEnable) && (configPage10.oilPressurePin < BOARD_MAX_IO_PINS) ) { pinOilPressure = pinTranslateAnalog(configPage10.oilPressurePin); }
-  
-  if ( (configPage10.wmiEmptyPin != 0) && (configPage10.wmiEmptyPin < BOARD_MAX_IO_PINS) ) { pinWMIEmpty = pinTranslate(configPage10.wmiEmptyPin); }
-  if ( (configPage10.wmiIndicatorPin != 0) && (configPage10.wmiIndicatorPin < BOARD_MAX_IO_PINS) ) { pinWMIIndicator = pinTranslate(configPage10.wmiIndicatorPin); }
-  if ( (configPage10.wmiEnabledPin != 0) && (configPage10.wmiEnabledPin < BOARD_MAX_IO_PINS) ) { pinWMIEnabled = pinTranslate(configPage10.wmiEnabledPin); }
   if ( (configPage10.vvt2Pin != 0) && (configPage10.vvt2Pin < BOARD_MAX_IO_PINS) ) { pinVVT_2 = pinTranslate(configPage10.vvt2Pin); }
 
   //Currently there's no default pin for Idle Up
@@ -2872,20 +2857,6 @@ void setPinMapping(byte boardID)
   {
     pinMode(pinOilPressure, INPUT);
   }
-  if(configPage10.wmiEnabled > 0)
-  {
-    pinMode(pinWMIEnabled, OUTPUT);
-    if(configPage10.wmiIndicatorEnabled > 0)
-    {
-      pinMode(pinWMIIndicator, OUTPUT);
-      if (configPage10.wmiIndicatorPolarity > 0) { digitalWrite(pinWMIIndicator, HIGH); }
-    }
-    if( (configPage10.wmiEmptyEnabled > 0) && (!pinIsOutput(pinWMIEmpty)) )
-    {
-      if (configPage10.wmiEmptyPolarity == 0) { pinMode(pinWMIEmpty, INPUT_PULLUP); } //Normal setting
-      else { pinMode(pinWMIEmpty, INPUT); } //inverted setting
-    }
-  }  
 
   //These must come after the above pinMode statements
   triggerPri_pin_port = portInputRegister(digitalPinToPort(pinTrigger));

@@ -18,6 +18,9 @@ A full copy of the license may be found in the projects root directory
 #include "pages.h"
 #include "decoders.h"
 
+uint16_t FuelPressErrorCounter; // Fuel pressure diagnostic counter
+uint16_t OilPressDiagCntr; // Oil pressure diagnostic counter
+
 /** Init all ADC conversions by setting resolutions, etc.
  */
 void initialiseADC()
@@ -124,7 +127,8 @@ void initialiseADC()
   if(configPage4.ADCFILTER_BAT  > 240) { configPage4.ADCFILTER_BAT   = ADCFILTER_BAT_DEFAULT;   writeConfig(ignSetPage); }
   if(configPage4.ADCFILTER_MAP  > 240) { configPage4.ADCFILTER_MAP   = ADCFILTER_MAP_DEFAULT;   writeConfig(ignSetPage); }
   if(configPage4.ADCFILTER_BARO > 240) { configPage4.ADCFILTER_BARO  = ADCFILTER_BARO_DEFAULT;  writeConfig(ignSetPage); }
-  if(configPage4.FILTER_FLEX    > 240) { configPage4.FILTER_FLEX     = FILTER_FLEX_DEFAULT;     writeConfig(ignSetPage); }
+  if(configPage10.ADCFILTER_FPRESS  > 240) { configPage10.ADCFILTER_FPRESS     = FILTER_FPRESS_DEFAULT;     writeConfig(wmiMapPage); }
+  if(configPage10.ADCFILTER_OPRESS  > 240) { configPage10.ADCFILTER_OPRESS     = FILTER_OPRESS_DEFAULT;     writeConfig(wmiMapPage); }
 
   flexStartTime = micros();
 
@@ -698,31 +702,58 @@ byte getGear()
   return tempGear;
 }
 
-byte getFuelPressure()
+/**
+ * @brief Performs the filtering on a sensor and any diagnostics. Returns a status variable 
+ * Status 0 = Error Default value provided
+ * Status 1 = Error Frozen value provided
+ * Status 2 = No Error.
+ * 
+ * @param ADC_Value the address of the ADC value to be updated
+ */
+//byte readFilteredSensor(int16_t *ADC_Value, byte pin, int16_t ADCFILTER_Value, int16_t lowDiagThresh, int16_t hiDiagThresh, byte updateRate, bool enableFilter, bool enableDiag);
+
+void readFuelPressure(bool useFilter)
 {
   int16_t tempFuelPressure = 0;
-  uint16_t tempReading;
+  int16_t tempReading;
 
   if(configPage10.fuelPressureEnable > 0)
   {
-    //Perform ADC read
+    #if defined(ANALOG_ISR)
+      tempReading = fastMap1023toX(AnChannel[pinFuelPressure-A0], 511); //Get the fuel pressure.
+    #else
     tempReading = analogRead(pinFuelPressure);
     tempReading = analogRead(pinFuelPressure);
+    #endif
+    
+    if (useFilter == true)
+    {
+      // Diagnostics for short to ground or Open Circuit on filtered value.
+      if ((tempReading > 50) && (tempReading < 970)) // Within range. Add cal values later
+      { 
+        if (FuelPressErrorCounter == 0) { currentStatus.fuelPress_ADC = filterADC(tempReading, configPage10.ADCFILTER_FPRESS, currentStatus.fuelPress_ADC); } // Diag ok, update value using filter.
+        else if (FuelPressErrorCounter > 30) { FuelPressErrorCounter = 30; } // Limit diag counter so that it will recover fast (1sec) if the values are within range.
+        else if (FuelPressErrorCounter > 0) { FuelPressErrorCounter = FuelPressErrorCounter - 1; } // Decrement diag counter when values appear good.
+      }
+      else // Not in range.
+      {
+        if (FuelPressErrorCounter < 150) { FuelPressErrorCounter = FuelPressErrorCounter + 1; }    //faulted for < 5sec  Hold last value and update fault counter
+        else { currentStatus.fuelPress_ADC = map(500, configPage10.fuelPressureMin, (int16_t)configPage10.fuelPressureMax, 0, 1024 ); } //After Diag counter exceeded use ADC version of safe value. Future - add error code here. Or latching Default action. This can still recover.
+      }
+    }
+    else { currentStatus.fuelPress_ADC = tempReading; } // Bypass diagnostics and filter if not required
 
-    tempFuelPressure = fastMap10Bit(tempReading, configPage10.fuelPressureMin, configPage10.fuelPressureMax);
-    tempFuelPressure = filterADC(tempFuelPressure, ADCFILTER_PSI_DEFAULT, currentStatus.fuelPressure); //Apply smoothing factor
-    //Sanity checks
-    if(tempFuelPressure > configPage10.fuelPressureMax) { tempFuelPressure = configPage10.fuelPressureMax; }
-    if(tempFuelPressure < 0 ) { tempFuelPressure = 0; } //prevent negative values, which will cause problems later when the values aren't signed.
+    tempFuelPressure = map(currentStatus.fuelPress_ADC, 0, 1024, configPage10.fuelPressureMin, (int16_t)configPage10.fuelPressureMax);
+    if(tempFuelPressure < 0 ) { tempFuelPressure = 0; } //Fuel pressure is absolute referenced (like MAP) so negative values are not plausible.
   }
-
-  return (byte)tempFuelPressure;
+  
+  currentStatus.fuelPressure = tempFuelPressure;
 }
 
-byte getOilPressure()
+void readOilPressure(bool useFilter)
 {
   int16_t tempOilPressure = 0;
-  uint16_t tempReading;
+  int16_t tempReading;
 
   if(configPage10.oilPressureEnable > 0)
   {
@@ -731,15 +762,13 @@ byte getOilPressure()
     tempReading = analogRead(pinOilPressure);
 
 
-    tempOilPressure = fastMap10Bit(tempReading, configPage10.oilPressureMin, configPage10.oilPressureMax);
-    tempOilPressure = filterADC(tempOilPressure, ADCFILTER_PSI_DEFAULT, currentStatus.oilPressure); //Apply smoothing factor
+    tempOilPressure = map(tempReading, 0, 1024, configPage10.oilPressureMin, configPage10.oilPressureMax);
+    //fastMap10Bit(tempReading, configPage10.oilPressureMin, configPage10.oilPressureMax);
     //Sanity check
-    if(tempOilPressure > configPage10.oilPressureMax) { tempOilPressure = configPage10.oilPressureMax; }
     if(tempOilPressure < 0 ) { tempOilPressure = 0; } //prevent negative values, which will cause problems later when the values aren't signed.
+    if(useFilter == true) { tempOilPressure = filterADC(tempOilPressure, configPage10.ADCFILTER_OPRESS, currentStatus.oilPressure); } //Apply smoothing factor
   }
-
-
-  return (byte)tempOilPressure;
+  currentStatus.oilPressure = tempOilPressure;
 }
 
 /*

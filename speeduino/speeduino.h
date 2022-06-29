@@ -39,7 +39,6 @@ extern bool ignitionOn; /**< The current state of the ignition system (on or off
 extern bool fuelOn; /**< The current state of the fuel system (on or off) */
 extern bool engineIsMoving; /** If the engine is moving, based on changes in trigger inputs */
 
-extern byte maxIgnOutputs; /**< Used for rolling rev limiter to indicate how many total ignition channels should currently be firing */
 extern byte curRollingCut; /**< Rolling rev limiter, current ignition channel being cut */
 extern byte rollingCutCounter; /**< how many times (revolutions) the ignition has been cut in a row */
 extern uint32_t rollingCutLastRev; /**< Tracks whether we're on the same or a different rev for the rolling cut */

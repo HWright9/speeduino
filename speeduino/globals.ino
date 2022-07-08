@@ -246,6 +246,7 @@ byte pinFuelPressure;
 byte pinOilPressure;
 byte pinMC33810_1_CS;
 byte pinMC33810_2_CS;
+byte pinSDEnable;
 #ifdef USE_SPI_EEPROM
   byte pinSPIFlash_CS;
 #endif

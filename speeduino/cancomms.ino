@@ -344,6 +344,7 @@ void sendcanValues(uint16_t offset, uint16_t packetLength, byte cmd, byte portTy
   fullStatus[120] = highByte(currentStatus.EMAP);
   fullStatus[121] = currentStatus.fanDuty;
   fullStatus[122] = currentStatus.ego2Correction; // ego 2 correction
+  fullStatus[123] = currentStatus.fuelPressCorrection; // Fuel Pressure Correction
 
   for(byte x=0; x<packetLength; x++)
   {

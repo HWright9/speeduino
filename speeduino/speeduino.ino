@@ -1204,7 +1204,6 @@ void loop()
  * @return uint16_t The injector pulse width in uS
  */
  
- // @param injOpen Injector opening time. The time the injector take to open minus the time it takes to close (Both in uS) - REMOVED HRW and will be used a the end.
 uint16_t Calc_BaseFuel(int REQ_FUEL, byte VE, long MAP, uint16_t corrections)
 {
   //Standard float version of the calculation

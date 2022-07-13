@@ -165,6 +165,7 @@ byte getTSLogEntry(uint16_t byteNum)
     case 120: statusValue = highByte(currentStatus.EMAP); break;
     case 121: statusValue = currentStatus.fanDuty; break;
     case 122: statusValue = currentStatus.ego2Correction; break; //Exhaust gas correction bank 2(%)
+    case 123: statusValue = currentStatus.fuelPressCorrection; break; //Fuel Pressure Correction (%)
   }
 
   return statusValue;

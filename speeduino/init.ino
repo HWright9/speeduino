@@ -221,6 +221,12 @@ void initialiseAll()
     fuelTempTable.xSize = 6;
     fuelTempTable.values = configPage10.fuelTempValues;
     fuelTempTable.axisX = configPage10.fuelTempBins;
+    
+    fuelPressTable.valueSize = SIZE_BYTE;
+    fuelPressTable.axisSize = SIZE_INT; //Set this table to use int axis bins
+    fuelPressTable.xSize = 4;
+    fuelPressTable.values = configPage10.fuelPressValues;
+    fuelPressTable.axisX = configPage10.fuelPressBins;
 
     knockWindowStartTable.valueSize = SIZE_BYTE;
     knockWindowStartTable.axisSize = SIZE_BYTE; //Set this table to use byte axis bins
@@ -351,8 +357,6 @@ void initialiseAll()
     initialiseADC();
     initialiseProgrammableIO();
 
-    //Lookup the current MAP reading for barometric pressure
-    instanteneousMAPReading(false); // No filter on first read to init MAP and For Accurate Baro Read when first MAP used to set baro.
     //barometric reading can be taken from either an external sensor if enabled, or simply by using the initial MAP value
     if ( configPage6.useSensorBaro == true )
     {
@@ -376,6 +380,9 @@ void initialiseAll()
       * with record highs close to 108.5 kPa.
       * The lowest measurable sea-level pressure is found at the centers of tropical cyclones and tornadoes, with a record low of 87 kPa;
       */
+      //Lookup the current MAP reading for barometric pressure
+      instanteneousMAPReading(false); // No filter on first read to init MAP and For Accurate Baro Read when first MAP used to set baro.
+      
       if ((currentStatus.MAP >= BARO_MIN) && (currentStatus.MAP <= BARO_MAX)) //Check if engine isn't running
       {
         currentStatus.baro = currentStatus.MAP;

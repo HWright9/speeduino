@@ -91,80 +91,6 @@ void initialiseCorrections()
 Calls all the other corrections functions and combines their results.
 This is the only function that should be called from anywhere outside the file
 */
-uint16_t correctionsFuel1()
-{
-  #define MAX_CORRECTIONS 3 //The maximum number of corrections allowed before the sum is reprocessed
-  uint32_t sumCorrections = 100;
-  byte activeCorrections = 0;
-  uint16_t result; //temporary variable to store the result of each corrections function
-
-  //The values returned by each of the correction functions are multiplied together and then divided back to give a single 0-255 value.
-  currentStatus.wueCorrection = correctionWUE();
-  if (currentStatus.wueCorrection != 100) { sumCorrections = (sumCorrections * currentStatus.wueCorrection); activeCorrections++; }
-
-  result = correctionASE();
-  if (result != 100) { sumCorrections = (sumCorrections * result); activeCorrections++; }
-
-  result = correctionCranking();
-  if (result != 100) { sumCorrections = (sumCorrections * result); activeCorrections++; }
-  if (activeCorrections == MAX_CORRECTIONS) { sumCorrections = sumCorrections / powint(100,activeCorrections); activeCorrections = 0; } // Need to check this to ensure that sumCorrections doesn't overflow. Can occur when the number of corrections is greater than 3 (Which is 100^4) as 100^5 can overflow
-
-  currentStatus.AEamount = correctionAccel();
-  if (configPage2.aeApplyMode == AE_MODE_MULTIPLIER)
-  {
-    if (currentStatus.AEamount != 100) { sumCorrections = (sumCorrections * currentStatus.AEamount); activeCorrections++; }
-    if (activeCorrections == MAX_CORRECTIONS) { sumCorrections = sumCorrections / powint(100,activeCorrections); activeCorrections = 0; }
-  }
-
-  result = correctionFloodClear();
-  if (result != 100) { sumCorrections = (sumCorrections * result); activeCorrections++; }
-  if (activeCorrections == MAX_CORRECTIONS) { sumCorrections = sumCorrections / powint(100,activeCorrections); activeCorrections = 0; }
-
-  currentStatus.egoCorrection = correctionAFRClosedLoop();
-  if (currentStatus.egoCorrection != 100) { sumCorrections = (sumCorrections * currentStatus.egoCorrection); activeCorrections++; }
-  if (activeCorrections == MAX_CORRECTIONS) { sumCorrections = sumCorrections / powint(100,activeCorrections); activeCorrections = 0; }
-
-  currentStatus.batCorrection = correctionBatVoltage();
-  if (configPage2.battVCorMode == BATTV_COR_MODE_OPENTIME)
-  {
-    inj_opentime_uS = (configPage2.injOpen * currentStatus.batCorrection) / 10; // Apply voltage correction to injector open time. *100 is no correction so this also converts to us.
-  }
-  if (configPage2.battVCorMode == BATTV_COR_MODE_WHOLE)
-  {
-    if (currentStatus.batCorrection != 100) { sumCorrections = (sumCorrections * currentStatus.batCorrection); activeCorrections++; }
-    if (activeCorrections == MAX_CORRECTIONS) { sumCorrections = sumCorrections / powint(100,activeCorrections); activeCorrections = 0; }
-    inj_opentime_uS = configPage2.injOpen * 10;
-  }
-
-  currentStatus.iatCorrection = correctionIATDensity();
-  if (currentStatus.iatCorrection != 100) { sumCorrections = (sumCorrections * currentStatus.iatCorrection); activeCorrections++; }
-  if (activeCorrections == MAX_CORRECTIONS) { sumCorrections = sumCorrections / powint(100,activeCorrections); activeCorrections = 0; }
-
-  currentStatus.baroCorrection = correctionBaro();
-  if (currentStatus.baroCorrection != 100) { sumCorrections = (sumCorrections * currentStatus.baroCorrection); activeCorrections++; }
-  if (activeCorrections == MAX_CORRECTIONS) { sumCorrections = sumCorrections / powint(100,activeCorrections); activeCorrections = 0; }
-
-  currentStatus.flexCorrection = correctionFlex();
-  if (currentStatus.flexCorrection != 100) { sumCorrections = (sumCorrections * currentStatus.flexCorrection); activeCorrections++; }
-  if (activeCorrections == MAX_CORRECTIONS) { sumCorrections = sumCorrections / powint(100,activeCorrections); activeCorrections = 0; }
-
-  currentStatus.fuelTempCorrection = correctionFuelTemp();
-  if (currentStatus.fuelTempCorrection != 100) { sumCorrections = (sumCorrections * currentStatus.fuelTempCorrection); activeCorrections++; }
-  if (activeCorrections == MAX_CORRECTIONS) { sumCorrections = sumCorrections / powint(100,activeCorrections); activeCorrections = 0; }
-
-  result = correctionDFCO();
-  if (result != 100) { sumCorrections = (sumCorrections * result); activeCorrections++; }
-  if (activeCorrections == MAX_CORRECTIONS) { sumCorrections = sumCorrections / powint(100,activeCorrections); activeCorrections = 0; }
-  
-  currentStatus.launchCorrection = correctionLaunch();
-  if (currentStatus.launchCorrection != 100) { sumCorrections = (sumCorrections * currentStatus.launchCorrection); activeCorrections++; }
-
-  sumCorrections = sumCorrections / powint(100,activeCorrections);
-
-  if(sumCorrections > 1500) { sumCorrections = 1500; } //This is the maximum allowable increase during cranking
-  return (uint16_t)sumCorrections;
-}
-
 uint16_t correctionsFuel()
 {
   uint32_t sumCorrections = 100;
@@ -212,6 +138,9 @@ uint16_t correctionsFuel()
 
   currentStatus.fuelTempCorrection = correctionFuelTemp();
   if (currentStatus.fuelTempCorrection != 100) { sumCorrections = div100(sumCorrections * currentStatus.fuelTempCorrection); }
+  
+    currentStatus.fuelPressCorrection = correctionFuelPress();
+  if (currentStatus.fuelPressCorrection != 100) { sumCorrections = div100(sumCorrections * currentStatus.fuelPressCorrection); }
 
   currentStatus.launchCorrection = correctionLaunch();
   if (currentStatus.launchCorrection != 100) { sumCorrections = div100(sumCorrections * currentStatus.launchCorrection); }
@@ -223,45 +152,6 @@ uint16_t correctionsFuel()
   return (uint16_t)sumCorrections;
 }
 
-/*
-correctionsTotal() calls all the other corrections functions and combines their results.
-This is the only function that should be called from anywhere outside the file
-*/
-static inline byte correctionsFuel_new()
-{
-  uint32_t sumCorrections = 100;
-  byte numCorrections = 0;
-
-  //The values returned by each of the correction functions are multiplied together and then divided back to give a single 0-255 value.
-  currentStatus.wueCorrection = correctionWUE(); numCorrections++;
-  uint16_t correctionASEvalue = correctionASE(); numCorrections++;
-  uint16_t correctionCrankingValue = correctionCranking(); numCorrections++;
-  currentStatus.AEamount = correctionAccel(); numCorrections++;
-  uint8_t correctionFloodClearValue = correctionFloodClear(); numCorrections++;
-  currentStatus.egoCorrection = correctionAFRClosedLoop(); numCorrections++;
-
-  currentStatus.batCorrection = correctionBatVoltage(); numCorrections++;
-  currentStatus.iatCorrection = correctionIATDensity(); numCorrections++;
-  currentStatus.baroCorrection = correctionBaro(); numCorrections++; 
-  currentStatus.flexCorrection = correctionFlex(); numCorrections++;
-  currentStatus.launchCorrection = correctionLaunch(); numCorrections++;
-
-  bitWrite(currentStatus.status1, BIT_STATUS1_DFCO, correctionDFCO());
-  if ( BIT_CHECK(currentStatus.status1, BIT_STATUS1_DFCO) == 1 ) { sumCorrections = 0; }
-
-  sumCorrections = currentStatus.wueCorrection \
-                  + correctionASEvalue \
-                  + correctionCrankingValue \
-                  + currentStatus.AEamount \
-                  + correctionFloodClearValue \
-                  + currentStatus.batCorrection \
-                  + currentStatus.iatCorrection \
-                  + currentStatus.baroCorrection \
-                  + currentStatus.flexCorrection \
-                  + currentStatus.launchCorrection;
-  return (sumCorrections);
-
-}
 
 /** Warm Up Enrichment (WUE) corrections.
 Uses a 2D enrichment table (WUETable) where the X axis is engine temp and the Y axis is the amount of extra fuel to add
@@ -799,6 +689,20 @@ byte correctionFuelTemp()
     fuelTempValue = table2D_getValue(&fuelTempTable, currentStatus.fuelTemp + CALIBRATION_TEMPERATURE_OFFSET);
   }
   return fuelTempValue;
+}
+
+/*
+ * Fuel Pressure adjustment to compensate for injector delta pressure
+*/
+byte correctionFuelPress()
+{
+  byte fuelPressValue = 100;
+
+  if (configPage10.fuelPressureEnable > 0)
+  {
+    fuelPressValue = table2D_getValue(&fuelPressTable, currentStatus.fuelPressure + CALIBRATION_TEMPERATURE_OFFSET);
+  }
+  return fuelPressValue;
 }
 
 

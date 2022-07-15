@@ -723,12 +723,12 @@ void readFuelPressure(bool useFilter)
     if (useFilter == true)
     {
       byte diagTmSclr = 0;  // Multiplier for diagnostic timeout to have the diagnostic be off, fail quick or fail slow.
-      if (fPress_DiagMode == FPDIAG_QUICK) { diagTmSclr = 1; }
-      if (fPress_DiagMode == FPDIAG_SLOW) { diagTmSclr = 3; }
+      if (configPage10.fPress_DiagMode == FPDIAG_QUICK) { diagTmSclr = 1; }
+      if (configPage10.fPress_DiagMode == FPDIAG_SLOW) { diagTmSclr = 3; }
       
       
       // Diagnostics for short to ground or Open Circuit on filtered value.
-      if ((fPress_DiagMode == FPDIAG_DISABLED) || (tempReading > 30) && (tempReading < 990)) // Within range. Or ignore if diags disabled
+      if ((configPage10.fPress_DiagMode == FPDIAG_DISABLED) || (tempReading > 30) && (tempReading < 990)) // Within range. Or ignore if diags disabled
       { 
         if (FuelPressErrorCounter == 0) { currentStatus.fuelPress_ADC = filterADC(tempReading, configPage10.ADCFILTER_FPRESS, currentStatus.fuelPress_ADC); } // Diag ok, update value using filter.
         else if (FuelPressErrorCounter > (10 * diagTmSclr)) { FuelPressErrorCounter = (10 * diagTmSclr); } // Limit diag counter so that it will recover fast if the values are within range.

@@ -750,7 +750,8 @@ struct statuses {
   uint16_t vss;      /**< Current speed reading. Natively stored in kph and converted to mph in TS if required */
   bool idleUpOutputActive; /**< Whether the idle up output is currently active */
   byte gear;         /**< Current gear (Calculated from vss) */
-  uint16_t fuelPressure; /**< Fuel pressure in kPa Absolute*/
+  uint16_t fuelPressure; /**< Fuel pressure in kPa Absolute */
+  uint16_t InjectorDeltaPress; /**< Injector delta pressure in kPa Absolute */
   int fuelPress_ADC; 
   byte oilPressure;  /**< Oil pressure in KPa x 4 Absolute*/
   int oilPress_ADC; 
@@ -1368,8 +1369,14 @@ struct config10 {
   
   byte ADCFILTER_FPRESS;
   byte ADCFILTER_OPRESS;
+  
+  byte injDeltaPressEnbl : 1;
+  byte fPress_InjTipRef : 2;
+  byte fPress_InjSupplyRef : 2;
+  byte fPress_DiagMode : 2;
+  uint16_t fPress_RefPress; // Reference fuel pressure for injector pressure differential calculations. Also used when there is a fault in fuel press sensor.
 
-  byte unused10_152_159[7];
+  byte unused10_155_159[4];
   
   uint16_t fuelPressBins[4];
   byte fuelPressValues[4];

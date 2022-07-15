@@ -692,15 +692,34 @@ byte correctionFuelTemp()
 }
 
 /*
- * Fuel Pressure adjustment to compensate for injector delta pressure
+ * Fuel Pressure adjustment to compensate for injector delta pressure.
+ * The high side pressure reference and low side pressure reference are user calibrated
+ * In the event of a fault with the sensors the fuel pressure defaults to the reference value.
 */
 byte correctionFuelPress()
 {
   byte fuelPressValue = 100;
 
-  if (configPage10.fuelPressureEnable > 0)
+  if (configPage10.injDeltaPressEnbl  > 0)
   {
-    fuelPressValue = table2D_getValue(&fuelPressTable, currentStatus.fuelPressure + CALIBRATION_TEMPERATURE_OFFSET);
+    int16_t fPress_InjTip = 101; // default 101kpa (atmosphere)
+    int16_t fPress_InjSupply = 501; // default 501kpa (4bar or 60PSI)
+    int16_t fPress_InjDelta = 400;
+    
+    if ((configPage10.fPress_InjTipRef == FPRESS_REF_MAP) && (mapErrorCount == 0)) { fPress_InjTip = currentStatus.MAP; }
+    else if (configPage10.fPress_InjTipRef == FPRESS_REF_BARO) { fPress_InjTip = currentStatus.baro; }
+    else { fPress_InjTip = 101; } // Fixed Default for faults
+    
+    if (configPage10.fPress_InjSupplyRef == FPRESS_REF_SENSOR) { fPress_InjSupply = currentStatus.fuelPressure; } // Fuel pressure from sensor handles its own default value when there is a fault
+    else if ((configPage10.fPress_InjSupplyRef == FPRESS_REF_MAP)  && (mapErrorCount == 0)) { fPress_InjSupply = currentStatus.MAP + configPage10.fPress_RefPress; }
+    else if (configPage10.fPress_InjSupplyRef == FPRESS_REF_BARO) { fPress_InjSupply = currentStatus.baro + configPage10.fPress_RefPress; }
+    else { fPress_InjSupply = 101 + configPage10.fPress_RefPress; } // Fixed uses refernce value plus 101, making the reference value gauge pressure.
+    
+    // Calculate pressure accross the injectors and use lookup table for compensation factor.
+    if (fPress_InjSupply > fPress_InjTip) { fPress_InjDelta = fPress_InjSupply - fPress_InjTip; } // prevent underflow
+    else { fPress_InjDelta = 0; }
+    
+    fuelPressValue = table2D_getValue(&fuelPressTable, fPress_InjDelta);
   }
   return fuelPressValue;
 }

@@ -704,20 +704,12 @@ byte getGear()
   return tempGear;
 }
 
-/**
- * @brief Performs the filtering on a sensor and any diagnostics. Returns a status variable 
- * Status 0 = Error Default value provided
- * Status 1 = Error Frozen value provided
- * Status 2 = No Error.
- * 
- * @param ADC_Value the address of the ADC value to be updated
- */
-//byte readFilteredSensor(int16_t *ADC_Value, byte pin, int16_t ADCFILTER_Value, int16_t lowDiagThresh, int16_t hiDiagThresh, byte updateRate, bool enableFilter, bool enableDiag);
 
 void readFuelPressure(bool useFilter)
 {
   int16_t tempFuelPressure = 0;
   int16_t tempReading;
+  
 
   if(configPage10.fuelPressureEnable > 0)
   {
@@ -730,17 +722,22 @@ void readFuelPressure(bool useFilter)
     
     if (useFilter == true)
     {
+      byte diagTmSclr = 0;  // Multiplier for diagnostic timeout to have the diagnostic be off, fail quick or fail slow.
+      if (fPress_DiagMode == FPDIAG_QUICK) { diagTmSclr = 1; }
+      if (fPress_DiagMode == FPDIAG_SLOW) { diagTmSclr = 3; }
+      
+      
       // Diagnostics for short to ground or Open Circuit on filtered value.
-      if ((tempReading > 50) && (tempReading < 970)) // Within range. Add cal values later
+      if ((fPress_DiagMode == FPDIAG_DISABLED) || (tempReading > 30) && (tempReading < 990)) // Within range. Or ignore if diags disabled
       { 
         if (FuelPressErrorCounter == 0) { currentStatus.fuelPress_ADC = filterADC(tempReading, configPage10.ADCFILTER_FPRESS, currentStatus.fuelPress_ADC); } // Diag ok, update value using filter.
-        else if (FuelPressErrorCounter > 30) { FuelPressErrorCounter = 30; } // Limit diag counter so that it will recover fast (1sec) if the values are within range.
+        else if (FuelPressErrorCounter > (10 * diagTmSclr)) { FuelPressErrorCounter = (10 * diagTmSclr); } // Limit diag counter so that it will recover fast if the values are within range.
         else if (FuelPressErrorCounter > 0) { FuelPressErrorCounter = FuelPressErrorCounter - 1; } // Decrement diag counter when values appear good.
       }
       else // Not in range.
       {
-        if (FuelPressErrorCounter < 150) { FuelPressErrorCounter = FuelPressErrorCounter + 1; }    //faulted for < 5sec  Hold last value and update fault counter
-        else { currentStatus.fuelPress_ADC = map(500, configPage10.fuelPressureMin, (int16_t)configPage10.fuelPressureMax, 0, 1024 ); } //After Diag counter exceeded use ADC version of safe value. Future - add error code here. Or latching Default action. This can still recover.
+        if (FuelPressErrorCounter < (50 * diagTmSclr)) { FuelPressErrorCounter = FuelPressErrorCounter + 1; }    //faulted for Hold last value and update fault counter until using default value
+        else { currentStatus.fuelPress_ADC = map((configPage10.fPress_RefPress + 101), configPage10.fuelPressureMin, (int16_t)configPage10.fuelPressureMax, 0, 1024 ); } //After Diag counter exceeded use ADC version of safe value. Future - add error code here. Or latching Default action. This can still recover.
       }
     }
     else { currentStatus.fuelPress_ADC = tempReading; } // Bypass diagnostics and filter if not required

@@ -70,4 +70,9 @@ extern uint8_t crankingEnrichTaper;
 #define DFCO_ACTIVE 3
 #define DFCO_RAMP_OUT 4
 
+#define FPRESS_REF_FIXED 0
+#define FPRESS_REF_BARO 1
+#define FPRESS_REF_MAP 2
+#define FPRESS_REF_SENSOR 3
+
 #endif // CORRECTIONS_H

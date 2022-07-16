@@ -139,7 +139,7 @@ uint16_t correctionsFuel()
   currentStatus.fuelTempCorrection = correctionFuelTemp();
   if (currentStatus.fuelTempCorrection != 100) { sumCorrections = div100(sumCorrections * currentStatus.fuelTempCorrection); }
   
-    currentStatus.fuelPressCorrection = correctionFuelPress();
+  currentStatus.fuelPressCorrection = correctionFuelPress();
   if (currentStatus.fuelPressCorrection != 100) { sumCorrections = div100(sumCorrections * currentStatus.fuelPressCorrection); }
 
   currentStatus.launchCorrection = correctionLaunch();
@@ -704,7 +704,6 @@ byte correctionFuelPress()
   {
     int16_t fPress_InjTip = 101; // default 101kpa (atmosphere)
     int16_t fPress_InjSupply = 501; // default 501kpa (4bar or 60PSI)
-    int16_t fPress_InjDelta = 400;
     
     if ((configPage10.fPress_InjTipRef == FPRESS_REF_MAP) && (mapErrorCount == 0)) { fPress_InjTip = currentStatus.MAP; }
     else if (configPage10.fPress_InjTipRef == FPRESS_REF_BARO) { fPress_InjTip = currentStatus.baro; }
@@ -716,11 +715,12 @@ byte correctionFuelPress()
     else { fPress_InjSupply = 101 + configPage10.fPress_RefPress; } // Fixed uses refernce value plus 101, making the reference value gauge pressure.
     
     // Calculate pressure accross the injectors and use lookup table for compensation factor.
-    if (fPress_InjSupply > fPress_InjTip) { fPress_InjDelta = fPress_InjSupply - fPress_InjTip; } // prevent underflow
-    else { fPress_InjDelta = 0; }
+    if (fPress_InjSupply > fPress_InjTip) { currentStatus.InjectorDeltaPress = fPress_InjSupply - fPress_InjTip; } // prevent underflow
+    else { currentStatus.InjectorDeltaPress = 0; }
     
-    fuelPressValue = table2D_getValue(&fuelPressTable, fPress_InjDelta);
+    fuelPressValue = table2D_getValue(&fuelPressTable, currentStatus.InjectorDeltaPress);
   }
+  else { currentStatus.InjectorDeltaPress = configPage10.fPress_RefPress; } // Set to reference pressure
   return fuelPressValue;
 }
 

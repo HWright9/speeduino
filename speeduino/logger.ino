@@ -165,7 +165,8 @@ byte getTSLogEntry(uint16_t byteNum)
     case 120: statusValue = highByte(currentStatus.EMAP); break;
     case 121: statusValue = currentStatus.fanDuty; break;
     case 122: statusValue = currentStatus.ego2Correction; break; //Exhaust gas correction bank 2(%)
-    case 123: statusValue = currentStatus.InjectorDeltaPress; break; //Injector Delta Pressure
+    case 123: statusValue = lowByte(currentStatus.InjectorDeltaPress); break; //Injector Delta Pressure
+    case 124: statusValue = highByte(currentStatus.InjectorDeltaPress); break;
     case 125: statusValue = currentStatus.fuelPressCorrection; break; //Fuel Pressure Correction (%)
   }
 

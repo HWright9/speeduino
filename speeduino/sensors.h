@@ -31,8 +31,8 @@
 #define TPS_READ_FREQUENCY  30 //ONLY VALID VALUES ARE 15 or 30!!!
 
 #define FPDIAG_DISABLED 0
-#define FPDIAG_QUICK 0
-#define FPDIAG_SLOW 0
+#define FPDIAG_QUICK 1
+#define FPDIAG_SLOW 2
 
 /*
 #if defined(CORE_AVR)

@@ -13,14 +13,14 @@
 
 #ifndef UNIT_TEST // Scope guard for unit testing
   #define LOG_ENTRY_SIZE      126 /**< The size of the live data packet. This MUST match ochBlockSize setting in the ini file */
-  #define SD_LOG_ENTRY_SIZE   126 /**< The size of the live data packet used by the SD car.*/
+  #define SD_LOG_ENTRY_SIZE   126 /**< The size of the live data packet used by the SD card.*/
 
 #else
   #define LOG_ENTRY_SIZE      1 /**< The size of the live data packet. This MUST match ochBlockSize setting in the ini file */
   #define SD_LOG_ENTRY_SIZE   1 /**< The size of the live data packet used by the SD card.*/
 #endif
 
-#define SD_LOG_NUM_FIELDS   89 /**< The number of fields that are in the log. This is always smaller than the entry size due to some fields being 2 bytes */
+#define SD_LOG_NUM_FIELDS   91 /**< The number of fields that are in the log. This is always smaller than the entry size due to some fields being 2 bytes */
 
 byte getTSLogEntry(uint16_t);
 int16_t getReadableLogEntry(uint16_t);
@@ -29,7 +29,7 @@ bool is2ByteEntry(uint8_t);
 // This array indicates which index values from the log are 2 byte values
 // This array MUST remain in ascending order
 // !!!! WARNING: If any value above 255 is required in this array, changes MUST be made to is2ByteEntry() function !!!!
-const byte PROGMEM fsIntIndex[] = {4, 14, 17, 25, 27, 32, 41, 43, 45, 47, 49, 51, 53, 55, 57, 59, 61, 63, 65, 67, 69, 71, 75, 77, 79, 81, 85, 87, 89, 93, 97, 102, 109, 119 };
+const byte PROGMEM fsIntIndex[] = {4, 14, 17, 25, 27, 32, 41, 43, 45, 47, 49, 51, 53, 55, 57, 59, 61, 63, 65, 67, 69, 71, 75, 77, 79, 81, 85, 87, 89, 93, 97, 102, 105, 109, 119, 123};
 
 //List of logger field names. This must be in the same order and length as logger_updateLogdataCSV()
 const char header_0[] PROGMEM = "secl";
@@ -108,22 +108,22 @@ const char header_72[] PROGMEM = "Vehicle Speed";
 const char header_73[] PROGMEM = "Gear";
 const char header_74[] PROGMEM = "Fuel Pressure";
 const char header_75[] PROGMEM = "Oil Pressure";
-const char header_76[] PROGMEM = "Unused";
-const char header_77[] PROGMEM = "status4";
-const char header_78[] PROGMEM = "VVT2 Angle";
-const char header_79[] PROGMEM = "VVT2 Target";
-const char header_80[] PROGMEM = "VVT2 Duty";
-const char header_81[] PROGMEM = "outputs";
-const char header_82[] PROGMEM = "Fuel Temp";
-const char header_83[] PROGMEM = "Fuel Temp Correction";
-const char header_84[] PROGMEM = "Advance 1";
-const char header_85[] PROGMEM = "Advance 2";
-const char header_86[] PROGMEM = "SD Status";
-const char header_87[] PROGMEM = "EMAP";
-const char header_88[] PROGMEM = "Fan Duty";
+const char header_76[] PROGMEM = "status4";
+const char header_77[] PROGMEM = "VVT2 Angle";
+const char header_78[] PROGMEM = "VVT2 Target";
+const char header_79[] PROGMEM = "VVT2 Duty";
+const char header_80[] PROGMEM = "outputs";
+const char header_81[] PROGMEM = "Fuel Temp";
+const char header_82[] PROGMEM = "Fuel Temp Correction";
+const char header_83[] PROGMEM = "Advance 1";
+const char header_84[] PROGMEM = "Advance 2";
+const char header_85[] PROGMEM = "SD Status";
+const char header_86[] PROGMEM = "EMAP";
+const char header_87[] PROGMEM = "Fan Duty";
+const char header_88[] PROGMEM = "EGO2 Correction";
+const char header_89[] PROGMEM = "Inj Delta Press";
+const char header_90[] PROGMEM = "Fuel Press Correction";
 /*
-const char header_89[] PROGMEM = "";
-const char header_90[] PROGMEM = "";
 const char header_91[] PROGMEM = "";
 const char header_92[] PROGMEM = "";
 const char header_93[] PROGMEM = "";
@@ -246,9 +246,9 @@ const char* const header_table[] PROGMEM = {  header_0,\
                                               header_86,\
                                               header_87,\
                                               header_88,\
-                                              /*
                                               header_89,\
                                               header_90,\
+                                              /*
                                               header_91,\
                                               header_92,\
                                               header_93,\

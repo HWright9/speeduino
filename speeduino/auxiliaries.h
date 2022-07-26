@@ -12,6 +12,7 @@ void vvtControl();
 void initialiseFan();
 void nitrousControl();
 void fanControl();
+void fuelPumpControl();
 
 #define SIMPLE_BOOST_P  1
 #define SIMPLE_BOOST_I  1
@@ -87,6 +88,8 @@ long vvt_pid_target_angle;
 long vvt2_pid_target_angle;
 long vvt_pid_current_angle;
 long vvt2_pid_current_angle;
+
+byte fpOffDelay;
 
 void boostInterrupt();
 void vvtInterrupt();

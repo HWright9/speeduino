@@ -492,7 +492,7 @@ extern struct table2D flexFuelTable;  //6 bin flex fuel correction table for fue
 extern struct table2D flexAdvTable;   //6 bin flex fuel correction table for timing advance (2D)
 extern struct table2D flexBoostTable; //6 bin flex fuel correction table for boost adjustments (2D)
 extern struct table2D fuelTempTable;  //6 bin fuel temperature correction table for fuel adjustments (2D)
-extern struct table2D fuelPressTable;  //4 bin fuel temperature correction table for fuel adjustments (2D)
+extern struct table2D injPressTable;  //4 bin fuel temperature correction table for fuel adjustments (2D)
 extern struct table2D knockWindowStartTable;
 extern struct table2D knockWindowDurationTable;
 extern struct table2D oilPressureProtectTable;
@@ -689,7 +689,7 @@ struct statuses {
   byte launchCorrection;   /**< The amount of correction being applied if launch control is active */
   byte flexCorrection;     /**< Amount of correction being applied to compensate for ethanol content */
   byte fuelTempCorrection; /**< Amount of correction being applied to compensate for fuel temperature */
-  byte fuelPressCorrection; /**< Amount of correction being applied to compensate for fuel pressure */
+  byte injPressCorrection; /**< Amount of correction being applied to compensate for injector differential pressure */
   int8_t flexIgnCorrection;/**< Amount of additional advance being applied based on flex. Note the type as this allows for negative values */
   byte afrTarget;    /**< Current AFR Target looked up from AFR target table (x10 ? See @ref afrTable)*/
   byte CLIdleTarget; /**< The target idle RPM (when closed loop idle control is active) */
@@ -1374,12 +1374,13 @@ struct config10 {
   byte fPress_InjTipRef : 2;
   byte fPress_InjSupplyRef : 2;
   byte fPress_DiagMode : 2;
+  byte fPress_SensorType : 1;
   uint16_t fPress_RefPress; // Reference fuel pressure for injector pressure differential calculations. Also used when there is a fault in fuel press sensor.
 
   byte unused10_155_159[4];
   
-  uint16_t fuelPressBins[4];
-  byte fuelPressValues[4];
+  uint16_t injPressBins[4];
+  byte injPressValues[4];
   
   byte vvtCLminDuty;
   byte vvtCLmaxDuty;

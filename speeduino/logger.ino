@@ -167,7 +167,7 @@ byte getTSLogEntry(uint16_t byteNum)
     case 122: statusValue = currentStatus.ego2Correction; break; //Exhaust gas correction bank 2(%)
     case 123: statusValue = lowByte(currentStatus.InjectorDeltaPress); break; //Injector Delta Pressure
     case 124: statusValue = highByte(currentStatus.InjectorDeltaPress); break;
-    case 125: statusValue = currentStatus.fuelPressCorrection; break; //Fuel Pressure Correction (%)
+    case 125: statusValue = currentStatus.injPressCorrection; break; //Injector Differential Correction (%)
   }
 
   return statusValue;

@@ -344,9 +344,9 @@ void sendcanValues(uint16_t offset, uint16_t packetLength, byte cmd, byte portTy
   fullStatus[120] = highByte(currentStatus.EMAP);
   fullStatus[121] = currentStatus.fanDuty;
   fullStatus[122] = currentStatus.ego2Correction; // ego 2 correction
-  fullStatus[123] = lowByte(currentStatus.InjectorDeltaPress); // Injector Delta Pressure
+  fullStatus[123] = lowByte(currentStatus.InjectorDeltaPress); // Injector Differential Pressure
   fullStatus[124] = highByte(currentStatus.InjectorDeltaPress);
-  fullStatus[125] = currentStatus.fuelPressCorrection; // Fuel Pressure Correction
+  fullStatus[125] = currentStatus.injPressCorrection; // Injector Pressure Differential Correction
 
   for(byte x=0; x<packetLength; x++)
   {

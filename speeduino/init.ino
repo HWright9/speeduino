@@ -222,11 +222,11 @@ void initialiseAll()
     fuelTempTable.values = configPage10.fuelTempValues;
     fuelTempTable.axisX = configPage10.fuelTempBins;
     
-    fuelPressTable.valueSize = SIZE_BYTE;
-    fuelPressTable.axisSize = SIZE_INT; //Set this table to use int axis bins
-    fuelPressTable.xSize = 4;
-    fuelPressTable.values = configPage10.fuelPressValues;
-    fuelPressTable.axisX = configPage10.fuelPressBins;
+    injPressTable.valueSize = SIZE_BYTE;
+    injPressTable.axisSize = SIZE_INT; //Set this table to use int axis bins
+    injPressTable.xSize = 4;
+    injPressTable.values = configPage10.injPressValues;
+    injPressTable.axisX = configPage10.injPressBins;
 
     knockWindowStartTable.valueSize = SIZE_BYTE;
     knockWindowStartTable.axisSize = SIZE_BYTE; //Set this table to use byte axis bins

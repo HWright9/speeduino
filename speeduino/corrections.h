@@ -75,4 +75,7 @@ extern uint8_t crankingEnrichTaper;
 #define FPRESS_REF_MAP 2
 #define FPRESS_REF_SENSOR 3
 
+#define FPRESS_TYPE_GAUGE 0
+#define FPRESS_TYPE_ABS 1
+
 #endif // CORRECTIONS_H

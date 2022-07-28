@@ -49,7 +49,7 @@ struct table2D flexFuelTable;  ///< 6 bin flex fuel correction table for fuel ad
 struct table2D flexAdvTable;   ///< 6 bin flex fuel correction table for timing advance (2D)
 struct table2D flexBoostTable; ///< 6 bin flex fuel correction table for boost adjustments (2D)
 struct table2D fuelTempTable;  ///< 6 bin flex fuel correction table for fuel adjustments (2D)
-struct table2D fuelPressTable;  ///< 4 bin fuel pressure correction table for fuel adjustments (2D)
+struct table2D injPressTable;  ///< 4 bin injector pressure differential correction table for fuel adjustments (2D)
 struct table2D knockWindowStartTable;
 struct table2D knockWindowDurationTable;
 struct table2D oilPressureProtectTable;

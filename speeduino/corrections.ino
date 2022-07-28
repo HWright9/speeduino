@@ -139,8 +139,8 @@ uint16_t correctionsFuel()
   currentStatus.fuelTempCorrection = correctionFuelTemp();
   if (currentStatus.fuelTempCorrection != 100) { sumCorrections = div100(sumCorrections * currentStatus.fuelTempCorrection); }
   
-  currentStatus.fuelPressCorrection = correctionFuelPress();
-  if (currentStatus.fuelPressCorrection != 100) { sumCorrections = div100(sumCorrections * currentStatus.fuelPressCorrection); }
+  currentStatus.injPressCorrection = correctionFuelPress();
+  if (currentStatus.injPressCorrection != 100) { sumCorrections = div100(sumCorrections * currentStatus.injPressCorrection); }
 
   currentStatus.launchCorrection = correctionLaunch();
   if (currentStatus.launchCorrection != 100) { sumCorrections = div100(sumCorrections * currentStatus.launchCorrection); }
@@ -700,25 +700,36 @@ byte correctionFuelPress()
 {
   byte fuelPressValue = 100;
 
-  if (configPage10.injDeltaPressEnbl  > 0)
+  if (configPage10.injDeltaPressEnbl > 0)
   {
     int16_t fPress_InjTip = 101; // default 101kpa (atmosphere)
     int16_t fPress_InjSupply = 501; // default 501kpa (4bar or 60PSI)
     
+    /* ******INJECTOR TIP PRESSURE CONFIGURATION ******** */
     if ((configPage10.fPress_InjTipRef == FPRESS_REF_MAP) && (mapErrorCount == 0)) { fPress_InjTip = currentStatus.MAP; }
     else if (configPage10.fPress_InjTipRef == FPRESS_REF_BARO) { fPress_InjTip = currentStatus.baro; }
     else { fPress_InjTip = 101; } // Fixed Default for faults
     
-    if (configPage10.fPress_InjSupplyRef == FPRESS_REF_SENSOR) { fPress_InjSupply = currentStatus.fuelPressure; } // Fuel pressure from sensor handles its own default value when there is a fault
-    else if ((configPage10.fPress_InjSupplyRef == FPRESS_REF_MAP)  && (mapErrorCount == 0)) { fPress_InjSupply = currentStatus.MAP + configPage10.fPress_RefPress; }
-    else if (configPage10.fPress_InjSupplyRef == FPRESS_REF_BARO) { fPress_InjSupply = currentStatus.baro + configPage10.fPress_RefPress; }
-    else { fPress_InjSupply = 101 + configPage10.fPress_RefPress; } // Fixed uses refernce value plus 101, making the reference value gauge pressure.
+    /* ******INJECTOR SUPPLY PRESSURE CONFIGURATION ******** */
+    if (configPage10.fPress_InjSupplyRef == FPRESS_REF_SENSOR) 
+    { 
+      fPress_InjSupply = currentStatus.fuelPressure;
+      if (configPage10.fPress_SensorType == FPRESS_TYPE_GAUGE) { fPress_InjSupply = fPress_InjSupply + currentStatus.baro; } // If gauge pressure need to convert to Absolute to compare with MAP / BARO
+    } // Fuel pressure from sensor handles its own default value when there is a fault
+    else
+    {
+      if ((configPage10.fPress_InjSupplyRef == FPRESS_REF_MAP)  && (mapErrorCount == 0)) { fPress_InjSupply = currentStatus.MAP + configPage10.fPress_RefPress; }
+      else if (configPage10.fPress_InjSupplyRef == FPRESS_REF_BARO) { fPress_InjSupply = currentStatus.baro + configPage10.fPress_RefPress; }
+      else { fPress_InjSupply = 101 + configPage10.fPress_RefPress; } // Fixed uses refernce value plus 101, making the reference value gauge pressure.
+      
+      if (configPage10.fPress_SensorType == FPRESS_TYPE_ABS) { fPress_InjSupply = fPress_InjSupply - 101; } // If user preferrs absolute pressure units then need to modify the refPress variable to remove this.
+    }
     
     // Calculate pressure accross the injectors and use lookup table for compensation factor.
     if (fPress_InjSupply > fPress_InjTip) { currentStatus.InjectorDeltaPress = fPress_InjSupply - fPress_InjTip; } // prevent underflow
     else { currentStatus.InjectorDeltaPress = 0; }
     
-    fuelPressValue = table2D_getValue(&fuelPressTable, currentStatus.InjectorDeltaPress);
+    fuelPressValue = table2D_getValue(&injPressTable, currentStatus.InjectorDeltaPress);
   }
   else { currentStatus.InjectorDeltaPress = configPage10.fPress_RefPress; } // Set to reference pressure
   return fuelPressValue;

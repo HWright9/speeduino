@@ -1253,6 +1253,9 @@ uint16_t Calc_BaseFuel(int REQ_FUEL, byte VE, long MAP, uint16_t corrections)
     {
       intermediate += ( ((unsigned long)REQ_FUEL) * (currentStatus.AEamount - 100) ) / 100;
     }
+    // Injector pressure correction, do this here to maintain clarity with G enrichments.
+    if (currentStatus.injPressCorrection != 100) { intermediate = (intermediate * (unsigned long)currentStatus.injPressCorrection) / 100; }
+    
     if ( intermediate > 65535)
     {
       intermediate = 65535;  //Make sure this won't overflow when we convert to uInt. This means the maximum pulsewidth possible is 65.535mS

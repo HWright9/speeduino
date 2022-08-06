@@ -140,7 +140,7 @@ uint16_t correctionsFuel()
   if (currentStatus.fuelTempCorrection != 100) { sumCorrections = div100(sumCorrections * currentStatus.fuelTempCorrection); }
   
   currentStatus.injPressCorrection = correctionFuelPress();
-  if (currentStatus.injPressCorrection != 100) { sumCorrections = div100(sumCorrections * currentStatus.injPressCorrection); }
+  //if (currentStatus.injPressCorrection != 100) { sumCorrections = div100(sumCorrections * currentStatus.injPressCorrection); } - Move this to ReqFuel Calc
 
   currentStatus.launchCorrection = correctionLaunch();
   if (currentStatus.launchCorrection != 100) { sumCorrections = div100(sumCorrections * currentStatus.launchCorrection); }

@@ -499,6 +499,7 @@ extern struct table2D oilPressureProtectTable;
 extern struct table2D coolantProtectTable; //6 bin coolant temperature protection table for engine protection (2D)
 extern struct table2D fanPWMTable;
 extern struct table2D ego_IntegralTable; // For ego Integral Control (2D)
+extern struct table2D mapSampleAngTable; // For map sample start angle (2D)
 
 
 //These are for the direct port manipulation of the injectors, coils and aux outputs
@@ -1408,7 +1409,7 @@ struct config10 {
   byte mapSensPin : 4;
   
   byte unused11_190 : 3;
-  byte unused11_191;
+  byte mapSampleAngle; // Angle in degrees that MAP is sampled over *3 for TS scaling to byte
 
 #if defined(CORE_AVR)
   };
@@ -1485,7 +1486,12 @@ struct config15 {
   byte unused15_1 : 7; //7bits unused
   byte boostDCWhenDisabled;
   byte boostControlEnableThreshold; //if fixed value enable set threshold here.
-  byte unused15_3_176[173];
+  
+  // Map Sample angle Table
+  byte MAPSampleRPMBins[8];
+  byte MAPSampleStrtAng[8];
+  
+  byte unused15_19_176[157];
 
 #if defined(CORE_AVR)
   };

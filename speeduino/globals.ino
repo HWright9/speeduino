@@ -56,6 +56,7 @@ struct table2D oilPressureProtectTable;
 struct table2D coolantProtectTable;
 struct table2D fanPWMTable;
 struct table2D ego_IntegralTable; /// For ego Integral Control (2D)
+struct table2D mapSampleAngTable; /// For map sample start angle
 
 /// volatile inj*_pin_port and  inj*_pin_mask vars are for the direct port manipulation of the injectors, coils and aux outputs.
 volatile PORT_TYPE *inj1_pin_port;

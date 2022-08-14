@@ -281,6 +281,12 @@ void initialiseAll()
     ego_IntegralTable.xSize = 5;
     ego_IntegralTable.values = egoIntAFR_Values;
     ego_IntegralTable.axisX = egoIntAFR_XBins;
+    
+    mapSampleAngTable.valueSize = SIZE_BYTE;
+    mapSampleAngTable.axisSize = SIZE_BYTE; //Set this table to use byte axis bins
+    mapSampleAngTable.xSize = 8;
+    mapSampleAngTable.values = configPage15.MAPSampleStrtAng;
+    mapSampleAngTable.axisX = configPage15.MAPSampleRPMBins;
 
 
     //Setup the calibration tables

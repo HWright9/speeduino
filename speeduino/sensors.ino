@@ -348,10 +348,18 @@ static inline void readMAP()
       break;
 
     case 3:
-      //Average of an ignition event
-      if ( (currentStatus.RPMdiv100 > configPage2.mapSwitchPoint) && ((currentStatus.hasSync == true) || BIT_CHECK(currentStatus.status3, BIT_STATUS3_HALFSYNC)) && (currentStatus.startRevolutions > 1) && (! currentStatus.engineProtectStatus) ) //If the engine isn't running, fall back to instantaneous reads
+      //Crank angle sampling, was ignition angle
+      if ( (currentStatus.RPMdiv100 > configPage2.mapSwitchPoint) && ((currentStatus.hasSync == true) || BIT_CHECK(currentStatus.status3, BIT_STATUS3_HALFSYNC)) && (currentStatus.startRevolutions > 1) ) //If the engine isn't running, fall back to instantaneous reads
       {
-        if( (MAPcurRev == ignitionCount) ) //Watch for a change in the ignition counter to determine whether we're still on the same event
+        int cyl1CrankTDC = getCrankAngle();
+        //int cyl2CrankTDC = cyl1CrankTDC - channel2InjDegrees;
+        int MAPCrankAngStart = table2D_getValue(&mapSampleAngTable, currentStatus.RPMdiv100) * 3;
+        int MAPCrankAngEnd = MAPCrankAngStart + ((int)configPage10.mapSampleAngle * 3);
+        
+        if (MAPCrankAngEnd > CRANK_ANGLE_MAX) { MAPCrankAngEnd = MAPCrankAngEnd - CRANK_ANGLE_MAX; } // Wrap around 720
+        
+        if (((MAPCrankAngStart < MAPCrankAngEnd) && (cyl1CrankTDC >= MAPCrankAngStart) && (cyl1CrankTDC <= MAPCrankAngEnd)) ||
+             ((MAPCrankAngStart > MAPCrankAngEnd) && ((cyl1CrankTDC >= MAPCrankAngStart) || (cyl1CrankTDC <= MAPCrankAngEnd))) )
         {
           #if defined(ANALOG_ISR_MAP)
             tempReading = AnChannel[pinMAP-A0];
@@ -373,7 +381,7 @@ static inline void readMAP()
         {
           //Reaching here means that the  next ignition event has occurred and the MAP value should be calculated
           //Sanity check
-          if( (MAPrunningValue != 0) && (MAPcount != 0) && (MAPcurRev < ignitionCount) )
+          if( (MAPrunningValue != 0) && (MAPcount != 0) )
           {
             //Update the calculation times and last value. These are used by the MAP based Accel enrich
             MAPlast = currentStatus.MAP;
@@ -384,9 +392,10 @@ static inline void readMAP()
             currentStatus.MAP = fastMap10Bit(currentStatus.mapADC, configPage2.mapMin, configPage2.mapMax); //Get the current MAP value
             validateMAP();
           }
-          else { instanteneousMAPReading(); }
+          // else wait until next map crank angle
+          //else { instanteneousMAPReading(); }
 
-          MAPcurRev = ignitionCount; //Reset the current event count
+          //MAPcurRev = ignitionCount; //Reset the current event count
           MAPrunningValue = 0;
           MAPcount = 0;
         }

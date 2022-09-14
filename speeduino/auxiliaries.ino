@@ -198,8 +198,10 @@ void initialiseAuxPWM()
 
     #if defined(CORE_AVR)
       vvt_pwm_max_count = 1000000L / (16 * configPage6.vvtFreq * 2); //Converts the frequency in Hz to the number of ticks (at 16uS) it takes to complete 1 cycle. Note that the frequency is divided by 2 coming from TS to allow for up to 512hz
-    #elif defined(CORE_TEENSY)
+    #elif defined(CORE_TEENSY35)
       vvt_pwm_max_count = 1000000L / (32 * configPage6.vvtFreq * 2); //Converts the frequency in Hz to the number of ticks (at 16uS) it takes to complete 1 cycle. Note that the frequency is divided by 2 coming from TS to allow for up to 512hz
+    #elif defined(CORE_TEENSY41)
+      vvt_pwm_max_count = 1000000L / (2 * configPage6.vvtFreq * 2); //Converts the frequency in Hz to the number of ticks (at 2uS) it takes to complete 1 cycle. Note that the frequency is divided by 2 coming fro TS to allow for up to 512hz
     #endif
 
     if(configPage6.vvtMode == VVT_MODE_CLOSED_LOOP)
@@ -224,6 +226,23 @@ void initialiseAuxPWM()
     BIT_CLEAR(currentStatus.status4, BIT_STATUS4_VVT2_ERROR);
     vvtTimeHold = false;
     if (currentStatus.coolant >= (int)(configPage4.vvtMinClt - CALIBRATION_TEMPERATURE_OFFSET)) { vvtIsHot = true; } //Checks to see if coolant's already at operating temperature
+  }
+
+  if( (configPage6.vvtEnabled == 0) && (configPage10.wmiEnabled >= 1) )
+  {
+    // config wmi pwm output to use vvt output
+    #if defined(CORE_AVR)
+      vvt_pwm_max_count = 1000000L / (16 * configPage6.vvtFreq * 2); //Converts the frequency in Hz to the number of ticks (at 16uS) it takes to complete 1 cycle. Note that the frequency is divided by 2 coming from TS to allow for up to 512hz
+    #elif defined(CORE_TEENSY35)
+      vvt_pwm_max_count = 1000000L / (32 * configPage6.vvtFreq * 2); //Converts the frequency in Hz to the number of ticks (at 16uS) it takes to complete 1 cycle. Note that the frequency is divided by 2 coming from TS to allow for up to 512hz
+    #elif defined(CORE_TEENSY41)
+      vvt_pwm_max_count = 1000000L / (2 * configPage6.vvtFreq * 2); //Converts the frequency in Hz to the number of ticks (at 2uS) it takes to complete 1 cycle. Note that the frequency is divided by 2 coming from TS to allow for up to 512hz
+    #endif
+    BIT_CLEAR(currentStatus.status4, BIT_STATUS4_WMI_EMPTY);
+    currentStatus.wmiPW = 0;
+    vvt1_pwm_value = 0;
+    vvt2_pwm_value = 0;
+    ENABLE_VVT_TIMER(); //Turn on the B compare unit (ie turn on the interrupt)
   }
 
   currentStatus.boostDuty = 0;
@@ -712,13 +731,21 @@ void boostDisable()
 {
   if (boost_pwm_state == true)
   {
+    #if defined(CORE_TEENSY41) //PIT TIMERS count down and have opposite effect on PWM
+    BOOST_PIN_HIGH();
+    #else
     BOOST_PIN_LOW();  // Switch pin to low
+    #endif
     SET_COMPARE(BOOST_TIMER_COMPARE, BOOST_TIMER_COUNTER + (boost_pwm_max_count - boost_pwm_cur_value) );
     boost_pwm_state = false;
   }
   else
   {
+    #if defined(CORE_TEENSY41) //PIT TIMERS count down and have opposite effect on PWM
+    BOOST_PIN_LOW();
+    #else
     BOOST_PIN_HIGH();  // Switch pin high
+    #endif
     SET_COMPARE(BOOST_TIMER_COMPARE, BOOST_TIMER_COUNTER + boost_pwm_target_value);
     boost_pwm_cur_value = boost_pwm_target_value;
     boost_pwm_state = true;
@@ -736,12 +763,20 @@ void boostDisable()
   {
     if( (vvt1_pwm_value > 0) && (vvt1_max_pwm == false) ) //Don't toggle if at 0%
     {
+      #if defined(CORE_TEENSY41)
+      VVT1_PIN_OFF();
+      #else
       VVT1_PIN_ON();
+      #endif
       vvt1_pwm_state = true;
     }
     if( (vvt2_pwm_value > 0) && (vvt2_max_pwm == false) ) //Don't toggle if at 0%
     {
+      #if defined(CORE_TEENSY41)
+      VVT2_PIN_OFF();
+      #else
       VVT2_PIN_ON();
+      #endif
       vvt2_pwm_state = true;
     }
 
@@ -768,7 +803,11 @@ void boostDisable()
     {
       if(vvt1_pwm_value < (long)vvt_pwm_max_count) //Don't toggle if at 100%
       {
+        #if defined(CORE_TEENSY41)
+        VVT1_PIN_ON();
+        #else
         VVT1_PIN_OFF();
+        #endif
         vvt1_pwm_state = false;
         vvt1_max_pwm = false;
       }
@@ -785,7 +824,11 @@ void boostDisable()
     {
       if(vvt2_pwm_value < (long)vvt_pwm_max_count) //Don't toggle if at 100%
       {
+        #if defined(CORE_TEENSY41)
+        VVT2_PIN_ON();
+        #else
         VVT2_PIN_OFF();
+        #endif
         vvt2_pwm_state = false;
         vvt2_max_pwm = false;
       }
@@ -802,7 +845,11 @@ void boostDisable()
     {
       if(vvt1_pwm_value < (long)vvt_pwm_max_count) //Don't toggle if at 100%
       {
+       #if defined(CORE_TEENSY41)
+        VVT1_PIN_ON();
+        #else
         VVT1_PIN_OFF();
+        #endif
         vvt1_pwm_state = false;
         vvt1_max_pwm = false;
         SET_COMPARE(VVT_TIMER_COMPARE, VVT_TIMER_COUNTER + (vvt_pwm_max_count - vvt1_pwm_cur_value) );
@@ -810,7 +857,11 @@ void boostDisable()
       else { vvt1_max_pwm = true; }
       if(vvt2_pwm_value < (long)vvt_pwm_max_count) //Don't toggle if at 100%
       {
+        #if defined(CORE_TEENSY41)
+        VVT2_PIN_ON();
+        #else
         VVT2_PIN_OFF();
+        #endif
         vvt2_pwm_state = false;
         vvt2_max_pwm = false;
         SET_COMPARE(VVT_TIMER_COMPARE, VVT_TIMER_COUNTER + (vvt_pwm_max_count - vvt2_pwm_cur_value) );

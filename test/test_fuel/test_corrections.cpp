@@ -144,7 +144,7 @@ void setup_DFCO_on()
   configPage9.dfcoExitFuelTime = 0; // DFCO exit for 2 engine cycles
   configPage9.dfcoExitFuel = 130; //130% fuel correction
   configPage9.dfcoDsblwClutch = 0; // Bypass clutch check
-  configPage9.dfcoAdv = 20; // Check spark advance, actually 5deg
+  configPage9.dfcoAdv = -5; // Check spark advance, actually 5deg
   
   configPage9.dfcoEnblGear1 = 0;
   configPage9.dfcoEnblGear2 = 1;
@@ -203,10 +203,12 @@ void test_corrections_dfco_off_delay()
 void test_corrections_dfco_spark_adv()
 {
   //Test that DFCO spark advance is achieved
-  //The setup function below simulates 5deg advance.
+  //The setup function below simulates 5deg advance offset from 10deg.
   setup_DFCO_on();
+  //Set the threshold to be 2.5 seconds, above the simulated delay of 2s
+  configPage2.dfcoStartDelay = 250;
 
-  TEST_ASSERT_EQUAL(configPage9.dfcoAdv, correctionDFCOEntryExit()); //Test DFCO spark equals calibrated value
+  TEST_ASSERT_EQUAL((10 + configPage9.dfcoAdv), correctionDFCOEntryExit(10)); //Test DFCO spark equals calibrated value
 }
 
 void test_corrections_dfco()

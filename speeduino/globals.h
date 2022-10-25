@@ -998,7 +998,7 @@ struct config4 {
   byte dwellLimit;
   byte dwellCorrectionValues[6]; ///< Correction table for dwell vs battery voltage
   byte iatRetBins[6]; ///< Inlet Air Temp timing retard curve bins (Unit: ...)
-  byte iatRetValues[6]; ///< Inlet Air Temp timing retard curve values (Unit: ...)
+  byte iatRetValues[6]; ///< Inlet Air Temp timing retard curve values. These are translated by 15 to allow for negative values (Unit: ...) 
   byte dfcoRPM;       ///< RPM at which DFCO turns off/on at
   byte dfcoHyster;    //Hysteris RPM for DFCO
   byte dfcoTPSThresh; //TPS must be below this figure for DFCO to engage (Unit: ...)
@@ -1199,7 +1199,7 @@ struct config9 {
   byte tps2Max; // 2nd TPS sensor max ADC Value
   byte tpsMidPoint; // Midpoint between two sensors (dual sensor) or Midpoint for non linear curve (3 point)
   
-  byte dfcoAdv; // Spark advance for DFCO entry and exit
+  int8_t dfcoAdv; // Spark advance offset for DFCO entry and exit
   byte dfcoRampOutTime; // Delay time to ramp spark and apply enrichment on DFCO exit
   byte dfcoExitFuel; // Fuel enrichment on DFCO exit.
   byte dfcoRampInTime; // time to ramp spark on DFCO entry

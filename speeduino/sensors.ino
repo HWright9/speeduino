@@ -417,7 +417,12 @@ static inline void readMAP()
 
 void readTPS(bool useFilter)
 {
-  currentStatus.TPSlast = currentStatus.TPS;
+  currentStatus.TPSlast = currentStatus.TPS; // Depreciated but kept here for any backwards compatabiltiy - HRW
+  
+  tpsHistory[0] = tpsHistory[1]; //oldest
+  tpsHistory[1] = tpsHistory[2];
+  tpsHistory[2] = currentStatus.TPS; //newest - Check AE_TPS_DOT_HIST_BINS to make sure array is indexed correctly.
+  
   
   //Check whether the closed throttle position sensor is active (shared calibrations with dual sensor so can only have one or the other.)
   if ( (configPage2.CTPSEnabled == true) && (configPage2.tpsType != TPS_MODE_DUALSENSOR) )

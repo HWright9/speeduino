@@ -406,6 +406,8 @@
 #define INJ_BANK1 0
 #define INJ_BANK2 1
 
+#define AE_TPS_DOT_HIST_BINS 3
+
 #define CALIBRATION_TABLE_SIZE 512 ///< Calibration table size for CLT, IAT, O2
 #define CALIBRATION_TEMPERATURE_OFFSET 40 /**< All temperature measurements are stored offset by 40 degrees.
 This is so we can use an unsigned byte (0-255) to represent temperature ranges from -40 to 215 */
@@ -937,6 +939,7 @@ struct config2 {
   byte tpsType : 2; ///< TPS Sensor Type 
   byte egoResetwAFR : 1;  ///<ego freeze or reset output when AFR target less than min
   byte egoResetwfuelLoad : 1;  ///<ego freeze or reset output when fuel load greater than max
+  byte tpsDOTTimeFilt : 2; /// Time base for calculating TPS Dot, 0 = 3 loops ago, 1 = 2 loops ago, 2 = previous loop.
 
 
 #if defined(CORE_AVR)

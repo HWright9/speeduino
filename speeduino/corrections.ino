@@ -31,8 +31,8 @@ There are 2 top level functions that call more detailed corrections for Fuel and
 #include "sensors.h"
 
 
-int MAP_rateOfChange;
-int TPS_rateOfChange;
+int16_t MAP_rateOfChange;
+int16_t TPS_rateOfChange;
 byte activateMAPDOT; //The mapDOT value seen when the MAE was activated. 
 byte activateTPSDOT; //The tpsDOT value seen when the MAE was activated.
 
@@ -321,6 +321,7 @@ uint16_t correctionAccel()
   int16_t accelValue = 100;
   int16_t MAP_change = 0;
   int16_t TPS_change = 0;
+  uint8_t tpsDOTTimeFiltIdx = 2;
 
   if(configPage2.aeMode == AE_MODE_MAP)
   {
@@ -334,11 +335,18 @@ uint16_t correctionAccel()
   else if(configPage2.aeMode == AE_MODE_TPS)
   {
     //Get the TPS rate change
-    TPS_change = (currentStatus.TPS - currentStatus.TPSlast);
+    
+    tpsDOTTimeFiltIdx = configPage2.tpsDOTTimeFilt; // Time base for calculating TPS Dot, 0 = 3 loops ago, 1 = 2 loops ago, 2 = previous loop.
+    if((tpsDOTTimeFiltIdx >= AE_TPS_DOT_HIST_BINS) ) { tpsDOTTimeFiltIdx = (AE_TPS_DOT_HIST_BINS - 1); } // Protection for array indexing if eeprom not set. 
+    TPS_change = (currentStatus.TPS - tpsHistory[tpsDOTTimeFiltIdx]); // This provides an option to calculate TPS change over a longer time period. Longer time base = better fidelity at slow signals. Shorter Time base = better fidelity at fast signals.
+    TPS_rateOfChange = (TPS_READ_FREQUENCY * TPS_change) / (2*(AE_TPS_DOT_HIST_BINS - tpsDOTTimeFiltIdx)); //This is the % per second that the TPS has moved
+    if (TPS_rateOfChange >= 0) { currentStatus.tpsDOT = TPS_rateOfChange / 10; } //The TAE bins are divided by 10 in order to allow them to be stored in a byte
+    
+    //TPS_change = (currentStatus.TPS - currentStatus.TPSlast);
     //TPS_rateOfChange = ldiv(1000000, (TPS_time - TPSlast_time)).quot * TPS_change; //This is the % per second that the TPS has moved
-    TPS_rateOfChange = (TPS_READ_FREQUENCY * TPS_change) / 2; //This is the % per second that the TPS has moved, adjusted for the 0.5% resolution of the TPS
-    if(TPS_rateOfChange >= 0) { currentStatus.tpsDOT = TPS_rateOfChange / 10; } //The TAE bins are divided by 10 in order to allow them to be stored in a byte
-    else { currentStatus.tpsDOT = 0; } //Prevent overflow as tpsDOT is signed
+    //TPS_rateOfChange = (TPS_READ_FREQUENCY * TPS_change) / 2; //This is the % per second that the TPS has moved, adjusted for the 0.5% resolution of the TPS
+    //if(TPS_rateOfChange >= 0) { currentStatus.tpsDOT = TPS_rateOfChange / 10; } //The TAE bins are divided by 10 in order to allow them to be stored in a byte
+    else { currentStatus.tpsDOT = 0; } //Prevent overflow as tpsDOT is usigned
   }
   
 
@@ -354,8 +362,8 @@ uint16_t correctionAccel()
       accelValue = 100;
 
       //Reset the relevant DOT value to 0
-      if(configPage2.aeMode == AE_MODE_MAP) { currentStatus.mapDOT = 0; }
-      else if(configPage2.aeMode == AE_MODE_TPS) { currentStatus.tpsDOT = 0; }
+      //if(configPage2.aeMode == AE_MODE_MAP) { currentStatus.mapDOT = 0; }
+      //else if(configPage2.aeMode == AE_MODE_TPS) { currentStatus.tpsDOT = 0; }
     }
     else
     {
@@ -434,8 +442,9 @@ uint16_t correctionAccel()
     
       //Check for deceleration (Deceleration adjustment not yet supported)
       //Also check for only very small movement (Movement less than or equal to 2% is ignored). This not only means we can skip the lookup, but helps reduce false triggering around 0-2% throttle openings
-      if (TPS_change <= TPSAE_ABSOLUTE_THRESHOLD)
+      if (0) //TPS_change <= TPSAE_ABSOLUTE_THRESHOLD)
       {
+        // Disabled this function, history based filter removes this requirement. -HRW
         accelValue = 100;
         currentStatus.tpsDOT = 0;
       }

@@ -58,6 +58,7 @@ unsigned long EMAPrunningValue; //As above but for EMAP
 unsigned int MAPcount; //Number of samples taken in the current MAP cycle
 uint32_t MAPcurRev; //Tracks which revolution we're sampling on
 bool auxIsEnabled;
+uint8_t tpsHistory[AE_TPS_DOT_HIST_BINS]; // History of TPS reads used for TPSdot moving average
 uint16_t MAPlast; /**< The previous MAP reading */
 unsigned long MAP_time; //The time the MAP sample was taken
 unsigned long MAPlast_time; //The time the previous MAP sample was taken

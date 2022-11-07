@@ -31,8 +31,6 @@ There are 2 top level functions that call more detailed corrections for Fuel and
 #include "sensors.h"
 
 
-int16_t MAP_rateOfChange;
-int16_t TPS_rateOfChange;
 byte activateMAPDOT; //The mapDOT value seen when the MAE was activated. 
 byte activateTPSDOT; //The tpsDOT value seen when the MAE was activated.
 
@@ -322,6 +320,8 @@ uint16_t correctionAccel()
   int16_t MAP_change = 0;
   int16_t TPS_change = 0;
   uint8_t tpsDOTTimeFiltIdx = 2;
+  int16_t MAP_rateOfChange = 0;
+  int16_t TPS_rateOfChange = 0;
 
   if(configPage2.aeMode == AE_MODE_MAP)
   {

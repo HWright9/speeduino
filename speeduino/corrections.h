@@ -49,8 +49,6 @@ void correctionFuelTrim(void);
 void correctionFuelInjOpen(void);
 void correctionFuelPWLimit(void);
 
-extern int MAP_rateOfChange;
-extern int TPS_rateOfChange;
 extern byte activateMAPDOT; //The mapDOT value seen when the MAE was activated. 
 extern byte activateTPSDOT; //The tpsDOT value seen when the MAE was activated. 
 

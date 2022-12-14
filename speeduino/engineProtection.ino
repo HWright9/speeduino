@@ -93,6 +93,9 @@ byte checkBoostLimit()
 byte checkOilPressureLimit()
 {
   byte oilProtectActive = 0;
+
+  bool alreadyActive = BIT_CHECK(currentStatus.engineProtectStatus, ENGINE_PROTECT_BIT_OIL);
+
   BIT_CLEAR(currentStatus.engineProtectStatus, ENGINE_PROTECT_BIT_OIL); //Will be set true below if required
 
   if (configPage6.engineProtectType != PROTECT_CUT_OFF) {

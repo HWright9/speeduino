@@ -262,7 +262,7 @@ void test_corrections_TAE_no_rpm_taper()
 
   uint16_t accelValue = correctionAccel(); //Run the AE calcs
 
-  TEST_ASSERT_EQUAL(75, currentStatus.tpsDOT); //DOT is 750%/s (25 * 30), value divided by 10;
+  TEST_ASSERT_EQUAL(750, currentStatus.tpsDOT); //DOT is 750%/s (25 * 30)
   TEST_ASSERT_EQUAL((100+132), accelValue);
 	TEST_ASSERT_TRUE(BIT_CHECK(currentStatus.engine, BIT_ENGINE_ACC)); //Confirm AE is flagged on
 }
@@ -279,7 +279,7 @@ void test_corrections_TAE_50pc_rpm_taper()
 
   uint16_t accelValue = correctionAccel(); //Run the AE calcs
 
-  TEST_ASSERT_EQUAL(75, currentStatus.tpsDOT); //DOT is 750%/s (25 * 30), value divided by 10;
+  TEST_ASSERT_EQUAL(750, currentStatus.tpsDOT); //DOT is 750%/s (25 * 30)
   TEST_ASSERT_EQUAL((100+66), accelValue);
 	TEST_ASSERT_TRUE(BIT_CHECK(currentStatus.engine, BIT_ENGINE_ACC)); //Confirm AE is flagged on
 }
@@ -296,7 +296,7 @@ void test_corrections_TAE_110pc_rpm_taper()
 
   uint16_t accelValue = correctionAccel(); //Run the AE calcs
 
-  TEST_ASSERT_EQUAL(75, currentStatus.tpsDOT); //DOT is 750%/s (25 * 30), value divided by 10;
+  TEST_ASSERT_EQUAL(750, currentStatus.tpsDOT); //DOT is 750%/s (25 * 30)
   TEST_ASSERT_EQUAL(100, accelValue); //Should be no AE as we're above the RPM taper end point
 	TEST_ASSERT_TRUE(BIT_CHECK(currentStatus.engine, BIT_ENGINE_ACC)); //Confirm AE is flagged on
 }
@@ -314,7 +314,7 @@ void test_corrections_TAE_under_threshold()
 
   uint16_t accelValue = correctionAccel(); //Run the AE calcs
 
-  TEST_ASSERT_EQUAL(9, currentStatus.tpsDOT); //DOT is 90%/s (3% * 30), value divided by 10;
+  TEST_ASSERT_EQUAL(90, currentStatus.tpsDOT); //DOT is 90%/s (3% * 30)
   TEST_ASSERT_EQUAL(100, accelValue); //Should be no AE as we're above the RPM taper end point
 	TEST_ASSERT_FALSE(BIT_CHECK(currentStatus.engine, BIT_ENGINE_ACC)); //Confirm AE is flagged off
 }
@@ -338,7 +338,7 @@ void test_corrections_TAE_50pc_warmup_taper()
 
   uint16_t accelValue = correctionAccel(); //Run the AE calcs
 
-  TEST_ASSERT_EQUAL(75, currentStatus.tpsDOT); //DOT is 750%/s (25 * 30), value divided by 10;
+  TEST_ASSERT_EQUAL(750, currentStatus.tpsDOT); //DOT is 750%/s (25 * 30)
   TEST_ASSERT_EQUAL((100+165), accelValue); //Total AE should be 132 + (50% * 50%) = 132 * 1.25 = 165
 	TEST_ASSERT_TRUE(BIT_CHECK(currentStatus.engine, BIT_ENGINE_ACC)); //Confirm AE is flagged on
 }

@@ -335,8 +335,8 @@ void loop()
       
       if (O2_Readflag == false) //This might be a little redundant now that O2 is reading at 30hz instead of 4 Hz
       { // O2 has not been updated since the last loop by O2 algo (engine cycle based) so update it here to enfore a minimum update rate for logging etc. 
-        readO2(); // Moved HRW
-        readO2_2(); // Moved HRW
+        readO2(); 
+        readO2_2();
       }
       else { O2_Readflag = false; } // Reset flag to see if O2 algo reads the O2 next loop.
 

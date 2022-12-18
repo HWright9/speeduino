@@ -889,6 +889,7 @@ byte correctionAFRClosedLoop()
             BIT_CLEAR(currentStatus.status4, BIT_STATUS4_EGO1_INTCORR);
             // Technically we are frozen here but don't have seperate bits to indicate ego2 frozen compared to ego1 so no indication given. 
             ego_IntDelayLoops = 0; 
+            if (configPage6.egoAlgorithm == EGO_ALGORITHM_DUALO2) { ego_AdjustPct = currentStatus.ego2Correction; } // If ego1 out of range or not available and we are dual O2 assume the same adjustment as ego2.  
           } 
 
           // Sensor2 check to check in range and if Enabled
@@ -953,7 +954,8 @@ byte correctionAFRClosedLoop()
           { // No 2nd O2 or O2 sensor out of range
             BIT_CLEAR(currentStatus.status4, BIT_STATUS4_EGO2_INTCORR);
             // Technically we are frozen here but don't have seperate bits to indicate ego2 frozen compared to ego1 so no indication given. 
-            ego2_IntDelayLoops = 0; 
+            ego2_IntDelayLoops = 0;
+            ego2_AdjustPct = currentStatus.egoCorrection; // If ego2 out of range or not available, assume the same adjustment as ego1.           
           } 
         } // End Conditions to not freeze ego correction
         else { ego_AdjustPct = currentStatus.egoCorrection; ego2_AdjustPct = currentStatus.ego2Correction; BIT_CLEAR(currentStatus.status4, BIT_STATUS4_EGO1_INTCORR); BIT_CLEAR(currentStatus.status4, BIT_STATUS4_EGO2_INTCORR);} // ego frozen at last values

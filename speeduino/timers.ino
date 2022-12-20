@@ -87,7 +87,7 @@ void oneMSInterval() //Most ARM chips can simply call a function
     else
     {
 	  tachoAlt = !tachoAlt; //Flip the alternating value incase half speed tacho is in use.
-	  tachoOutputFlag = DEACTIVE;		
+	  tachoOutputFlag = INACTIVE;		
     }
     tachoAlt = !tachoAlt; //Flip the alternating value in case half speed tacho is in use. 
   }
@@ -101,7 +101,7 @@ void oneMSInterval() //Most ARM chips can simply call a function
       if(tacho_ms_counter >= configPage2.tachoDuration)
       {
         TACHO_PULSE_HIGH();
-        tachoOutputFlag = DEACTIVE;
+        tachoOutputFlag = INACTIVE;
         tacho_ms_counter = 0;
       }
 

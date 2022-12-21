@@ -2867,20 +2867,6 @@ void setPinMapping(byte boardID)
   if( (configPage13.onboard_log_trigger_Epin > 0) && (!pinIsOutput(pinSDEnable)) )
   {
     pinMode(pinSDEnable, INPUT);
-  }
-  if(configPage10.wmiEnabled > 0)
-  {
-    pinMode(pinWMIEnabled, OUTPUT);
-    if(configPage10.wmiIndicatorEnabled > 0)
-    {
-      pinMode(pinWMIIndicator, OUTPUT);
-      if (configPage10.wmiIndicatorPolarity > 0) { digitalWrite(pinWMIIndicator, HIGH); }
-    }
-    if( (configPage10.wmiEmptyEnabled > 0) && (!pinIsOutput(pinWMIEmpty)) )
-    {
-      if (configPage10.wmiEmptyPolarity == 0) { pinMode(pinWMIEmpty, INPUT_PULLUP); } //Normal setting
-      else { pinMode(pinWMIEmpty, INPUT); } //inverted setting
-    }
   }  
 
   //These must come after the above pinMode statements

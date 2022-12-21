@@ -228,22 +228,6 @@ void initialiseAuxPWM()
     if (currentStatus.coolant >= (int)(configPage4.vvtMinClt - CALIBRATION_TEMPERATURE_OFFSET)) { vvtIsHot = true; } //Checks to see if coolant's already at operating temperature
   }
 
-  if( (configPage6.vvtEnabled == 0) && (configPage10.wmiEnabled >= 1) )
-  {
-    // config wmi pwm output to use vvt output
-    #if defined(CORE_AVR)
-      vvt_pwm_max_count = 1000000L / (16 * configPage6.vvtFreq * 2); //Converts the frequency in Hz to the number of ticks (at 16uS) it takes to complete 1 cycle. Note that the frequency is divided by 2 coming from TS to allow for up to 512hz
-    #elif defined(CORE_TEENSY35)
-      vvt_pwm_max_count = 1000000L / (32 * configPage6.vvtFreq * 2); //Converts the frequency in Hz to the number of ticks (at 16uS) it takes to complete 1 cycle. Note that the frequency is divided by 2 coming from TS to allow for up to 512hz
-    #elif defined(CORE_TEENSY41)
-      vvt_pwm_max_count = 1000000L / (2 * configPage6.vvtFreq * 2); //Converts the frequency in Hz to the number of ticks (at 2uS) it takes to complete 1 cycle. Note that the frequency is divided by 2 coming from TS to allow for up to 512hz
-    #endif
-    BIT_CLEAR(currentStatus.status4, BIT_STATUS4_WMI_EMPTY);
-    currentStatus.wmiPW = 0;
-    vvt1_pwm_value = 0;
-    vvt2_pwm_value = 0;
-    ENABLE_VVT_TIMER(); //Turn on the B compare unit (ie turn on the interrupt)
-  }
 
   currentStatus.boostDuty = 0;
   boostCounter = 0;

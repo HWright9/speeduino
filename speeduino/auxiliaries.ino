@@ -596,8 +596,10 @@ void vvtControl()
       if( (currentStatus.vvt1Duty == 0) && (currentStatus.vvt2Duty == 0) )
       {
         //Make sure solenoid is off (0% duty)
+        no_AVR_Interrupts();
         VVT1_PIN_OFF();
         VVT2_PIN_OFF();
+        AVR_interrupts();
         vvt1_pwm_state = false;
         vvt1_max_pwm = false;
         vvt2_pwm_state = false;
@@ -607,8 +609,10 @@ void vvtControl()
       else if( (currentStatus.vvt1Duty >= 200) && (currentStatus.vvt2Duty >= 200) )
       {
         //Make sure solenoid is on (100% duty)
+        no_AVR_Interrupts();
         VVT1_PIN_ON();
         VVT2_PIN_ON();
+        AVR_interrupts();
         vvt1_pwm_state = true;
         vvt1_max_pwm = true;
         vvt2_pwm_state = true;
@@ -698,12 +702,14 @@ void nitrousControl()
 }
 
 
-void boostDisable()
+void boostDisable(void)
 {
   boostPID.Initialize(); //This resets the ITerm value to prevent rubber banding
   currentStatus.boostDuty = 0;
+  no_AVR_Interrupts(); 
   DISABLE_BOOST_TIMER(); //Turn off timer
   BOOST_PIN_LOW(); //Make sure solenoid is off (0% duty)
+  AVR_interrupts();
 }
 
 //The interrupt to control the Boost PWM

@@ -320,7 +320,6 @@ uint16_t correctionAccel()
   int16_t MAP_change = 0;
   int16_t TPS_change = 0;
   uint8_t tpsDOTTimeFiltIdx = 2;
-  int16_t MAP_rateOfChange = 0;
 
 
   if(configPage2.aeMode == AE_MODE_MAP)

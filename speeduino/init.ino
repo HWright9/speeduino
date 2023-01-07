@@ -2844,7 +2844,7 @@ void setPinMapping(byte boardID)
     if ( (configPage2.CTPSPolarity == 0) ) { pinMode(pinCTPS, INPUT_PULLUP); } //Normal setting
     else { pinMode(pinCTPS, INPUT); } //inverted setting
   }
-  else if (configPage2.tpsType == TPS_MODE_DUALSENSOR) { pinMode(pinCTPS, INPUT); } //settings for CTPS are mutually exclusive with dual sensor TPS
+  else if (configPage15.tpsType == TPS_MODE_DUALSENSOR) { pinMode(pinCTPS, INPUT); } //settings for CTPS are mutually exclusive with dual sensor TPS
     
   if( (configPage10.fuel2Mode == FUEL2_MODE_INPUT_SWITCH) && (!pinIsOutput(pinFuel2Input)) )
   {

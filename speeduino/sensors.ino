@@ -425,7 +425,7 @@ void readTPS(bool useFilter)
   
   
   //Check whether the closed throttle position sensor is active (shared calibrations with dual sensor so can only have one or the other.)
-  if ( (configPage2.CTPSEnabled == true) && (configPage2.tpsType != TPS_MODE_DUALSENSOR) )
+  if ( (configPage2.CTPSEnabled == true) && (configPage15.tpsType != TPS_MODE_DUALSENSOR) )
   {
     if(configPage2.CTPSPolarity == 0) { currentStatus.CTPSActive = !digitalRead(pinCTPS); } //Normal mode (ground switched)
     else { currentStatus.CTPSActive = digitalRead(pinCTPS); } //Inverted mode (5v activates closed throttle position sensor)
@@ -433,7 +433,7 @@ void readTPS(bool useFilter)
   else { currentStatus.CTPSActive = false; }
     
   //Get ADC Values if enabled
-  if (configPage2.tpsType != TPS_MODE_DISABLED)
+  if (configPage15.tpsType != TPS_MODE_DISABLED)
   {
     byte tempADC = 0;
     byte tempADC2 = 0;
@@ -454,7 +454,7 @@ void readTPS(bool useFilter)
     if (currentStatus.tpsADC < configPage2.tpsMin) { tempADC = configPage2.tpsMin; }
     else if(currentStatus.tpsADC > configPage2.tpsMax) { tempADC = configPage2.tpsMax; }
     
-    if (configPage2.tpsType == TPS_MODE_DUALSENSOR )
+    if (configPage15.tpsType == TPS_MODE_DUALSENSOR )
     {
       #if defined(ANALOG_ISR)
         byte tempTPS2 = fastMap1023toX(AnChannel[pinCTPS-A0], 255); //Get the current raw TPS ADC value and map it into a byte
@@ -474,19 +474,19 @@ void readTPS(bool useFilter)
     }
 
     /* Map ADC to TPS depending on the sensor type */   
-    if (configPage2.tpsType == TPS_MODE_2POINT) // Traditional linear TPS, supports reversed connection.
+    if (configPage15.tpsType == TPS_MODE_2POINT) // Traditional linear TPS, supports reversed connection.
     {     
       if(configPage2.tpsMax > configPage2.tpsMin) { currentStatus.TPS = map(tempADC, configPage2.tpsMin, configPage2.tpsMax, 0, 200); } //Take the raw TPS ADC value and convert it into a TPS% based on the calibrated values
       else { currentStatus.TPS = map(tempADC, configPage2.tpsMin, configPage2.tpsMax, 200, 0); } // Reversed connection support. 
     }
     
-    if (configPage2.tpsType == TPS_MODE_3POINT) // Single sensor 3 point calibration for non-linear TPS and dual slope. Does not support backwards TPS wiring.
+    if (configPage15.tpsType == TPS_MODE_3POINT) // Single sensor 3 point calibration for non-linear TPS and dual slope. Does not support backwards TPS wiring.
     {
       if ( currentStatus.tpsADC < configPage9.tps2Min ) { currentStatus.TPS = map(tempADC, configPage2.tpsMin, configPage9.tps2Min, 0, configPage9.tpsMidPoint); }
       else {currentStatus.TPS = map(tempADC, configPage9.tps2Min, configPage2.tpsMax, configPage9.tpsMidPoint, 200); }
     }
     
-    if (configPage2.tpsType == TPS_MODE_DUALSENSOR) // Two linear independent TPS sensors with an overlap in the range. Used on some BOSCH 4 wire TPS. Does not support backwards TPS wiring.
+    if (configPage15.tpsType == TPS_MODE_DUALSENSOR) // Two linear independent TPS sensors with an overlap in the range. Used on some BOSCH 4 wire TPS. Does not support backwards TPS wiring.
     { //TPS 1 is 0% -> midpoint), TPS2 is (midpoint -> 100%)
       if ( currentStatus.tpsADC < configPage2.tpsMax ) { currentStatus.TPS = map(tempADC, configPage2.tpsMin, configPage2.tpsMax, 0, configPage9.tpsMidPoint); }
       else {currentStatus.TPS = map(tempADC2, configPage9.tps2Min, configPage9.tps2Max, configPage9.tpsMidPoint, 200); }

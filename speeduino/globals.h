@@ -931,10 +931,7 @@ struct config2 {
   byte enableCluster1 : 1;
   byte enableCluster2 : 1;
   byte unusedClusterBits : 4;
-  byte tpsType : 2; ///< TPS Sensor Type 
-  byte egoResetwAFR : 1;  ///<ego freeze or reset output when AFR target less than min
-  byte egoResetwfuelLoad : 1;  ///<ego freeze or reset output when fuel load greater than max
-  byte tpsDOTTimeFilt : 2; /// Time base for calculating TPS Dot, 0 = 3 loops ago, 1 = 2 loops ago, 2 = previous loop.
+  byte unused2_127;
 
 
 #if defined(CORE_AVR)
@@ -1485,12 +1482,19 @@ struct config15 {
   byte unused15_1 : 7; //7bits unused
   byte boostDCWhenDisabled;
   byte boostControlEnableThreshold; //if fixed value enable set threshold here.
+    
+  byte unused15_83_245[163];
+  
+//HRW TESTING AND UNIQUE MEMORY BELOW
+  byte tpsType : 2; ///< TPS Sensor Type 
+  byte egoResetwAFR : 1;  ///<ego freeze or reset output when AFR target less than min
+  byte egoResetwfuelLoad : 1;  ///<ego freeze or reset output when fuel load greater than max
+  byte tpsDOTTimeFilt : 2; /// Time base for calculating TPS Dot, 0 = 3 loops ago, 1 = 2 loops ago, 2 = previous loop.
+  byte unused15_246 : 2; //2 bits unused
   
   // Map Sample angle Table
-  byte MAPSampleRPMBins[8];
-  byte MAPSampleStrtAng[8];
-  
-  byte unused15_19_176[157];
+  byte MAPSampleRPMBins[4];
+  byte MAPSampleStrtAng[4];
 
 #if defined(CORE_AVR)
   };

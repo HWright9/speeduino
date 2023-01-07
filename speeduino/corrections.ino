@@ -336,7 +336,7 @@ uint16_t correctionAccel()
   {
     //Get the TPS rate change
     
-    tpsDOTTimeFiltIdx = configPage2.tpsDOTTimeFilt; // Time base for calculating TPS Dot, 0 = 3 loops ago, 1 = 2 loops ago, 2 = previous loop.
+    tpsDOTTimeFiltIdx = configPage15.tpsDOTTimeFilt; // Time base for calculating TPS Dot, 0 = 3 loops ago, 1 = 2 loops ago, 2 = previous loop.
     if((tpsDOTTimeFiltIdx >= AE_TPS_DOT_HIST_BINS) ) { tpsDOTTimeFiltIdx = (AE_TPS_DOT_HIST_BINS - 1); } // Protection for array indexing if eeprom not set. 
     TPS_change = (currentStatus.TPS - tpsHistory[tpsDOTTimeFiltIdx]); // This provides an option to calculate TPS change over a longer time period. Longer time base = better fidelity at slow signals. Shorter Time base = better fidelity at fast signals.
     TPS_rateOfChange = (TPS_READ_FREQUENCY * TPS_change) / (2*(AE_TPS_DOT_HIST_BINS - tpsDOTTimeFiltIdx)); //This is the % per second that the TPS has moved
@@ -805,9 +805,9 @@ byte correctionAFRClosedLoop()
           (currentStatus.RPM >= (unsigned int)(configPage6.egoRPM * 100)) &&
           (currentStatus.runSecs > configPage6.egoStartdelay) &&
           (currentStatus.engineProtectStatus == 0) &&      // Engine protection , fuel or ignition cut is active.     
-          ((configPage2.egoResetwAFR == false) ||
+          ((configPage15.egoResetwAFR == false) ||
            (currentStatus.afrTarget >= configPage6.egoAFRTargetMin)) && // Ignore this criteria if cal set to freeze (false).
-          ((configPage2.egoResetwfuelLoad == false) ||
+          ((configPage15.egoResetwfuelLoad == false) ||
            (currentStatus.fuelLoad <= (int16_t)configPage6.egoFuelLoadMax))) // Ignore this criteria if cal set to freeze (false).
       {
         

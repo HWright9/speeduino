@@ -321,7 +321,6 @@ uint16_t correctionAccel()
   int16_t TPS_change = 0;
   uint8_t tpsDOTTimeFiltIdx = 2;
   int16_t MAP_rateOfChange = 0;
-  int16_t TPS_rateOfChange = 0;
 
 
   if(configPage2.aeMode == AE_MODE_MAP)
@@ -338,7 +337,7 @@ uint16_t correctionAccel()
     tpsDOTTimeFiltIdx = configPage15.tpsDOTTimeFilt; // Time base for calculating TPS Dot, 0 = 3 loops ago, 1 = 2 loops ago, 2 = previous loop.
     if((tpsDOTTimeFiltIdx >= AE_TPS_DOT_HIST_BINS) ) { tpsDOTTimeFiltIdx = (AE_TPS_DOT_HIST_BINS - 1); } // Protection for array indexing if eeprom not set. 
     TPS_change = (currentStatus.TPS - tpsHistory[tpsDOTTimeFiltIdx]); // This provides an option to calculate TPS change over a longer time period. Longer time base = better fidelity at slow signals. Shorter Time base = better fidelity at fast signals.
-    TPS_rateOfChange = (TPS_READ_FREQUENCY * TPS_change) / (2*(AE_TPS_DOT_HIST_BINS - tpsDOTTimeFiltIdx)); //This is the % per second that the TPS has moved
+    currentStatus.tpsDOT = (TPS_READ_FREQUENCY * TPS_change) / (2*(AE_TPS_DOT_HIST_BINS - tpsDOTTimeFiltIdx)); //This is the % per second that the TPS has moved
     
     //TPS_change = (currentStatus.TPS - currentStatus.TPSlast);
     //currentStatus.tpsDOT = ldiv(1000000, (TPS_time - TPSlast_time)).quot * TPS_change; //This is the % per second that the TPS has moved

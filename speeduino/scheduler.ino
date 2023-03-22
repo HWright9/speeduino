@@ -785,7 +785,6 @@ void setIgnitionSchedule8(void (*startCallback)(), unsigned long timeout, unsign
 extern void beginInjectorPriming()
 {
   unsigned long primingValue = table2D_getValue(&PrimingPulseTable, currentStatus.coolant + CALIBRATION_TEMPERATURE_OFFSET);
-  currentStatus.BaseFuel = primingValue; // HRW add to visulise for logging
   if( (primingValue > 0) && (currentStatus.TPS < configPage4.floodClear) )
   {
     primingValue = primingValue * 100 * 5; //to achieve long enough priming pulses, the values in tuner studio are divided by 0.5 instead of 0.1, so multiplier of 5 is required.

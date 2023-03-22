@@ -135,7 +135,7 @@ void oneMSInterval() //Most ARM chips can simply call a function
     
     fuelPumpControl(); // Control the fuel pump at 10Hz
 
-    if ( (injPrimed == false) && (seclx10 >= configPage2.primingDelay) && (engineIsMoving == true) && (currentStatus.RPM == 0) ) { beginInjectorPriming(); injPrimed = true; }
+    if ( (injPrimed == false) && (seclx10 > configPage2.primingDelay) && (engineIsMoving == true) && (currentStatus.RPM == 0) ) { beginInjectorPriming(); injPrimed = true; }
     seclx10++;
   }
 

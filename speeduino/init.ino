@@ -472,6 +472,7 @@ void initialiseAll()
     timer5_overflow_count = 0;
     toothHistoryIndex = 0;
     toothLastToothTime = 0;
+    engineIsMoving = false;
 
     //Lookup the current MAP reading for barometric pressure
     //instanteneousMAPReading();

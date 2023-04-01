@@ -127,7 +127,7 @@ int ignition8EndAngle = 0;
 
 //These are variables used across multiple files
 bool initialisationComplete = false; ///< Tracks whether the setup() function has run completely (true = has run)
-byte fpPrimeTime = 0; ///< The time (in seconds, based on @ref statuses.secl) that the fuel pump started priming
+byte fpOnTime = 0; /// Time that fuel pump has been running seclx10, max 25.5 sec
 uint8_t softLimitTime = 0; //The time (in 0.1 seconds, based on seclx10) that the soft limiter started
 volatile uint16_t mainLoopCount; //Main loop counter (incremented at each main loop rev., used for maintaining currentStatus.loopsPerSecond)
 unsigned long revolutionTime; //The time in uS that one revolution would take at current speed (The time tooth 1 was last seen, minus the time it was seen prior to that)
@@ -157,7 +157,7 @@ int CRANK_ANGLE_MAX = 720;
 int CRANK_ANGLE_MAX_IGN = 360;
 int CRANK_ANGLE_MAX_INJ = 360; ///< The number of crank degrees that the system track over. 360 for wasted / timed batch and 720 for sequential
 volatile uint32_t runSecsX10;
-volatile uint32_t seclx10;
+//volatile uint32_t seclx10;
 volatile byte HWTest_INJ = 0; /**< Each bit in this variable represents one of the injector channels and it's HW test status */
 volatile byte HWTest_INJ_50pc = 0; /**< Each bit in this variable represents one of the injector channels and it's 50% HW test status */
 volatile byte HWTest_IGN = 0; /**< Each bit in this variable represents one of the ignition channels and it's HW test status */

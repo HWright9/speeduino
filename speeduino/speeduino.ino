@@ -77,7 +77,8 @@ uint16_t inj_opentime_uS = 0;
 
 bool ignitionOn = false; /**< The current state of the ignition system (on or off) */
 bool fuelOn = false; /**< The current state of the fuel system (on or off) */
-bool engineIsMoving; /** If the engine is moving, based on changes in trigger inputs */
+bool engineIsMoving = false; /** If the engine is moving, based on changes in trigger inputs */
+bool atLeastOneToothSeen = false;
 
 byte curRollingCut = 0; /**< Rolling rev limiter, current ignition channel being cut */
 byte rollingCutCounter = 0; /**< how many times (revolutions) the ignition has been cut in a row */
@@ -186,10 +187,13 @@ void loop()
       //Occurs when micros() has overflowed
       deferEEPROMWritesUntil = 0; //Required to ensure that EEPROM writes are not deferred indefinitely
     }
-
+    
+    //Deterimine if any valid trigger inputs have been seen. This resolves the init issue assuming the engine is moving.
+    if ((atLeastOneToothSeen == false) && (validTrigger == true)) { atLeastOneToothSeen = true; }
+    
     currentLoopTime = micros_safe();
     unsigned long timeToLastTooth = (currentLoopTime - toothLastToothTime);
-    if ( (timeToLastTooth < MAX_STALL_TIME) || (toothLastToothTime > currentLoopTime) ) //Check how long ago the last tooth was seen compared to now. If it was more than half a second ago then the engine is probably stopped. toothLastToothTime can be greater than currentLoopTime if a pulse occurs between getting the latest time and doing the comparison
+    if ((atLeastOneToothSeen == true) && ((timeToLastTooth < MAX_STALL_TIME) || (toothLastToothTime > currentLoopTime)) ) //Check how long ago the last tooth was seen compared to now. If it was more than half a second ago then the engine is probably stopped. toothLastToothTime can be greater than currentLoopTime if a pulse occurs between getting the latest time and doing the comparison
     {
       currentStatus.longRPM = getRPM(); //Long RPM is included here
       currentStatus.RPM = currentStatus.longRPM;
@@ -228,6 +232,7 @@ void loop()
       ignitionOn = false;
       fuelOn = false;
       engineIsMoving = false;
+      atLeastOneToothSeen = false;
       if (configPage6.iacPWMrun == false) { disableIdle(); } //Turn off the idle PWM
       BIT_CLEAR(currentStatus.engine, BIT_ENGINE_CRANK); //Clear cranking bit (Can otherwise get stuck 'on' even with 0 rpm)
       BIT_CLEAR(currentStatus.engine, BIT_ENGINE_WARMUP); //Same as above except for WUE

@@ -627,7 +627,7 @@ void readBat(bool useFilter)
   if( (currentStatus.battery10 < 55) && (tempReading > 70) && (currentStatus.RPM == 0) )
   {
     //Re-prime the fuel pump
-    fpPrimeTime = currentStatus.secl;
+    fpOnTime = 0;
     fpPrimed = false;
 
     //Redo the stepper homing

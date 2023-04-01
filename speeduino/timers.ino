@@ -134,9 +134,16 @@ void oneMSInterval() //Most ARM chips can simply call a function
     else { runSecsX10 = 0; }
     
     fuelPumpControl(); // Control the fuel pump at 10Hz
-
-    if ( (injPrimed == false) && (seclx10 > configPage2.primingDelay) && (engineIsMoving == true) && (currentStatus.RPM == 0) ) { beginInjectorPriming(); injPrimed = true; }
-    seclx10++;
+    
+    // Injector priming control, once per ecu power cycle
+    if (configPage15.injPrimewCrank == true)
+    {
+      if ((injPrimed == false) && (fpOnTime > configPage2.primingDelay) && (engineIsMoving == true) && (currentStatus.hasSync == false) ) { beginInjectorPriming(); injPrimed = true; }
+    }
+    else // with ignition on
+    {
+      if ((injPrimed == false) && (fpOnTime > configPage2.primingDelay) && (currentStatus.hasSync == false) ) { beginInjectorPriming(); injPrimed = true; }
+    }
   }
 
   //4Hz loop

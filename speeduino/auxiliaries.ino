@@ -138,6 +138,10 @@ void fanControl()
   }
 }
 
+/* Function fuelPumpControl. Controls the state of the fuel pump and reports out the status. Assumes to be called at 0.1sec intervals. 
+* Note fpOnTime and fpPrimed are reset outside this function by the supply voltage rising from < 6v to > 10V 
+* fpOnTime also used to delay injector priming. 
+*/
 void fuelPumpControl()
 {
    if (BIT_CHECK(currentStatus.testOutputs, 1) == false) // Make sure test outputs is not on, otherwise fuel pump request is controlled by that function.
@@ -145,20 +149,28 @@ void fuelPumpControl()
      if (engineIsMoving == true) // Engine moving
      {
        currentStatus.fuelPumpOn = true;
-       fpOffDelay = 2; //0.2 sec delay for debouncing in case of noisy 
+       fpOffDelay = 2; //0.2 sec delay for debouncing in case of noisy signals
      }
      else if(fpPrimed == false) // Engine not running and not primed
      {
-       if( (currentStatus.secl - fpPrimeTime) >= configPage2.fpPrime) { fpPrimed = true; } //Mark the priming as being completed
-       else { currentStatus.fuelPumpOn = true; } // otherwise turn on the fuel pump
+       currentStatus.fuelPumpOn = true; // turn on the fuel pump for priming
        fpOffDelay = 0;
      }
      else if(fpOffDelay == 0) { currentStatus.fuelPumpOn = false; } // not running and prime completed and off delay done, turn off pump.
      else { fpOffDelay = fpOffDelay - 1; } // count down off delay.
    }
   // Single place to align fuel pump status with actual fuel pump state
-  if (currentStatus.fuelPumpOn == true) { FUEL_PUMP_ON(); }
-  else { FUEL_PUMP_OFF(); }
+  if (currentStatus.fuelPumpOn == true) 
+  { 
+    FUEL_PUMP_ON();
+    if (fpOnTime < 254){ fpOnTime++; } // Count up time since fuel pump on in secx10, limit overflow
+    if ((fpPrimed == false) && (fpOnTime >= (configPage2.fpPrime * 10))) { fpPrimed = true; } 
+  }
+  else 
+  { 
+    FUEL_PUMP_OFF(); 
+    fpOnTime = 0;
+  }
 }
 
 void initialiseAuxPWM()

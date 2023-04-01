@@ -579,7 +579,7 @@ extern int ignition7StartAngle;
 extern int ignition8StartAngle;
 
 extern bool initialisationComplete; //Tracks whether the setup() function has run completely
-extern byte fpPrimeTime; //The time (in seconds, based on currentStatus.secl) that the fuel pump started priming
+extern byte fpOnTime; // Time that fuel pump has been running seclx10, max 25.5 sec
 extern uint8_t softLimitTime; //The time (in 0.1 seconds, based on seclx10) that the soft limiter started
 extern volatile uint16_t mainLoopCount;
 extern unsigned long revolutionTime; //The time in uS that one revolution would take at current speed (The time tooth 1 was last seen, minus the time it was seen prior to that)
@@ -610,7 +610,7 @@ extern int CRANK_ANGLE_MAX;
 extern int CRANK_ANGLE_MAX_IGN;
 extern int CRANK_ANGLE_MAX_INJ;       ///< The number of crank degrees that the system track over. 360 for wasted / timed batch and 720 for sequential
 extern volatile uint32_t runSecsX10;  /**< Counter of seconds since cranking commenced (similar to runSecs) but in increments of 0.1 seconds */
-extern volatile uint32_t seclx10;     /**< Counter of seconds since powered commenced (similar to secl) but in increments of 0.1 seconds */
+//extern volatile uint32_t seclx10;     /**< Counter of seconds since powered commenced (similar to secl) but in increments of 0.1 seconds */
 extern volatile byte HWTest_INJ;      /**< Each bit in this variable represents one of the injector channels and it's HW test status */
 extern volatile byte HWTest_INJ_50pc; /**< Each bit in this variable represents one of the injector channels and it's 50% HW test status */
 extern volatile byte HWTest_IGN;      /**< Each bit in this variable represents one of the ignition channels and it's HW test status */
@@ -1484,7 +1484,8 @@ struct config15 {
   byte egoResetwAFR : 1;  ///<ego freeze or reset output when AFR target less than min
   byte egoResetwfuelLoad : 1;  ///<ego freeze or reset output when fuel load greater than max
   byte tpsDOTTimeFilt : 2; /// Time base for calculating TPS Dot, 0 = 3 loops ago, 1 = 2 loops ago, 2 = previous loop.
-  byte unused15_246 : 2; //2 bits unused
+  byte injPrimewCrank : 1; /// Injector prime mode, if 0 then priming with igntion on. if 1 priming when engine cranking, only once per power cycle.
+  byte unused15_246 : 1; //1 bit unused
   
   // Map Sample angle Table
   byte MAPSampleRPMBins[4];

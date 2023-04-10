@@ -18,4 +18,14 @@ void sendBMWCluster();
 void sendVAGCluster();
 void DashMessages(uint16_t DashMessageID);
 #endif
+
+#if defined CAN_AVR_MCP2515
+
+#endif
+uint8_t sendCAN_Speeduino_10Hz(void);
+
+void canTx_EngineSensor1(void);
+void canTx_EnginePosition1(void);
+void canTx_VehicleSpeed1(void);
+
 #endif // CANBROADCAST_H

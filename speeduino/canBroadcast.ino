@@ -114,3 +114,71 @@ void DashMessage(uint16_t DashMessageID)
   }
 }
 #endif
+
+#if defined CAN_AVR_MCP2515
+#include "globals.h"
+#include <mcp2515.h>
+
+// Broadcasts Speeduino Generic data on CAN. Compatible with data dictionary v0.1
+uint8_t sendCAN_Speeduino_10Hz()
+{
+  uint8_t canErrCode = MCP2515::ERROR_FAILTX;
+  
+  canTx_EngineSensor1(); canErrCode = mcp2515.sendMessage(&canMsg);
+  canTx_EnginePosition1(); canErrCode = mcp2515.sendMessage(&canMsg);
+  canTx_VehicleSpeed1(); canErrCode = mcp2515.sendMessage(&canMsg);
+    
+  return canErrCode;
+}
+
+// Builds engine sensor status 1 msg on CAN Id 401 in struct canMsg, ready for sending
+void canTx_EngineSensor1()
+{
+  canMsg.can_id  = 0x401;
+  canMsg.can_dlc = 8;
+  
+  canMsg.data[0] = currentStatus.TPS;  //X * 0.5
+  canMsg.data[1] = highByte(currentStatus.MAP); //X
+  canMsg.data[2] = lowByte(currentStatus.MAP); //X
+  canMsg.data[3] = currentStatus.baro; //X
+  canMsg.data[4] = currentStatus.IAT; //X - 40
+  canMsg.data[5] = currentStatus.coolant;//X - 40
+  canMsg.data[6] = currentStatus.battery10; //X * 0.1
+  canMsg.data[7] = currentStatus.ethanolPct; //X
+  
+}
+
+void canTx_EnginePosition1()
+{
+  canMsg.can_id  = 0x402;
+  canMsg.can_dlc = 7;
+  
+  canMsg.data[0] = highByte(currentStatus.RPM); //X
+  canMsg.data[1] = lowByte(currentStatus.RPM); //X
+  canMsg.data[2] = currentStatus.engine; //bitfield
+  canMsg.data[3] = currentStatus.spark; //bitfield
+  canMsg.data[4] = currentStatus.advance; //X
+  canMsg.data[5] = currentStatus.idleLoad; // X
+  canMsg.data[6] = currentStatus.CLIdleTarget; // X * 100
+  canMsg.data[7] = 0xFF;
+  
+}
+
+void canTx_VehicleSpeed1()
+{
+  canMsg.can_id  = 0x403;
+  canMsg.can_dlc = 3;
+  
+  canMsg.data[0] = highByte(currentStatus.vss); //X
+  canMsg.data[1] = lowByte(currentStatus.vss); //X
+  canMsg.data[2] = currentStatus.gear; //bitfield
+  canMsg.data[3] = currentStatus.spark; //bitfield
+  canMsg.data[4] = 0xFF;
+  canMsg.data[5] = 0xFF;
+  canMsg.data[6] = 0xFF;
+  canMsg.data[7] = 0xFF;
+  
+}
+
+
+#endif

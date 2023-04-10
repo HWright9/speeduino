@@ -31,6 +31,9 @@
 #include "logger.h"
 #include "src/FastCRC/FastCRC.h"
 
+#include <SPI.h>
+#include <mcp2515.h>
+
 #if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__) || defined(__AVR_ATmega2561__)
   #define BOARD_MAX_DIGITAL_PINS 54 //digital pins +1
   #define BOARD_MAX_IO_PINS 70 //digital pins + analog channels + 1
@@ -227,6 +230,7 @@
 #define BIT_STATUS3_NSQUIRTS2     6
 #define BIT_STATUS3_NSQUIRTS3     7
 
+#define BIT_STATUS4_CAN_ERROR     0 //CAN Bus MCP2515 Error
 #define BIT_STATUS4_VVT1_ERROR    1 //VVT1 cam angle within limits or not
 #define BIT_STATUS4_VVT2_ERROR    2 //VVT2 cam angle within limits or not
 #define BIT_STATUS4_FAN           3 //Fan Status
@@ -407,6 +411,9 @@
 #define INJ_BANK2 1
 
 #define AE_TPS_DOT_HIST_BINS 3
+
+#define CAN0_INT 2  /// MCP2515 interrupt pin
+#define MCP2515_CS_Pin 53 /// MCP2515 chip select pin
 
 #define CALIBRATION_TABLE_SIZE 512 ///< Calibration table size for CLT, IAT, O2
 #define CALIBRATION_TEMPERATURE_OFFSET 40 /**< All temperature measurements are stored offset by 40 degrees.
@@ -624,6 +631,8 @@ extern volatile byte TIMER_mask;
 extern volatile byte LOOP_TIMER;
 
 extern uint8_t egoIntAFR_Values[5];
+
+extern struct can_frame canMsg;
 
 //These functions all do checks on a pin to determine if it is already in use by another (higher importance) function
 #define pinIsInjector(pin)  ( ((pin) == pinInjector1) || ((pin) == pinInjector2) || ((pin) == pinInjector3) || ((pin) == pinInjector4) || ((pin) == pinInjector5) || ((pin) == pinInjector6) || ((pin) == pinInjector7) || ((pin) == pinInjector8) )

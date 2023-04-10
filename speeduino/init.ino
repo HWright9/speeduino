@@ -25,6 +25,10 @@
   #include "rtc_common.h"
 #endif
 
+
+#include <SPI.h>
+#include <mcp2515.h>
+
 /** Initialise Speeduino for the main loop.
  * Top level init entry point for all initialisations:
  * - Initialise and set sizes of 3D tables
@@ -112,6 +116,25 @@ void initialiseAll()
     #if defined(CANSerial_AVAILABLE)
       if (configPage9.enable_secondarySerial == 1) { CANSerial.begin(115200); }
     #endif
+    
+  #if defined (CAN_AVR_MCP2515)
+  SPI.begin();
+  mcp2515.reset();
+  mcp2515.setBitrate(CAN_1000KBPS, MCP_8MHZ); // cheap MCP2515 boards use 8Mhz crystals
+  mcp2515.setNormalMode();
+  
+  //Some junk to test sending HRW
+  canMsg.can_id  = 0x0F6;
+  canMsg.can_dlc = 8;
+  canMsg.data[0] = 0x8E;
+  canMsg.data[1] = 0x87;
+  canMsg.data[2] = 0x32;
+  canMsg.data[3] = 0xFA;
+  canMsg.data[4] = 0x26;
+  canMsg.data[5] = 0x8E;
+  canMsg.data[6] = 0xBE;
+  canMsg.data[7] = 0x86;
+  #endif
 
     //Repoint the 2D table structs to the config pages that were just loaded
     taeTable.valueSize = SIZE_BYTE; //Set this table to use byte values

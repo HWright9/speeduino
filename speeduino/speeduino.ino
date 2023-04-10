@@ -45,6 +45,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "SD_logger.h"
 #include RTC_LIB_H //Defined in each boards .h file
 #include BOARD_H //Note that this is not a real file, it is defined in globals.h. 
+#include <SPI.h>
+#include <mcp2515.h>
 
 int ignition1StartAngle = 0;
 int ignition2StartAngle = 0;
@@ -86,6 +88,11 @@ uint32_t rollingCutLastRev = 0; /**< Tracks whether we're on the same or a diffe
 
 uint16_t staged_req_fuel_mult_pri = 0;
 uint16_t staged_req_fuel_mult_sec = 0;   
+
+#if defined CAN_AVR_MCP2515
+MCP2515 mcp2515(MCP2515_CS_Pin);
+#endif
+  
 #ifndef UNIT_TEST // Scope guard for unit testing
 void setup()
 {
@@ -320,6 +327,12 @@ void loop()
       
       currentStatus.vss = getSpeed();
       currentStatus.gear = getGear();
+      
+      #if defined CAN_AVR_MCP2515
+      uint8_t canErr = sendCAN_Speeduino_10Hz();
+      if (canErr != MCP2515::ERROR_OK) { BIT_SET(currentStatus.status4, BIT_STATUS4_CAN_ERROR); }
+      else { BIT_CLEAR(currentStatus.status4, BIT_STATUS4_CAN_ERROR); }
+      #endif
 
       #ifdef SD_LOGGING
         if(configPage13.onboard_log_file_rate == LOGGER_RATE_10HZ) { writeSDLogEntry(); }

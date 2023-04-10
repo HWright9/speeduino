@@ -1050,7 +1050,7 @@ See the ini file for further reference.
 struct config6 {
 
   byte egoAlgorithm : 2; ///< EGO Algorithm 0=SingleSensor, 1=DualBank, 3 =INVALID, 4= No correction
-  byte egoType : 2;      ///< EGO Sensor Type 0=Disabled/None, 1=Narrowband, 2=Wideband
+  byte egoType : 2;      ///< EGO Sensor Type 0=Disabled/None, 1=Onboard, 2=Via Can bus
   byte boostEnabled : 1; ///< Boost control enabled 0 =off, 1 = on
   byte vvtEnabled : 1;   ///< 
   byte engineProtectType : 2;

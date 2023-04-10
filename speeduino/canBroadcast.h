@@ -24,8 +24,13 @@ void DashMessages(uint16_t DashMessageID);
 #endif
 uint8_t sendCAN_Speeduino_10Hz(void);
 
+uint8_t recieveCAN_BroadCast(void);
+
 void canTx_EngineSensor1(void);
 void canTx_EnginePosition1(void);
 void canTx_VehicleSpeed1(void);
+
+void canRx_MotecPLM_O2(struct can_frame *canRxMsg, canid_t canRXId);
+void canRx_MotecPLM_O22(struct can_frame *canRxMsg, canid_t canRXId);
 
 #endif // CANBROADCAST_H

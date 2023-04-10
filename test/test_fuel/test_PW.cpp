@@ -80,7 +80,7 @@ void test_PW_AFR_Multiply()
   configPage2.includeAFR = 1;
   configPage2.incorporateAFR = 0;
   configPage2.aeApplyMode = 0;
-  configPage6.egoType = 2; //Set O2 sensor type to wideband
+  configPage6.egoType = 1; //Set O2 sensor type to onboard
   currentStatus.runSecs = 20; configPage6.ego_sdelay = 10; //Ensure that the run time is longer than the O2 warmup time
   currentStatus.O2 = 150;
   currentStatus.afrTarget = 147;

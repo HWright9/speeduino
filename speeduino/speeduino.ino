@@ -188,6 +188,12 @@ void loop()
             }
           }
       #endif
+      
+      #if defined CAN_AVR_MCP2515
+      recieveCAN_BroadCast();
+      
+      #endif
+      
           
     if(currentLoopTime > micros_safe())
     {
@@ -1251,7 +1257,7 @@ uint16_t Calc_BaseFuel(int REQ_FUEL, byte VE, long MAP, uint16_t corrections)
   if ( configPage2.multiplyMAP == MULTIPLY_MAP_MODE_100) { iMAP = ((unsigned int)MAP << 7) / 100; }
   else if( configPage2.multiplyMAP == MULTIPLY_MAP_MODE_BARO) { iMAP = ((unsigned int)MAP << 7) / currentStatus.baro; }
   
-  if ( (configPage2.includeAFR == true) && (configPage6.egoType == 2) && (currentStatus.runSecs > configPage6.egoStartdelay) ) {
+  if ( (configPage2.includeAFR == true) && (configPage6.egoType > 0) && (currentStatus.runSecs > configPage6.egoStartdelay) ) {
     iAFR = ((unsigned int)currentStatus.O2 << 7) / currentStatus.afrTarget;  //Include measured O2 AFR from sensor (vs target) if enabled
   }
   if ( (configPage2.incorporateAFR == true) && (configPage2.includeAFR == false) ) {
@@ -1264,7 +1270,7 @@ uint16_t Calc_BaseFuel(int REQ_FUEL, byte VE, long MAP, uint16_t corrections)
   unsigned long intermediate = ((uint32_t)REQ_FUEL * (uint32_t)iVE) >> 7; //Need to use an intermediate value to avoid overflowing the long
   if ( configPage2.multiplyMAP > 0 ) { intermediate = (intermediate * (unsigned long)iMAP) >> 7; }
   
-  if ( (configPage2.includeAFR == true) && (configPage6.egoType == 2) && (currentStatus.runSecs > configPage6.egoStartdelay) ) {
+  if ( (configPage2.includeAFR == true) && (configPage6.egoType > 0) && (currentStatus.runSecs > configPage6.egoStartdelay) ) {
     //EGO type must be set to wideband and the AFR warmup time must've elapsed for this to be used
     intermediate = (intermediate * (unsigned long)iAFR) >> 7;  
   }

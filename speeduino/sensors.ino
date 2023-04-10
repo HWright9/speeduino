@@ -559,7 +559,8 @@ void readBaro(bool useFilter)
 void readO2()
 {
   //An O2 read is only performed if an O2 sensor type is selected. This is to prevent potentially dangerous use of the O2 readings prior to proper setup/calibration
-  if(configPage6.egoType > 0)
+  // Type 1 is internal, Type 2 is via CAN
+  if(configPage6.egoType == 1)
   {
     unsigned int tempReading;
     #if defined(ANALOG_ISR)
@@ -573,6 +574,10 @@ void readO2()
     //currentStatus.O2 = o2CalibrationTable[currentStatus.O2ADC];
     currentStatus.O2 = table2D_getValue(&o2CalibrationTable, currentStatus.O2ADC);
   }
+  else if (configPage6.egoType == 2)
+  {
+    currentStatus.O2ADC = 0;
+  }
   else
   {
     currentStatus.O2ADC = 0;
@@ -583,7 +588,8 @@ void readO2()
 
 void readO2_2()
 {
-  if(configPage6.egoType > 0)
+  // Type 1 is internal, Type 2 is via CAN
+  if(configPage6.egoType == 1)
   {
   //Get the current O2 value of sensor 2.
   unsigned int tempReading;
@@ -597,10 +603,14 @@ void readO2_2()
   currentStatus.O2_2ADC = filterADC(tempReading, configPage4.ADCFILTER_O2, currentStatus.O2_2ADC);
   currentStatus.O2_2 = table2D_getValue(&o2CalibrationTable, currentStatus.O2_2ADC);
   }
-  else
+  else if (configPage6.egoType == 2)
   {
-	currentStatus.O2_2ADC = 0;
-	currentStatus.O2_2 = 0;
+    currentStatus.O2_2ADC = 0;
+  }
+    else
+  {
+	  currentStatus.O2_2ADC = 0;
+	  currentStatus.O2_2 = 0;
   }
 }
 

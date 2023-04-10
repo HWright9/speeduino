@@ -131,6 +131,18 @@ uint8_t sendCAN_Speeduino_10Hz()
   return canErrCode;
 }
 
+uint8_t recieveCAN_BroadCast()
+{
+  uint8_t canErrCode = MCP2515::ERROR_FAILTX;
+  
+  canErrCode = mcp2515.readMessage(&canMsg);
+  if ((canErrCode == MCP2515::ERROR_OK) && (configPage6.egoType == 2)) // O2 sensor source set to read CAN
+  {
+    canRx_MotecPLM_O2(&canMsg, 0x460); // Parse Motec PLM message at ID 460 for O2
+    canRx_MotecPLM_O22(&canMsg, 0x461); // Parse Motec PLM message at ID 461 for 2nd O2
+  }
+}
+
 // Builds engine sensor status 1 msg on CAN Id 401 in struct canMsg, ready for sending
 void canTx_EngineSensor1()
 {
@@ -178,6 +190,150 @@ void canTx_VehicleSpeed1()
   canMsg.data[6] = 0xFF;
   canMsg.data[7] = 0xFF;
   
+}
+
+/* Recieve MotecPLM Can message frame on defined CAN ID */
+void canRx_MotecPLM_O2 (struct can_frame *canRxMsg, canid_t canRXId)
+{
+  if ((canRxMsg->can_id == canRXId) && (canRxMsg->can_dlc == 8)) // Check msg on correct address and data length is correct
+  {
+    
+    //byte0 Compound ID
+    
+    //byte1 and 2 Calibrated Sensor Output Value Hi:lo*1 = x.xxxLa
+    uint16_t result = (canRxMsg->data[1] << 8) | canRxMsg->data[2]; //(highByte << 8) | lowByte
+    // Scale into AFR x10
+    result = result / 10;
+    if (result > 445) { result = 445; } // prevent overflow in next calculation.
+    
+    // Check O2 data is valid using sensor status
+    if (canRxMsg->data[7] == 0x00)
+    {
+      currentStatus.O2 = (uint8_t)(div100(result * 147));
+    }
+    else
+    {
+      currentStatus.O2 = 255; // full lean egomax should be set to throw this as an error
+    }
+      
+    //byte3 Heater duty cycle Byte*1 = xxx%
+
+    //byte4 Device Internal Temperature Byte*195/10-500 = xxx.xC
+
+    //byte5 Zp (Pump cell impedance) Byte*1 = X ohm
+
+    //byte6 Diagnostic Field 1
+
+    //byte7 sensor state
+    /*
+    switch (canRxMsg->data[7])
+    {
+      case (0x00):
+      EQRLH_State = e_EQRState_RUN;
+      break;
+      
+      case (0x01):
+      EQRLH_State = e_EQRState_CONTROL_WAIT;
+      break;
+
+      case (0x02):
+      EQRLH_State = e_EQRState_PUMP_WAIT;
+      break;
+
+      case (0x03):
+      EQRLH_State = e_EQRState_WARM_UP;
+      break;
+
+      case (0x04):
+      EQRLH_State = e_EQRState_NO_HEATER;
+      break;
+
+      case (0x05):
+      EQRLH_State = e_EQRState_STOP;
+      break;
+
+      case (0x06):
+      EQRLH_State = e_EQRState_PUMP_OFF;
+      break;
+
+      default:
+      EQRLH_State = e_EQRState_STOP;
+      break;
+    }
+    */
+  }
+}
+
+/* Recieve MotecPLM Can message frame on defined CAN ID */
+void canRx_MotecPLM_O22 (struct can_frame *canRxMsg, canid_t canRXId)
+{
+  if ((canRxMsg->can_id == canRXId) && (canRxMsg->can_dlc == 8)) // Check msg on correct address and data length is correct
+  {
+    
+    //byte0 Compound ID
+    
+    //byte1 and 2 Calibrated Sensor Output Value Hi:lo*1 = x.xxxLa
+    uint16_t result = (canRxMsg->data[1] << 8) | canRxMsg->data[2]; //(highByte << 8) | lowByte
+    // Scale into AFR x10
+    result = result / 10;
+    if (result > 445) { result = 445; } // prevent overflow in next calculation.
+    
+    // Check O2 data is valid using sensor status
+    if (canRxMsg->data[7] == 0x00)
+    {
+      currentStatus.O2_2 = (uint8_t)(div100(result * 147));
+    }
+    else
+    {
+      currentStatus.O2_2 = 255; // full lean egomax should be set to throw this as an error
+    }
+      
+    //byte3 Heater duty cycle Byte*1 = xxx%
+
+    //byte4 Device Internal Temperature Byte*195/10-500 = xxx.xC
+
+    //byte5 Zp (Pump cell impedance) Byte*1 = X ohm
+
+    //byte6 Diagnostic Field 1
+
+    //byte7 sensor state
+    /*
+    switch (canRxMsg->data[7])
+    {
+      case (0x00):
+      EQRLH_State = e_EQRState_RUN;
+      break;
+      
+      case (0x01):
+      EQRLH_State = e_EQRState_CONTROL_WAIT;
+      break;
+
+      case (0x02):
+      EQRLH_State = e_EQRState_PUMP_WAIT;
+      break;
+
+      case (0x03):
+      EQRLH_State = e_EQRState_WARM_UP;
+      break;
+
+      case (0x04):
+      EQRLH_State = e_EQRState_NO_HEATER;
+      break;
+
+      case (0x05):
+      EQRLH_State = e_EQRState_STOP;
+      break;
+
+      case (0x06):
+      EQRLH_State = e_EQRState_PUMP_OFF;
+      break;
+
+      default:
+      EQRLH_State = e_EQRState_STOP;
+      break;
+    }
+    */
+  }
 }
 
 

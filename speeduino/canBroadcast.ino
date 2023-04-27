@@ -10,6 +10,10 @@ This is for handling the data broadcasted to various CAN dashes and instrument c
 #if defined(NATIVE_CAN_AVAILABLE)
 #include "globals.h"
 
+uint8_t canO2TimeSinceLast;
+uint8_t canO22TimeSinceLast;
+uint8_t canEPBTimeSinceLast;
+
 void sendBMWCluster()
 {
   DashMessage(CAN_BMW_DME1);
@@ -131,16 +135,42 @@ uint8_t sendCAN_Speeduino_10Hz()
   return canErrCode;
 }
 
+// Recieves Speeduino data on CAN. Compatible with data dictionary v0.1
 uint8_t recieveCAN_BroadCast()
 {
   uint8_t canErrCode = MCP2515::ERROR_FAILTX;
   
   canErrCode = mcp2515.readMessage(&canMsg);
-  if ((canErrCode == MCP2515::ERROR_OK) && (configPage6.egoType == 2)) // O2 sensor source set to read CAN
-  {
-    canRx_MotecPLM_O2(&canMsg, 0x460); // Parse Motec PLM message at ID 460 for O2
-    canRx_MotecPLM_O22(&canMsg, 0x461); // Parse Motec PLM message at ID 461 for 2nd O2
+  
+  
+  if(canErrCode == MCP2515::ERROR_OK) 
+  { 
+      // O2 sensors using motec PLM's
+    if (configPage6.egoType == 2) // O2 sensor source set to read CAN
+    {
+      canRx_MotecPLM_O2(&canMsg, 0x460); // Parse Motec PLM message at ID 460 for O2
+      canRx_MotecPLM_O22(&canMsg, 0x461); // Parse Motec PLM message at ID 461 for 2nd O2
+    }
+    
+    if (configPage2.vssMode == 1) // 1 is RX over CAN
+    {
+      canRx_EPB_Vss(&canMsg, 0x470); // Parse Electric Park Brake data on 470. This has vss gear and clutch data from EPB.
+    }
+      
   }
+  else if (BIT_CHECK(LOOP_TIMER, BIT_TIMER_10HZ)) // Time out variables to check if messages not recieved, sec x10
+  { 
+    if (canO2TimeSinceLast < 255) { canO2TimeSinceLast++; }
+    if (canO22TimeSinceLast < 255) { canO22TimeSinceLast++; }
+    if (canEPBTimeSinceLast < 255) { canEPBTimeSinceLast++; }
+  }  
+  
+  // Timeout error handling
+  if ((configPage6.egoType == 2) && (canO2TimeSinceLast > 10)) { canRx_EPB_Vss_Dflt(); }
+  if ((configPage6.egoType == 2) && (canO22TimeSinceLast > 10)) { canRx_MotecPLM_O22_Dflt(); }
+  if ((configPage2.vssMode == 1) && (canEPBTimeSinceLast > 20)) { canRx_EPB_Vss_Dflt(); }
+  
+  return canErrCode;
 }
 
 // Builds engine sensor status 1 msg on CAN Id 401 in struct canMsg, ready for sending
@@ -171,7 +201,7 @@ void canTx_EnginePosition1()
   canMsg.data[3] = currentStatus.spark; //bitfield
   canMsg.data[4] = currentStatus.advance; //X
   canMsg.data[5] = currentStatus.idleLoad; // X
-  canMsg.data[6] = currentStatus.CLIdleTarget; // X * 100
+  canMsg.data[6] = currentStatus.CLIdleTarget; // X * 10
   canMsg.data[7] = 0xFF;
   
 }
@@ -183,8 +213,8 @@ void canTx_VehicleSpeed1()
   
   canMsg.data[0] = highByte(currentStatus.vss); //X
   canMsg.data[1] = lowByte(currentStatus.vss); //X
-  canMsg.data[2] = currentStatus.gear; //bitfield
-  canMsg.data[3] = currentStatus.spark; //bitfield
+  canMsg.data[2] = currentStatus.gear; // Enum
+  canMsg.data[3] = 0xFF;
   canMsg.data[4] = 0xFF;
   canMsg.data[5] = 0xFF;
   canMsg.data[6] = 0xFF;
@@ -197,24 +227,21 @@ void canRx_MotecPLM_O2 (struct can_frame *canRxMsg, canid_t canRXId)
 {
   if ((canRxMsg->can_id == canRXId) && (canRxMsg->can_dlc == 8)) // Check msg on correct address and data length is correct
   {
+    canO2TimeSinceLast = 0; //reset timeout 
     
     //byte0 Compound ID
-    
-    //byte1 and 2 Calibrated Sensor Output Value Hi:lo*1 = x.xxxLa
-    uint16_t result = (canRxMsg->data[1] << 8) | canRxMsg->data[2]; //(highByte << 8) | lowByte
-    // Scale into AFR x10
-    result = result / 10;
-    if (result > 445) { result = 445; } // prevent overflow in next calculation.
     
     // Check O2 data is valid using sensor status
     if (canRxMsg->data[7] == 0x00)
     {
-      currentStatus.O2 = (uint8_t)(div100(result * 147));
+      //byte1 and 2 Calibrated Sensor Output Value Hi:lo*1 = x.xxxLa
+      uint32_t result = (canRxMsg->data[1] << 8) | canRxMsg->data[2]; //(highByte << 8) | lowByte - this is EQR from PLM
+      
+      if (result < 600 ) { currentStatus.O2 = 255; } // catch divide by 0 and overflow later on.
+      else { currentStatus.O2 = (uint8_t)(147000 / result); }//afr
     }
-    else
-    {
-      currentStatus.O2 = 255; // full lean egomax should be set to throw this as an error
-    }
+    else { currentStatus.O2 = 255; } // not valid sensor reading
+
       
     //byte3 Heater duty cycle Byte*1 = xxx%
 
@@ -262,6 +289,12 @@ void canRx_MotecPLM_O2 (struct can_frame *canRxMsg, canid_t canRXId)
     }
     */
   }
+}
+
+// Default action when message times out
+void canRx_MotecPLM_O2_Dflt(void)
+{
+  currentStatus.O2 = 255;
 }
 
 /* Recieve MotecPLM Can message frame on defined CAN ID */
@@ -269,24 +302,20 @@ void canRx_MotecPLM_O22 (struct can_frame *canRxMsg, canid_t canRXId)
 {
   if ((canRxMsg->can_id == canRXId) && (canRxMsg->can_dlc == 8)) // Check msg on correct address and data length is correct
   {
+    canO22TimeSinceLast = 0; //reset timeout 
     
     //byte0 Compound ID
-    
-    //byte1 and 2 Calibrated Sensor Output Value Hi:lo*1 = x.xxxLa
-    uint16_t result = (canRxMsg->data[1] << 8) | canRxMsg->data[2]; //(highByte << 8) | lowByte
-    // Scale into AFR x10
-    result = result / 10;
-    if (result > 445) { result = 445; } // prevent overflow in next calculation.
     
     // Check O2 data is valid using sensor status
     if (canRxMsg->data[7] == 0x00)
     {
-      currentStatus.O2_2 = (uint8_t)(div100(result * 147));
+      //byte1 and 2 Calibrated Sensor Output Value Hi:lo*1 = x.xxxLa
+      uint32_t result = (canRxMsg->data[1] << 8) | canRxMsg->data[2]; //(highByte << 8) | lowByte - this is EQR from PLM
+      
+      if (result < 600 ) { currentStatus.O2_2 = 255; } // catch divide by 0 and overflow later on.
+      else { currentStatus.O2_2 = (uint8_t)(147000 / result); }//afr
     }
-    else
-    {
-      currentStatus.O2_2 = 255; // full lean egomax should be set to throw this as an error
-    }
+    else { currentStatus.O2_2 = 255; } // not valid sensor reading
       
     //byte3 Heater duty cycle Byte*1 = xxx%
 
@@ -336,5 +365,44 @@ void canRx_MotecPLM_O22 (struct can_frame *canRxMsg, canid_t canRXId)
   }
 }
 
+// Default action when message times out
+void canRx_MotecPLM_O22_Dflt(void)
+{
+  currentStatus.O2_2 = 255;
+}
+
+/* Recieve EPB data on 470 */
+void canRx_EPB_Vss (struct can_frame *canRxMsg, canid_t canRXId)
+{
+  if ((canRxMsg->can_id == canRXId) && (canRxMsg->can_dlc == 8)) // Check msg on correct address and data length is correct
+  {
+    canEPBTimeSinceLast = 0; //reset timeout 
+    
+    // Bytes 0 and 1 are vss X
+    currentStatus.vss = (canRxMsg->data[1] << 8) | canRxMsg->data[2]; //(highByte << 8) | lowByte
+    if (currentStatus.vss > 512) { currentStatus.vss = 512; } //basic error checking.
+
+  
+  // Byte 2 is gear
+  // Byte 3 is reverse gearbox state, need to resolve both of them.
+  currentStatus.gear = canRxMsg->data[3]; // Raw gear from EPB.
+  if ( currentStatus.gear = 6) { currentStatus.gear = 0; } // 0 and 6 are both neutral in speeduino gear logic.
+  if ((canRxMsg->data[4] == 0) && (currentStatus.gear >= 2 )){ currentStatus.gear = 1; } // Reverse gearbox is in reverse, limit speeduino gear to 1st
+  else if (canRxMsg->data[4] >= 2){ currentStatus.gear = 0; } // All other states of reverse gearbox are neutral
+
+  // Read clutch trigger bit as the inverse of "clutch is top travel from EPB"
+  clutchTrigger = !(canRxMsg->data[4] & 0b00000010); // Bit 1 inverted.
+  // Other messages not read 
+  }
+
+}
+
+// Default action when message times out
+void canRx_EPB_Vss_Dflt(void)
+{
+  currentStatus.vss = 0;
+  currentStatus.gear = 0;
+  clutchTrigger = 0;
+}
 
 #endif

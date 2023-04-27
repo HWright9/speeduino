@@ -21,7 +21,6 @@ void DashMessages(uint16_t DashMessageID);
 
 #if defined CAN_AVR_MCP2515
 
-#endif
 uint8_t sendCAN_Speeduino_10Hz(void);
 
 uint8_t recieveCAN_BroadCast(void);
@@ -32,5 +31,16 @@ void canTx_VehicleSpeed1(void);
 
 void canRx_MotecPLM_O2(struct can_frame *canRxMsg, canid_t canRXId);
 void canRx_MotecPLM_O22(struct can_frame *canRxMsg, canid_t canRXId);
+void canRx_EPB_Vss(struct can_frame *canRxMsg, canid_t canRXId);
+
+void canRx_MotecPLM_O2_Dflt(void);
+void canRx_MotecPLM_O22_Dflt(void);
+void canRx_EPB_Vss_Dflt(void);
+
+
+uint8_t canO2TimeSinceLast;
+uint8_t canO22TimeSinceLast;
+uint8_t canEPBTimeSinceLast;
+#endif
 
 #endif // CANBROADCAST_H

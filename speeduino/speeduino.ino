@@ -190,8 +190,10 @@ void loop()
       #endif
       
       #if defined CAN_AVR_MCP2515
-      recieveCAN_BroadCast();
-      
+      if (1) // TO DO assign input pin for can recieve and check it here to make sure data is available.
+      {
+        recieveCAN_BroadCast();
+      }
       #endif
       
           
@@ -291,8 +293,9 @@ void loop()
 
       //Check for launching/flat shift (clutch) can be done around here too
       previousClutchTrigger = clutchTrigger;
+      // vssMode = 1 is RX over CAN for VSS gear and clutch.
       //Only check for pinLaunch if any function using it is enabled. Else pins might break starting a board
-      if(configPage6.flatSEnable || configPage6.launchEnabled || (configPage9.dfcoDsblwClutch == true)){
+      if((configPage2.vssMode != 1) && (configPage6.flatSEnable || configPage6.launchEnabled || (configPage9.dfcoDsblwClutch == true))){
         if(configPage6.launchHiLo > 0) { clutchTrigger = digitalRead(pinLaunch); }
         else { clutchTrigger = !digitalRead(pinLaunch); }
       }
@@ -331,8 +334,8 @@ void loop()
 
       //if( (isEepromWritePending() == true) && (serialReceivePending == false) && (micros() > deferEEPROMWritesUntil)) { writeAllConfig(); } //Used for slower EEPROM writes (Currently this runs in the 30Hz block)
       
-      currentStatus.vss = getSpeed();
-      currentStatus.gear = getGear();
+      getSpeed();
+      getGear();
       
       #if defined CAN_AVR_MCP2515
       uint8_t canErr = sendCAN_Speeduino_10Hz();

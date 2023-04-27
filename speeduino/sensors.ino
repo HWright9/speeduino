@@ -673,19 +673,15 @@ uint32_t vssGetPulseGap(byte historyIndex)
   return tempGap;
 }
 
-uint16_t getSpeed()
+void getSpeed()
 {
-  uint16_t tempSpeed = 0;
-
-  if(configPage2.vssMode == 1)
-  {
-    //VSS mode 1 is (Will be) CAN
-  }
+  //VSS mode 1 is CAN - Check canBroadcast
   // Interrupt driven mode
-  else if(configPage2.vssMode > 1)
+  if(configPage2.vssMode > 1)
   {
     uint32_t pulseTime = 0;
     uint32_t vssTotalTime = 0;
+    uint16_t tempSpeed = 0;
 
     //Add up the time between the teeth. Note that the total number of gaps is equal to the number of samples minus 1
     for(byte x = 0; x<(VSS_SAMPLES-1); x++)
@@ -701,30 +697,45 @@ uint16_t getSpeed()
         tempSpeed = filterADC(tempSpeed, configPage2.vssSmoothing, currentStatus.vss); //Apply speed smoothing factor
       }
     if(tempSpeed > 1000) { tempSpeed = currentStatus.vss; } //Safety check. This usually occurs when there is a hardware issue
-
+    
+    currentStatus.vss = tempSpeed;
   }
-  return tempSpeed;
+  else if(configPage2.vssMode == 0) // turn vss off.
+  {
+    currentStatus.vss = 0;
+  }
+  // Else VSS is being recieved on CAN
 }
 
-byte getGear()
+void getGear()
 {
-  byte tempGear = 0; //Unknown gear
-  if ((currentStatus.vss > 0) && (currentStatus.RPM > 0))
-  {
-    //If the speed is non-zero, default to the last calculated gear
-    tempGear = currentStatus.gear;
-
-    uint16_t pulsesPer1000rpm = (currentStatus.vss * 10000UL) / currentStatus.RPM; //Gives the current pulses per 1000RPM, multiplied by 10 (10x is the multiplication factor for the ratios in TS)
-    //Begin gear detection
-    if( (pulsesPer1000rpm > (configPage2.vssRatio1 - VSS_GEAR_HYSTERESIS)) && (pulsesPer1000rpm < (configPage2.vssRatio1 + VSS_GEAR_HYSTERESIS)) ) { tempGear = 1; }
-    else if( (pulsesPer1000rpm > (configPage2.vssRatio2 - VSS_GEAR_HYSTERESIS)) && (pulsesPer1000rpm < (configPage2.vssRatio2 + VSS_GEAR_HYSTERESIS)) ) { tempGear = 2; }
-    else if( (pulsesPer1000rpm > (configPage2.vssRatio3 - VSS_GEAR_HYSTERESIS)) && (pulsesPer1000rpm < (configPage2.vssRatio3 + VSS_GEAR_HYSTERESIS)) ) { tempGear = 3; }
-    else if( (pulsesPer1000rpm > (configPage2.vssRatio4 - VSS_GEAR_HYSTERESIS)) && (pulsesPer1000rpm < (configPage2.vssRatio4 + VSS_GEAR_HYSTERESIS)) ) { tempGear = 4; }
-    else if( (pulsesPer1000rpm > (configPage2.vssRatio5 - VSS_GEAR_HYSTERESIS)) && (pulsesPer1000rpm < (configPage2.vssRatio5 + VSS_GEAR_HYSTERESIS)) ) { tempGear = 5; }
-    else if( (pulsesPer1000rpm > (configPage2.vssRatio6 - VSS_GEAR_HYSTERESIS)) && (pulsesPer1000rpm < (configPage2.vssRatio6 + VSS_GEAR_HYSTERESIS)) ) { tempGear = 6; }
-  }
   
-  return tempGear;
+  if(configPage2.vssMode > 1)
+  {
+    byte tempGear = 0; //Unknown gear
+    
+    if ((currentStatus.vss > 0) && (currentStatus.RPM > 0))
+    {
+      //If the speed is non-zero, default to the last calculated gear
+      tempGear = currentStatus.gear;
+
+      uint16_t pulsesPer1000rpm = (currentStatus.vss * 10000UL) / currentStatus.RPM; //Gives the current pulses per 1000RPM, multiplied by 10 (10x is the multiplication factor for the ratios in TS)
+      //Begin gear detection
+      if( (pulsesPer1000rpm > (configPage2.vssRatio1 - VSS_GEAR_HYSTERESIS)) && (pulsesPer1000rpm < (configPage2.vssRatio1 + VSS_GEAR_HYSTERESIS)) ) { tempGear = 1; }
+      else if( (pulsesPer1000rpm > (configPage2.vssRatio2 - VSS_GEAR_HYSTERESIS)) && (pulsesPer1000rpm < (configPage2.vssRatio2 + VSS_GEAR_HYSTERESIS)) ) { tempGear = 2; }
+      else if( (pulsesPer1000rpm > (configPage2.vssRatio3 - VSS_GEAR_HYSTERESIS)) && (pulsesPer1000rpm < (configPage2.vssRatio3 + VSS_GEAR_HYSTERESIS)) ) { tempGear = 3; }
+      else if( (pulsesPer1000rpm > (configPage2.vssRatio4 - VSS_GEAR_HYSTERESIS)) && (pulsesPer1000rpm < (configPage2.vssRatio4 + VSS_GEAR_HYSTERESIS)) ) { tempGear = 4; }
+      else if( (pulsesPer1000rpm > (configPage2.vssRatio5 - VSS_GEAR_HYSTERESIS)) && (pulsesPer1000rpm < (configPage2.vssRatio5 + VSS_GEAR_HYSTERESIS)) ) { tempGear = 5; }
+      else if( (pulsesPer1000rpm > (configPage2.vssRatio6 - VSS_GEAR_HYSTERESIS)) && (pulsesPer1000rpm < (configPage2.vssRatio6 + VSS_GEAR_HYSTERESIS)) ) { tempGear = 6; }
+    }
+    currentStatus.gear = tempGear;
+  }
+  else if (configPage2.vssMode == 0)
+  {
+    currentStatus.gear = 0;
+  }
+  // Else gear is being recieved on CAN with vss
+
 }
 
 /* Calculates fuel Pressure including diagnostics. Read rate 30Hz. This function has internal timers so need to adjust hard coded values if the read rate is changed */

@@ -80,8 +80,8 @@ void readO2_2();
 void flexPulse();
 uint32_t vssGetPulseGap(byte);
 void vssPulse();
-uint16_t getSpeed();
-byte getGear();
+void getSpeed();
+void getGear();
 void readFuelPressure(bool=true); //Allows the option to override the use of the filter
 void readOilPressure(bool=true); //Allows the option to override the use of the filter
 uint16_t readAuxanalog(uint8_t analogPin);

@@ -513,7 +513,9 @@ void readCLT(bool useFilter)
   if(useFilter == true) { currentStatus.cltADC = filterADC(tempReading, configPage4.ADCFILTER_CLT, currentStatus.cltADC); }
   else { currentStatus.cltADC = tempReading; }
   
-  currentStatus.coolant = table2D_getValue(&cltCalibrationTable, currentStatus.cltADC) - CALIBRATION_TEMPERATURE_OFFSET; //Temperature calibration values are stored as positive bytes. We subtract 40 from them to allow for negative temperatures
+  if (currentStatus.cltADC >= 1022){currentStatus.coolant = 255 - CALIBRATION_TEMPERATURE_OFFSET;} //default action on open circuit - HRW
+  else{ currentStatus.coolant = table2D_getValue(&cltCalibrationTable, currentStatus.cltADC) - CALIBRATION_TEMPERATURE_OFFSET; //Temperature calibration values are stored as positive bytes. We subtract 40 from them to allow for negative temperatures
+  }
 }
 
 void readIAT(bool useFilter)

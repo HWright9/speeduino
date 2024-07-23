@@ -338,9 +338,12 @@ void loop()
       getGear();
       
       #if defined CAN_AVR_MCP2515
-      uint8_t canErr = sendCAN_Speeduino_10Hz();
-      if (canErr != MCP2515::ERROR_OK) { BIT_SET(currentStatus.status4, BIT_STATUS4_CAN_ERROR); }
-      else { BIT_CLEAR(currentStatus.status4, BIT_STATUS4_CAN_ERROR); }
+	  if (configPage2.enableAeroSSCAN == true){
+		uint8_t canErr = sendCAN_Speeduino_10Hz();
+		if (canErr != MCP2515::ERROR_OK) { BIT_SET(currentStatus.status4, BIT_STATUS4_CAN_ERROR); }
+		else { BIT_CLEAR(currentStatus.status4, BIT_STATUS4_CAN_ERROR); }
+	  }
+	  else { BIT_CLEAR(currentStatus.status4, BIT_STATUS4_CAN_ERROR); }
       #endif
 
       #ifdef SD_LOGGING

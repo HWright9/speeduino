@@ -130,6 +130,7 @@ uint8_t sendCAN_Speeduino_10Hz()
   
   canTx_EngineSensor1(); canErrCode = mcp2515.sendMessage(&canMsg);
   canTx_EnginePosition1(); canErrCode = mcp2515.sendMessage(&canMsg);
+  canTx_EngineActuator1(); canErrCode = mcp2515.sendMessage(&canMsg);
   canTx_VehicleSpeed1(); canErrCode = mcp2515.sendMessage(&canMsg);
     
   return canErrCode;
@@ -193,7 +194,7 @@ void canTx_EngineSensor1()
 void canTx_EnginePosition1()
 {
   canMsg.can_id  = 0x402;
-  canMsg.can_dlc = 7;
+  canMsg.can_dlc = 8;
   
   canMsg.data[0] = highByte(currentStatus.RPM); //X
   canMsg.data[1] = lowByte(currentStatus.RPM); //X
@@ -202,13 +203,29 @@ void canTx_EnginePosition1()
   canMsg.data[4] = currentStatus.advance; //X
   canMsg.data[5] = currentStatus.idleLoad; // X
   canMsg.data[6] = currentStatus.CLIdleTarget; // X * 10
+  canMsg.data[7] = currentStatus.engineProtectStatus; //bitfield
+  
+}
+
+void canTx_EngineActuator1()
+{
+  canMsg.can_id  = 0x403;
+  canMsg.can_dlc = 5;
+  
+  canMsg.data[0] = highByte(currentStatus.PW1); //X * 0.001
+  canMsg.data[1] = lowByte(currentStatus.PW1); //X * 0.001
+  canMsg.data[2] = highByte(currentStatus.PW2); //X * 0.001
+  canMsg.data[3] = lowByte(currentStatus.PW2); //X * 0.001
+  canMsg.data[4] = currentStatus.afrTarget; //X * 0.1
+  canMsg.data[5] = 0xFF;
+  canMsg.data[6] = 0xFF;
   canMsg.data[7] = 0xFF;
   
 }
 
 void canTx_VehicleSpeed1()
 {
-  canMsg.can_id  = 0x403;
+  canMsg.can_id  = 0x410;
   canMsg.can_dlc = 3;
   
   canMsg.data[0] = highByte(currentStatus.vss); //X

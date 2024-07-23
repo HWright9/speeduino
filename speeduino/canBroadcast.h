@@ -27,6 +27,7 @@ uint8_t recieveCAN_BroadCast(void);
 
 void canTx_EngineSensor1(void);
 void canTx_EnginePosition1(void);
+void canTx_EngineActuator1(void);
 void canTx_VehicleSpeed1(void);
 
 void canRx_MotecPLM_O2(struct can_frame *canRxMsg, canid_t canRXId);

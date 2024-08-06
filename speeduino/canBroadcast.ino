@@ -10,10 +10,6 @@ This is for handling the data broadcasted to various CAN dashes and instrument c
 #if defined(NATIVE_CAN_AVAILABLE)
 #include "globals.h"
 
-uint8_t canO2TimeSinceLast;
-uint8_t canO22TimeSinceLast;
-uint8_t canEPBTimeSinceLast;
-
 void sendBMWCluster()
 {
   DashMessage(CAN_BMW_DME1);
@@ -121,17 +117,26 @@ void DashMessage(uint16_t DashMessageID)
 
 #if defined CAN_AVR_MCP2515
 #include "globals.h"
-#include <mcp2515.h>
 
-// Broadcasts Speeduino Generic data on CAN. Compatible with data dictionary v0.1
+/*Variables Local to this function*/
+unsigned char len = 0;
+uint32_t CANrxId;
+uint8_t CANMsgdata[8]; // Used by both TX and RX routines.
+uint8_t can0_Msg_FailCntr;
+
+uint8_t canO2TimeSinceLast;
+uint8_t canO22TimeSinceLast;
+uint8_t canEPBTimeSinceLast;
+
+// Broadcasts Speeduino Generic data on CAN. Compatible with data dictionary v0.2
 uint8_t sendCAN_Speeduino_10Hz()
 {
-  uint8_t canErrCode = MCP2515::ERROR_FAILTX;
+  uint8_t canErrCode = CAN_OK;
   
-  canTx_EngineSensor1(); canErrCode = mcp2515.sendMessage(&canMsg);
-  canTx_EnginePosition1(); canErrCode = mcp2515.sendMessage(&canMsg);
-  canTx_EngineActuator1(); canErrCode = mcp2515.sendMessage(&canMsg);
-  canTx_VehicleSpeed1(); canErrCode = mcp2515.sendMessage(&canMsg);
+  if(canErrCode == CAN_OK) { canErrCode = canTx_EngineSensor1(); }
+  if(canErrCode == CAN_OK) { canErrCode = canTx_EnginePosition1(); }
+  if(canErrCode == CAN_OK) { canErrCode = canTx_EngineActuator1(); }
+  if(canErrCode == CAN_OK) { canErrCode = canTx_VehicleSpeed1(); }
     
   return canErrCode;
 }
@@ -139,23 +144,23 @@ uint8_t sendCAN_Speeduino_10Hz()
 // Recieves Speeduino data on CAN. Compatible with data dictionary v0.1
 uint8_t recieveCAN_BroadCast()
 {
-  uint8_t canErrCode = MCP2515::ERROR_FAILTX;
+  uint8_t canErrCode = CAN_OK;
   
-  canErrCode = mcp2515.readMessage(&canMsg);
-  
-  
-  if(canErrCode == MCP2515::ERROR_OK) 
+  if(digitalRead(2) == 0) // Digital read INT pin on pin 2
   { 
+  
+    CAN0.readMsgBuf(&CANrxId, &len, CANMsgdata);
+    
       // O2 sensors using motec PLM's
     if (configPage6.egoType == 2) // O2 sensor source set to read CAN
     {
-      canRx_MotecPLM_O2(&canMsg, 0x460); // Parse Motec PLM message at ID 460 for O2
-      canRx_MotecPLM_O22(&canMsg, 0x461); // Parse Motec PLM message at ID 461 for 2nd O2
+      if ((CANrxId == 460) && (len == 8)) { canRx_MotecPLM_O2(); }// Parse Motec PLM message at ID 460 for O2
+      if ((CANrxId == 461) && (len == 8)) { canRx_MotecPLM_O22; } // Parse Motec PLM message at ID 461 for 2nd O2
     }
     
     if (configPage2.vssMode == 1) // 1 is RX over CAN
     {
-      canRx_EPB_Vss(&canMsg, 0x470); // Parse Electric Park Brake data on 470. This has vss gear and clutch data from EPB.
+      if ((CANrxId == 470) && (len == 8)) { canRx_EPB_Vss(); } // Parse Electric Park Brake data on 470. This has vss gear and clutch data from EPB.
     }
       
   }
@@ -174,138 +179,133 @@ uint8_t recieveCAN_BroadCast()
   return canErrCode;
 }
 
-// Builds engine sensor status 1 msg on CAN Id 401 in struct canMsg, ready for sending
-void canTx_EngineSensor1()
+// Builds and sends engine sensor status 1 msg on CAN Id 401
+uint8_t canTx_EngineSensor1()
 {
-  canMsg.can_id  = 0x401;
-  canMsg.can_dlc = 8;
+  CANMsgdata[0] = currentStatus.TPS;  //X * 0.5
+  CANMsgdata[1] = highByte(currentStatus.MAP); //X
+  CANMsgdata[2] = lowByte(currentStatus.MAP); //X
+  CANMsgdata[3] = currentStatus.baro; //X
+  CANMsgdata[4] = currentStatus.IAT; //X - 40
+  CANMsgdata[5] = currentStatus.coolant;//X - 40
+  CANMsgdata[6] = currentStatus.battery10; //X * 0.1
+  CANMsgdata[7] = currentStatus.ethanolPct; //X
   
-  canMsg.data[0] = currentStatus.TPS;  //X * 0.5
-  canMsg.data[1] = highByte(currentStatus.MAP); //X
-  canMsg.data[2] = lowByte(currentStatus.MAP); //X
-  canMsg.data[3] = currentStatus.baro; //X
-  canMsg.data[4] = currentStatus.IAT; //X - 40
-  canMsg.data[5] = currentStatus.coolant;//X - 40
-  canMsg.data[6] = currentStatus.battery10; //X * 0.1
-  canMsg.data[7] = currentStatus.ethanolPct; //X
-  
+  //CANStat = CAN0.sendMsgBuf(theaddress, 0, 8, thedata);
+  return CAN0.sendMsgBuf(0x401, 0, 8, CANMsgdata);
 }
 
-void canTx_EnginePosition1()
+// Builds and sends engine position status 1 msg on CAN Id 402
+uint8_t canTx_EnginePosition1()
 {
-  canMsg.can_id  = 0x402;
-  canMsg.can_dlc = 8;
+  CANMsgdata[0] = highByte(currentStatus.RPM); //X
+  CANMsgdata[1] = lowByte(currentStatus.RPM); //X
+  CANMsgdata[2] = currentStatus.engine; //bitfield
+  CANMsgdata[3] = currentStatus.spark; //bitfield
+  CANMsgdata[4] = currentStatus.advance; //X
+  CANMsgdata[5] = currentStatus.idleLoad; // X
+  CANMsgdata[6] = currentStatus.CLIdleTarget; // X * 10
+  CANMsgdata[7] = currentStatus.engineProtectStatus; //bitfield
   
-  canMsg.data[0] = highByte(currentStatus.RPM); //X
-  canMsg.data[1] = lowByte(currentStatus.RPM); //X
-  canMsg.data[2] = currentStatus.engine; //bitfield
-  canMsg.data[3] = currentStatus.spark; //bitfield
-  canMsg.data[4] = currentStatus.advance; //X
-  canMsg.data[5] = currentStatus.idleLoad; // X
-  canMsg.data[6] = currentStatus.CLIdleTarget; // X * 10
-  canMsg.data[7] = currentStatus.engineProtectStatus; //bitfield
-  
+  return CAN0.sendMsgBuf(0x402, 0, 8, CANMsgdata);
 }
 
-void canTx_EngineActuator1()
+// Builds and sends engine actuator status 1 msg on CAN Id 403
+uint8_t canTx_EngineActuator1()
 {
-  canMsg.can_id  = 0x403;
-  canMsg.can_dlc = 5;
   
-  canMsg.data[0] = highByte(currentStatus.PW1); //X * 0.001
-  canMsg.data[1] = lowByte(currentStatus.PW1); //X * 0.001
-  canMsg.data[2] = highByte(currentStatus.PW2); //X * 0.001
-  canMsg.data[3] = lowByte(currentStatus.PW2); //X * 0.001
-  canMsg.data[4] = currentStatus.afrTarget; //X * 0.1
-  canMsg.data[5] = 0xFF;
-  canMsg.data[6] = 0xFF;
-  canMsg.data[7] = 0xFF;
+  CANMsgdata[0] = highByte(currentStatus.PW1); //X * 0.001
+  CANMsgdata[1] = lowByte(currentStatus.PW1); //X * 0.001
+  CANMsgdata[2] = highByte(currentStatus.PW2); //X * 0.001
+  CANMsgdata[3] = lowByte(currentStatus.PW2); //X * 0.001
+  CANMsgdata[4] = currentStatus.afrTarget; //X * 0.1
+  CANMsgdata[5] = 0xFF;
+  CANMsgdata[6] = 0xFF;
+  CANMsgdata[7] = 0xFF;
   
+  return CAN0.sendMsgBuf(0x403, 0, 5, CANMsgdata);
 }
 
-void canTx_VehicleSpeed1()
+// Builds and sends vehicle speed status 1 msg on CAN Id 410
+uint8_t canTx_VehicleSpeed1()
 {
-  canMsg.can_id  = 0x410;
-  canMsg.can_dlc = 3;
   
-  canMsg.data[0] = highByte(currentStatus.vss); //X
-  canMsg.data[1] = lowByte(currentStatus.vss); //X
-  canMsg.data[2] = currentStatus.gear; // Enum
-  canMsg.data[3] = 0xFF;
-  canMsg.data[4] = 0xFF;
-  canMsg.data[5] = 0xFF;
-  canMsg.data[6] = 0xFF;
-  canMsg.data[7] = 0xFF;
+  CANMsgdata[0] = highByte(currentStatus.vss); //X
+  CANMsgdata[1] = lowByte(currentStatus.vss); //X
+  CANMsgdata[2] = currentStatus.gear; // Enum
+  CANMsgdata[3] = 0xFF;
+  CANMsgdata[4] = 0xFF;
+  CANMsgdata[5] = 0xFF;
+  CANMsgdata[6] = 0xFF;
+  CANMsgdata[7] = 0xFF;
   
+  return CAN0.sendMsgBuf(0x410, 0, 3, CANMsgdata);
 }
 
 /* Recieve MotecPLM Can message frame on defined CAN ID */
-void canRx_MotecPLM_O2 (struct can_frame *canRxMsg, canid_t canRXId)
+void canRx_MotecPLM_O2 (void)
 {
-  if ((canRxMsg->can_id == canRXId) && (canRxMsg->can_dlc == 8)) // Check msg on correct address and data length is correct
+  canO2TimeSinceLast = 0; //reset timeout 
+  
+  //byte0 Compound ID
+  
+  // Check O2 data is valid using sensor status
+  if (CANMsgdata[7] == 0x00)
   {
-    canO2TimeSinceLast = 0; //reset timeout 
+    //byte1 and 2 Calibrated Sensor Output Value Hi:lo*1 = x.xxxLa
+    uint32_t result = (CANMsgdata[1] << 8) | CANMsgdata[2]; //(highByte << 8) | lowByte - this is EQR from PLM
     
-    //byte0 Compound ID
-    
-    // Check O2 data is valid using sensor status
-    if (canRxMsg->data[7] == 0x00)
-    {
-      //byte1 and 2 Calibrated Sensor Output Value Hi:lo*1 = x.xxxLa
-      uint32_t result = (canRxMsg->data[1] << 8) | canRxMsg->data[2]; //(highByte << 8) | lowByte - this is EQR from PLM
-      
-      if (result < 600 ) { currentStatus.O2 = 255; } // catch divide by 0 and overflow later on.
-      else { currentStatus.O2 = (uint8_t)(147000 / result); }//afr
-    }
-    else { currentStatus.O2 = 255; } // not valid sensor reading
-
-      
-    //byte3 Heater duty cycle Byte*1 = xxx%
-
-    //byte4 Device Internal Temperature Byte*195/10-500 = xxx.xC
-
-    //byte5 Zp (Pump cell impedance) Byte*1 = X ohm
-
-    //byte6 Diagnostic Field 1
-
-    //byte7 sensor state
-    /*
-    switch (canRxMsg->data[7])
-    {
-      case (0x00):
-      EQRLH_State = e_EQRState_RUN;
-      break;
-      
-      case (0x01):
-      EQRLH_State = e_EQRState_CONTROL_WAIT;
-      break;
-
-      case (0x02):
-      EQRLH_State = e_EQRState_PUMP_WAIT;
-      break;
-
-      case (0x03):
-      EQRLH_State = e_EQRState_WARM_UP;
-      break;
-
-      case (0x04):
-      EQRLH_State = e_EQRState_NO_HEATER;
-      break;
-
-      case (0x05):
-      EQRLH_State = e_EQRState_STOP;
-      break;
-
-      case (0x06):
-      EQRLH_State = e_EQRState_PUMP_OFF;
-      break;
-
-      default:
-      EQRLH_State = e_EQRState_STOP;
-      break;
-    }
-    */
+    if (result < 600 ) { currentStatus.O2 = 255; } // catch divide by 0 and overflow later on.
+    else { currentStatus.O2 = (uint8_t)(147000 / result); }//afr
   }
+  else { currentStatus.O2 = 255; } // not valid sensor reading
+
+    
+  //byte3 Heater duty cycle Byte*1 = xxx%
+
+  //byte4 Device Internal Temperature Byte*195/10-500 = xxx.xC
+
+  //byte5 Zp (Pump cell impedance) Byte*1 = X ohm
+
+  //byte6 Diagnostic Field 1
+
+  //byte7 sensor state
+  /*
+  switch (CANMsgdata[7])
+  {
+    case (0x00):
+    EQRLH_State = e_EQRState_RUN;
+    break;
+    
+    case (0x01):
+    EQRLH_State = e_EQRState_CONTROL_WAIT;
+    break;
+
+    case (0x02):
+    EQRLH_State = e_EQRState_PUMP_WAIT;
+    break;
+
+    case (0x03):
+    EQRLH_State = e_EQRState_WARM_UP;
+    break;
+
+    case (0x04):
+    EQRLH_State = e_EQRState_NO_HEATER;
+    break;
+
+    case (0x05):
+    EQRLH_State = e_EQRState_STOP;
+    break;
+
+    case (0x06):
+    EQRLH_State = e_EQRState_PUMP_OFF;
+    break;
+
+    default:
+    EQRLH_State = e_EQRState_STOP;
+    break;
+  }
+  */
 }
 
 // Default action when message times out
@@ -315,71 +315,68 @@ void canRx_MotecPLM_O2_Dflt(void)
 }
 
 /* Recieve MotecPLM Can message frame on defined CAN ID */
-void canRx_MotecPLM_O22 (struct can_frame *canRxMsg, canid_t canRXId)
+void canRx_MotecPLM_O22 (void)
 {
-  if ((canRxMsg->can_id == canRXId) && (canRxMsg->can_dlc == 8)) // Check msg on correct address and data length is correct
+  canO22TimeSinceLast = 0; //reset timeout 
+  
+  //byte0 Compound ID
+  
+  // Check O2 data is valid using sensor status
+  if (CANMsgdata[7] == 0x00)
   {
-    canO22TimeSinceLast = 0; //reset timeout 
+    //byte1 and 2 Calibrated Sensor Output Value Hi:lo*1 = x.xxxLa
+    uint32_t result = (CANMsgdata[1] << 8) | CANMsgdata[2]; //(highByte << 8) | lowByte - this is EQR from PLM
     
-    //byte0 Compound ID
-    
-    // Check O2 data is valid using sensor status
-    if (canRxMsg->data[7] == 0x00)
-    {
-      //byte1 and 2 Calibrated Sensor Output Value Hi:lo*1 = x.xxxLa
-      uint32_t result = (canRxMsg->data[1] << 8) | canRxMsg->data[2]; //(highByte << 8) | lowByte - this is EQR from PLM
-      
-      if (result < 600 ) { currentStatus.O2_2 = 255; } // catch divide by 0 and overflow later on.
-      else { currentStatus.O2_2 = (uint8_t)(147000 / result); }//afr
-    }
-    else { currentStatus.O2_2 = 255; } // not valid sensor reading
-      
-    //byte3 Heater duty cycle Byte*1 = xxx%
-
-    //byte4 Device Internal Temperature Byte*195/10-500 = xxx.xC
-
-    //byte5 Zp (Pump cell impedance) Byte*1 = X ohm
-
-    //byte6 Diagnostic Field 1
-
-    //byte7 sensor state
-    /*
-    switch (canRxMsg->data[7])
-    {
-      case (0x00):
-      EQRLH_State = e_EQRState_RUN;
-      break;
-      
-      case (0x01):
-      EQRLH_State = e_EQRState_CONTROL_WAIT;
-      break;
-
-      case (0x02):
-      EQRLH_State = e_EQRState_PUMP_WAIT;
-      break;
-
-      case (0x03):
-      EQRLH_State = e_EQRState_WARM_UP;
-      break;
-
-      case (0x04):
-      EQRLH_State = e_EQRState_NO_HEATER;
-      break;
-
-      case (0x05):
-      EQRLH_State = e_EQRState_STOP;
-      break;
-
-      case (0x06):
-      EQRLH_State = e_EQRState_PUMP_OFF;
-      break;
-
-      default:
-      EQRLH_State = e_EQRState_STOP;
-      break;
-    }
-    */
+    if (result < 600 ) { currentStatus.O2_2 = 255; } // catch divide by 0 and overflow later on.
+    else { currentStatus.O2_2 = (uint8_t)(147000 / result); }//afr
   }
+  else { currentStatus.O2_2 = 255; } // not valid sensor reading
+    
+  //byte3 Heater duty cycle Byte*1 = xxx%
+
+  //byte4 Device Internal Temperature Byte*195/10-500 = xxx.xC
+
+  //byte5 Zp (Pump cell impedance) Byte*1 = X ohm
+
+  //byte6 Diagnostic Field 1
+
+  //byte7 sensor state
+  /*
+  switch (CANMsgdata[7])
+  {
+    case (0x00):
+    EQRLH_State = e_EQRState_RUN;
+    break;
+    
+    case (0x01):
+    EQRLH_State = e_EQRState_CONTROL_WAIT;
+    break;
+
+    case (0x02):
+    EQRLH_State = e_EQRState_PUMP_WAIT;
+    break;
+
+    case (0x03):
+    EQRLH_State = e_EQRState_WARM_UP;
+    break;
+
+    case (0x04):
+    EQRLH_State = e_EQRState_NO_HEATER;
+    break;
+
+    case (0x05):
+    EQRLH_State = e_EQRState_STOP;
+    break;
+
+    case (0x06):
+    EQRLH_State = e_EQRState_PUMP_OFF;
+    break;
+
+    default:
+    EQRLH_State = e_EQRState_STOP;
+    break;
+  }
+  */
 }
 
 // Default action when message times out
@@ -389,28 +386,25 @@ void canRx_MotecPLM_O22_Dflt(void)
 }
 
 /* Recieve EPB data on 470 */
-void canRx_EPB_Vss (struct can_frame *canRxMsg, canid_t canRXId)
+void canRx_EPB_Vss (void)
 {
-  if ((canRxMsg->can_id == canRXId) && (canRxMsg->can_dlc == 8)) // Check msg on correct address and data length is correct
-  {
-    canEPBTimeSinceLast = 0; //reset timeout 
-    
-    // Bytes 0 and 1 are vss X
-    currentStatus.vss = (canRxMsg->data[1] << 8) | canRxMsg->data[2]; //(highByte << 8) | lowByte
-    if (currentStatus.vss > 512) { currentStatus.vss = 512; } //basic error checking.
-
+  canEPBTimeSinceLast = 0; //reset timeout 
   
+  // Bytes 0 and 1 are vss X
+  currentStatus.vss = (CANMsgdata[1] << 8) | CANMsgdata[2]; //(highByte << 8) | lowByte
+  if (currentStatus.vss > 512) { currentStatus.vss = 512; } //basic error checking.
+
+
   // Byte 2 is gear
   // Byte 3 is reverse gearbox state, need to resolve both of them.
-  currentStatus.gear = canRxMsg->data[3]; // Raw gear from EPB.
+  currentStatus.gear = CANMsgdata[3]; // Raw gear from EPB.
   if ( currentStatus.gear = 6) { currentStatus.gear = 0; } // 0 and 6 are both neutral in speeduino gear logic.
-  if ((canRxMsg->data[4] == 0) && (currentStatus.gear >= 2 )){ currentStatus.gear = 1; } // Reverse gearbox is in reverse, limit speeduino gear to 1st
-  else if (canRxMsg->data[4] >= 2){ currentStatus.gear = 0; } // All other states of reverse gearbox are neutral
+  if ((CANMsgdata[4] == 0) && (currentStatus.gear >= 2 )){ currentStatus.gear = 1; } // Reverse gearbox is in reverse, limit speeduino gear to 1st
+  else if (CANMsgdata[4] >= 2){ currentStatus.gear = 0; } // All other states of reverse gearbox are neutral
 
   // Read clutch trigger bit as the inverse of "clutch is top travel from EPB"
-  clutchTrigger = !(canRxMsg->data[4] & 0b00000010); // Bit 1 inverted.
+  clutchTrigger = !(CANMsgdata[4] & 0b00000010); // Bit 1 inverted.
   // Other messages not read 
-  }
 
 }
 

@@ -32,7 +32,7 @@
 #include "src/FastCRC/FastCRC.h"
 
 #include <SPI.h>
-#include <mcp2515.h>
+#include <mcp_can.h>          //see canbus.h for all canbus config
 
 #if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__) || defined(__AVR_ATmega2561__)
   #define BOARD_MAX_DIGITAL_PINS 54 //digital pins +1
@@ -631,8 +631,6 @@ extern volatile byte TIMER_mask;
 extern volatile byte LOOP_TIMER;
 
 extern uint8_t egoIntAFR_Values[5];
-
-extern struct can_frame canMsg;
 
 //These functions all do checks on a pin to determine if it is already in use by another (higher importance) function
 #define pinIsInjector(pin)  ( ((pin) == pinInjector1) || ((pin) == pinInjector2) || ((pin) == pinInjector3) || ((pin) == pinInjector4) || ((pin) == pinInjector5) || ((pin) == pinInjector6) || ((pin) == pinInjector7) || ((pin) == pinInjector8) )
@@ -1486,7 +1484,7 @@ struct config15 {
   byte boostDCWhenDisabled;
   byte boostControlEnableThreshold; //if fixed value enable set threshold here.
     
-  byte unused15_83_245[163];
+  //byte unused15_83_245[163];
   
 //HRW TESTING AND UNIQUE MEMORY BELOW
   byte tpsType : 2; ///< TPS Sensor Type 

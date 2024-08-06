@@ -45,8 +45,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "SD_logger.h"
 #include RTC_LIB_H //Defined in each boards .h file
 #include BOARD_H //Note that this is not a real file, it is defined in globals.h. 
-#include <SPI.h>
-#include <mcp2515.h>
 
 int ignition1StartAngle = 0;
 int ignition2StartAngle = 0;
@@ -87,11 +85,12 @@ byte rollingCutCounter = 0; /**< how many times (revolutions) the ignition has b
 uint32_t rollingCutLastRev = 0; /**< Tracks whether we're on the same or a different rev for the rolling cut */
 
 uint16_t staged_req_fuel_mult_pri = 0;
-uint16_t staged_req_fuel_mult_sec = 0;   
+uint16_t staged_req_fuel_mult_sec = 0;
 
 #if defined CAN_AVR_MCP2515
-MCP2515 mcp2515(MCP2515_CS_Pin);
-#endif
+MCP_CAN CAN0(CAN0_CS);      // Set MCP_CAN CAN0 instance CS to pin 53
+uint8_t CAN_ErrorTmr = 0;
+#endif   
   
 #ifndef UNIT_TEST // Scope guard for unit testing
 void setup()
@@ -190,9 +189,11 @@ void loop()
       #endif
       
       #if defined CAN_AVR_MCP2515
-      if (1) // TO DO assign input pin for can recieve and check it here to make sure data is available.
+      if ((configPage2.enableAeroSSCAN == true) && 
+          (BIT_CHECK(currentStatus.status4, BIT_STATUS4_CAN_ERROR) == false))
       {
-        recieveCAN_BroadCast();
+        uint8_t canErr = recieveCAN_BroadCast();
+		    if (canErr != CAN_OK) { (BIT_SET(currentStatus.status4, BIT_STATUS4_CAN_ERROR)); }
       }
       #endif
       
@@ -337,13 +338,16 @@ void loop()
       getSpeed();
       getGear();
       
-      #if defined CAN_AVR_MCP2515
-	  if (configPage2.enableAeroSSCAN == true){
-		uint8_t canErr = sendCAN_Speeduino_10Hz();
-		if (canErr != MCP2515::ERROR_OK) { BIT_SET(currentStatus.status4, BIT_STATUS4_CAN_ERROR); }
-		else { BIT_CLEAR(currentStatus.status4, BIT_STATUS4_CAN_ERROR); }
+    #if defined CAN_AVR_MCP2515
+	  if ((configPage2.enableAeroSSCAN == true) && (BIT_CHECK(currentStatus.status4, BIT_STATUS4_CAN_ERROR) == false)){
+		  uint8_t canErr = sendCAN_Speeduino_10Hz();
+		  if (canErr != CAN_OK)  // This locks can out from sending further messages untill reset ~10sec later.
+      { 
+         BIT_SET(currentStatus.status4, BIT_STATUS4_CAN_ERROR);
+         CAN_ErrorTmr = 0;
+      } 
+		  else { BIT_CLEAR(currentStatus.status4, BIT_STATUS4_CAN_ERROR); }
 	  }
-	  else { BIT_CLEAR(currentStatus.status4, BIT_STATUS4_CAN_ERROR); }
       #endif
 
       #ifdef SD_LOGGING
@@ -362,6 +366,7 @@ void loop()
       if (configPage2.canBMWCluster == true) { sendBMWCluster(); }
       if (configPage2.canVAGCluster == true) { sendVAGCluster(); }
       #endif
+      
       #if TPS_READ_FREQUENCY == 30
         readTPS();
       #endif
@@ -465,6 +470,16 @@ void loop()
 
       #ifdef SD_LOGGING
         if(configPage13.onboard_log_file_rate == LOGGER_RATE_1HZ) { writeSDLogEntry(); }
+      #endif
+      
+      //MCP2515 - This resets the CAN error allowing CAN to soft-recover after 10sec
+      #if defined CAN_AVR_MCP2515
+      if ((configPage2.enableAeroSSCAN == true) && (BIT_CHECK(currentStatus.status4, BIT_STATUS4_CAN_ERROR))) { CAN_ErrorTmr++; }
+      if (CAN_ErrorTmr > 100)
+      {
+        CAN_ErrorTmr = 0;
+        BIT_CLEAR(currentStatus.status4, BIT_STATUS4_CAN_ERROR);
+      }
       #endif
 
     } //1Hz timer

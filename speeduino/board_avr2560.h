@@ -157,7 +157,7 @@
 * CAN / Second serial
 */
 // This is HRW testing a mcp 2515 board to broadcast CAN from the Mega.
-  #define CAN_AVR_MCP2515
+ #define CAN_AVR_MCP2515
 
 
 #endif //CORE_AVR

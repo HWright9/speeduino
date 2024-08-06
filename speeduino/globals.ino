@@ -276,10 +276,6 @@ struct table2D o2CalibrationTable;
 uint8_t egoIntAFR_XBins[] = {97, 124, 127, 130, 157}; // Fixed Axis for lookup Y = 10X +127. -3.0, -0.3, 0.0, 0.3, 3.0
 uint8_t egoIntAFR_Values[5]; // Dynamically populated
 
-#if defined CAN_AVR_MCP2515
-  struct can_frame canMsg;
-#endif
-
 //These function do checks on a pin to determine if it is already in use by another (higher importance) active function
 inline bool pinIsOutput(byte pin)
 {

@@ -373,6 +373,7 @@ void loop()
       
       readFuelPressure();
       readOilPressure();
+      readEGT();
       
       if (O2_Readflag == false) //This might be a little redundant now that O2 is reading at 30hz instead of 4 Hz
       { // O2 has not been updated since the last loop by O2 algo (engine cycle based) so update it here to enfore a minimum update rate for logging etc. 

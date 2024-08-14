@@ -162,8 +162,8 @@ byte getTSLogEntry(uint16_t byteNum)
     case 117: statusValue = currentStatus.advance1; break; //advance 1 (%)
     case 118: statusValue = currentStatus.advance2; break; //advance 2 (%)
     case 119: statusValue = currentStatus.TS_SD_Status; break; //SD card status
-    case 120: statusValue = lowByte(currentStatus.EMAP); break; //2 bytes for EMAP
-    case 121: statusValue = highByte(currentStatus.EMAP); break;
+    case 120: statusValue = lowByte(currentStatus.EGT); break; //2 bytes for EGT - WAS EMAP
+    case 121: statusValue = highByte(currentStatus.EGT); break;
     case 122: statusValue = currentStatus.fanDuty; break;
     case 123: statusValue = currentStatus.ego2Correction; break; //Exhaust gas correction bank 2(%)
     case 124: statusValue = lowByte(currentStatus.InjectorDeltaPress); break; //Injector Delta Pressure

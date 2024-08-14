@@ -129,6 +129,7 @@ void initialiseADC()
   if(configPage4.ADCFILTER_BARO > 240) { configPage4.ADCFILTER_BARO  = ADCFILTER_BARO_DEFAULT;  writeConfig(ignSetPage); }
   if(configPage10.ADCFILTER_FPRESS  > 240) { configPage10.ADCFILTER_FPRESS     = FILTER_FPRESS_DEFAULT;     writeConfig(wmiMapPage); }
   if(configPage10.ADCFILTER_OPRESS  > 240) { configPage10.ADCFILTER_OPRESS     = FILTER_OPRESS_DEFAULT;     writeConfig(wmiMapPage); }
+  //if(configPage10.ADCFILTER_EGT  > 240) { configPage10.ADCFILTER_EGT     = FILTER_EGT_DEFAULT;     writeConfig(wmiMapPage); }
 
   flexStartTime = micros();
 
@@ -804,6 +805,27 @@ void readOilPressure(bool useFilter)
     if(useFilter == true) { tempOilPressure = filterADC(tempOilPressure, configPage10.ADCFILTER_OPRESS, currentStatus.oilPressure); } //Apply smoothing factor
   }
   currentStatus.oilPressure = tempOilPressure;
+}
+
+void readEGT(bool useFilter)
+{
+  int16_t tempEGT = 0;
+  int16_t tempReading;
+
+  if(configPage10.useEGT > 0)
+  {
+    //Perform ADC read
+    tempReading = analogRead(pinEGT);
+    tempReading = analogRead(pinEGT);
+
+
+    tempEGT = map(tempReading, 0, 1024, configPage10.EGTMin, (int16_t)configPage10.EGTMax);
+    //fastMap10Bit(tempReading, configPage10.oilPressureMin, configPage10.oilPressureMax);
+    //Sanity check
+    if(tempEGT < 0 ) { tempEGT = 0; } //prevent negative values, which will cause problems later when the values aren't signed. TODO Make this signed.
+    if(useFilter == true) { tempEGT = filterADC(tempEGT, configPage10.ADCFILTER_OPRESS, currentStatus.EGT); } //Apply smoothing factor
+  }
+  currentStatus.EGT = tempEGT;
 }
 
 /*

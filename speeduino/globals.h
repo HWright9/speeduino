@@ -655,6 +655,7 @@ struct statuses {
   long MAP;     ///< Manifold absolute pressure. Has to be a long for PID calcs (Boost control)
   int16_t EMAP; ///< EMAP ... (See @ref config6.useEMAP for EMAP enablement)
   int16_t EMAPADC;
+  int16_t EGT; ///< EGT
   byte baro;   ///< Barometric pressure is simply the initial MAP reading, taken before the engine is running. Alternatively, can be taken from an external sensor
   byte TPS;    /**< The current TPS reading (0% - 100%). Is the tpsADC value after the calibration is applied */
   byte tpsADC; /**< byte (valued: 0-255) representation of the TPS. Downsampled from the original 10-bit (0-1023) reading, but before any calibration is applied */
@@ -1355,7 +1356,6 @@ struct config10 {
 
   byte fuelPressurePin : 5;
   byte unused11_165 : 3;
-  
   int8_t fuelPressureMin;
   uint16_t fuelPressureMax;
   int8_t oilPressureMin;
@@ -1374,7 +1374,12 @@ struct config10 {
   byte fPress_SensorType : 1;
   uint16_t fPress_RefPress; // Reference fuel pressure for injector pressure differential calculations. Also used when there is a fault in fuel press sensor.
 
-  byte unused10_155_159[4];
+  byte useEGT : 1;    ///< Enable EGT
+  byte EGTPin : 5;
+  byte Config10_unusedBits : 2;  
+  int8_t EGTMin;
+  uint16_t EGTMax;
+  //byte ADCFILTER_EGT;
   
   uint16_t injPressBins[4];
   byte injPressValues[4];
@@ -1529,6 +1534,7 @@ extern byte pinTrigger3;	//the 2nd cam sensor pin
 extern byte pinTPS;//TPS input pin
 extern byte pinMAP; //MAP sensor pin
 extern byte pinEMAP; //EMAP sensor pin
+extern byte pinEGT;  //EGT sensor pin
 extern byte pinMAP2; //2nd MAP sensor (Currently unused)
 extern byte pinIAT; //IAT sensor pin
 extern byte pinCLT; //CLS sensor pin

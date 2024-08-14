@@ -340,8 +340,8 @@ void sendcanValues(uint16_t offset, uint16_t packetLength, byte cmd, byte portTy
   fullStatus[116] = currentStatus.advance2; //advance 2 
   fullStatus[117] = currentStatus.nitrous_status;
   fullStatus[118] = currentStatus.TS_SD_Status; //SD card status
-  fullStatus[119] = lowByte(currentStatus.EMAP); //2 bytes for EMAP
-  fullStatus[120] = highByte(currentStatus.EMAP);
+  fullStatus[119] = lowByte(currentStatus.EGT); //2 bytes for EGT1 -WAS EMAP
+  fullStatus[120] = highByte(currentStatus.EGT);
   fullStatus[121] = currentStatus.fanDuty;
   fullStatus[122] = currentStatus.ego2Correction; // ego 2 correction
   fullStatus[123] = lowByte(currentStatus.InjectorDeltaPress); // Injector Differential Pressure

@@ -198,6 +198,7 @@ byte pinTrigger3;	///< the 2nd cam sensor pin
 byte pinTPS;      //TPS input pin
 byte pinMAP;      //MAP sensor pin
 byte pinEMAP;     //EMAP sensor pin
+byte pinEGT;      //EGT sensor pin
 byte pinMAP2;     //2nd MAP sensor (Currently unused)
 byte pinIAT;      //IAT sensor pin
 byte pinCLT;      //CLS sensor pin

@@ -407,6 +407,7 @@ void initialiseAll()
     //Read fuel and oil pressure with no filter (probably zero but can't assume for the running reset case).
     readFuelPressure(false);
     readOilPressure(false);
+    readEGT(false);
 
     //Check whether the flex sensor is enabled and if so, attach an interrupt for it
     if(configPage2.flexEnabled > 0)
@@ -1975,6 +1976,7 @@ void setPinMapping(byte boardID)
       pinMAP = A0; //MAP sensor pin
       pinIAT = A5; //IAT sensor pin
       pinCLT = A4; //CLT sensor pin
+      pinEGT = A7; // EGT Pin
       pinO2 = A2; //O2 sensor pin
       pinO2_2 = A6; //O2 2nd sensor pin - HRW
       pinBat = A1; //Battery reference voltage pin
@@ -2672,6 +2674,7 @@ void setPinMapping(byte boardID)
   if ( (configPage6.vvt1Pin != 0) && (configPage6.vvt1Pin < BOARD_MAX_IO_PINS) ) { pinVVT_1 = pinTranslate(configPage6.vvt1Pin); }
   if ( (configPage6.useSensorBaro != 0) && (configPage6.baroPin < BOARD_MAX_IO_PINS) ) { pinBaro = pinTranslateAnalog(configPage6.baroPin); }
   if ( (configPage6.useEMAP != 0) && (configPage10.EMAPPin < BOARD_MAX_IO_PINS) ) { pinEMAP = pinTranslateAnalog(configPage10.EMAPPin); }
+  if ( (configPage10.useEGT != 0) && (configPage10.EGTPin < BOARD_MAX_IO_PINS) ) { pinEGT = pinTranslateAnalog(configPage10.EGTPin); }
   if ( (configPage10.fuel2InputPin != 0) && (configPage10.fuel2InputPin < BOARD_MAX_IO_PINS) ) { pinFuel2Input = pinTranslate(configPage10.fuel2InputPin); }
   if ( (configPage10.spark2InputPin != 0) && (configPage10.spark2InputPin < BOARD_MAX_IO_PINS) ) { pinSpark2Input = pinTranslate(configPage10.spark2InputPin); }
   if ( (configPage2.vssPin != 0) && (configPage2.vssPin < BOARD_MAX_IO_PINS) ) { pinVSS = pinTranslate(configPage2.vssPin); }

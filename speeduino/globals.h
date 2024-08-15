@@ -756,7 +756,7 @@ struct statuses {
   uint16_t vss;      /**< Current speed reading. Natively stored in kph and converted to mph in TS if required */
   bool idleUpOutputActive; /**< Whether the idle up output is currently active */
   byte gear;         /**< Current gear (Calculated from vss) */
-  uint16_t fuelPressure; /**< Fuel pressure in kPa Absolute */
+  int16_t fuelPressure; /**< Fuel pressure in kPa  */
   uint16_t InjectorDeltaPress; /**< Injector delta pressure in kPa Absolute */
   int fuelPress_ADC; 
   byte oilPressure;  /**< Oil pressure in KPa x 4 Absolute*/
@@ -1377,7 +1377,7 @@ struct config10 {
   byte useEGT : 1;    ///< Enable EGT
   byte EGTPin : 5;
   byte Config10_unusedBits : 2;  
-  int8_t EGTMin;
+  uint8_t EGTMin; // EGT Min is negative. Max value 0 degC.
   uint16_t EGTMax;
   //byte ADCFILTER_EGT;
   

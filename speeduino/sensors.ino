@@ -779,8 +779,8 @@ void readFuelPressure(bool useFilter)
     }
     else { currentStatus.fuelPress_ADC = tempReading; } // Bypass diagnostics and filter if not required
 
-    tempFuelPressure = map(currentStatus.fuelPress_ADC, 0, 1024, configPage10.fuelPressureMin, (int16_t)configPage10.fuelPressureMax);
-    if(tempFuelPressure < 0 ) { tempFuelPressure = 0; } // negative values are not plausible. Configure the sensor as an ABS pressure sensor if pressure less than atmospheric required.
+    tempFuelPressure = map(currentStatus.fuelPress_ADC, 0, 1023, (int16_t)configPage10.fuelPressureMin, (int16_t)configPage10.fuelPressureMax);
+    //if(tempFuelPressure < 0 ) { tempFuelPressure = 0; } // negative values are not plausible. Configure the sensor as an ABS pressure sensor if pressure less than atmospheric required.
   }
   
   currentStatus.fuelPressure = tempFuelPressure;
@@ -798,7 +798,7 @@ void readOilPressure(bool useFilter)
     tempReading = analogRead(pinOilPressure);
 
 
-    tempOilPressure = map(tempReading, 0, 1024, configPage10.oilPressureMin, configPage10.oilPressureMax);
+    tempOilPressure = map(tempReading, 0, 1023, configPage10.oilPressureMin, configPage10.oilPressureMax);
     //fastMap10Bit(tempReading, configPage10.oilPressureMin, configPage10.oilPressureMax);
     //Sanity check
     if(tempOilPressure < 0 ) { tempOilPressure = 0; } //prevent negative values, which will cause problems later when the values aren't signed.
@@ -819,10 +819,10 @@ void readEGT(bool useFilter)
     tempReading = analogRead(pinEGT);
 
 
-    tempEGT = map(tempReading, 0, 1024, configPage10.EGTMin, (int16_t)configPage10.EGTMax);
+    tempEGT = map(tempReading, 0, 1023, -((int16_t)configPage10.EGTMin), (int16_t)configPage10.EGTMax);
     //fastMap10Bit(tempReading, configPage10.oilPressureMin, configPage10.oilPressureMax);
     //Sanity check
-    if(tempEGT < 0 ) { tempEGT = 0; } //prevent negative values, which will cause problems later when the values aren't signed. TODO Make this signed.
+    //if(tempEGT < 0 ) { tempEGT = 0; } //prevent negative values, which will cause problems later when the values aren't signed. TODO Make this signed.
     if(useFilter == true) { tempEGT = filterADC(tempEGT, configPage10.ADCFILTER_OPRESS, currentStatus.EGT); } //Apply smoothing factor
   }
   currentStatus.EGT = tempEGT;

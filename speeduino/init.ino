@@ -1263,12 +1263,9 @@ void initialiseAll()
 #if defined (CAN_AVR_MCP2515)
   if (configPage2.enableAeroSSCAN == true)
   {
-    pinMode(2, INPUT_PULLUP);
-    SPI.begin();
-    byte CANStat = CAN0.begin(MCP_ANY, CAN_1000KBPS, CAN_XTAL_8MHZ); // init can bus : baudrate = CAN_1000KBPS, frequency MCP_8MHZ
+    byte CANStat = CAN0.begin(MCP_ANY, CAN_500KBPS, MCP_8MHZ); // init can bus : baudrate = CAN_500KBPS, frequency MCP_8MHZ
     if(CANStat == CAN_OK)  
     {
-      CAN0.setMode(MCP_NORMAL);
       BIT_CLEAR(currentStatus.status4, BIT_STATUS4_CAN_ERROR);
     }
     else
@@ -1276,6 +1273,7 @@ void initialiseAll()
       BIT_SET(currentStatus.status4, BIT_STATUS4_CAN_ERROR);
       CAN_ErrorTmr = 0;
     }
+    CAN0.setMode(MCP_NORMAL);
   }    
 #endif
 
@@ -2000,6 +1998,7 @@ void setPinMapping(byte boardID)
       pinSpareLOut2 = 34; //low current output spare2 - ONLY WITH DB
       pinSpareLOut3 = 36; //low current output spare3 - ONLY WITH DB
       pinResetControl = 26; //Reset control output
+      pinCANInt = 2; // CAN Bus Shield MsgRxInterrupt Pin.
       #endif
       break;
 
@@ -2843,6 +2842,8 @@ void setPinMapping(byte boardID)
   pinMode(pinTrigger, INPUT);
   pinMode(pinTrigger2, INPUT);
   pinMode(pinTrigger3, INPUT);
+  
+  pinMode(pinCANInt, INPUT_PULLUP);
 
   //Each of the below are only set when their relevant function is enabled. This can help prevent pin conflicts that users aren't aware of with unused functions
   if( (configPage2.flexEnabled > 0) && (!pinIsOutput(pinFlex)) )

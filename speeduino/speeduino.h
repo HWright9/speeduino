@@ -31,6 +31,7 @@ void calculateIgnitionAngle6(int);
 void calculateIgnitionAngle7(int);
 void calculateIgnitionAngle8(int);
 void calculateIgnitionAngles(int);
+void canPrintErrors(uint8_t);
 
 extern uint16_t req_fuel_uS; /**< The required fuel variable (As calculated by TunerStudio) in uS */
 extern uint16_t inj_opentime_uS; /**< The injector opening time. This is set within Tuner Studio, but stored here in uS rather than mS */

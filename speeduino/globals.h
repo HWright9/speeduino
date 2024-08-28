@@ -1584,6 +1584,7 @@ extern byte pinOilPressure;
 extern byte pinMC33810_1_CS;
 extern byte pinMC33810_2_CS;
 extern byte pinSDEnable; //Input for manually enabling SD logging
+extern byte pinCANInt; // MCP2515 interrupt pin
 #ifdef USE_SPI_EEPROM
   extern byte pinSPIFlash_CS;
 #endif

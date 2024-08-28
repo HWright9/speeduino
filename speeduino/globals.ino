@@ -248,6 +248,7 @@ byte pinOilPressure;
 byte pinMC33810_1_CS;
 byte pinMC33810_2_CS;
 byte pinSDEnable;
+byte pinCANInt; // Interrupt pin from MCP2515
 #ifdef USE_SPI_EEPROM
   byte pinSPIFlash_CS;
 #endif

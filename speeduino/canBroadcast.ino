@@ -129,65 +129,68 @@ uint8_t canO22TimeSinceLast;
 uint8_t canEPBTimeSinceLast;
 
 // Broadcasts Speeduino Generic data on CAN. Compatible with data dictionary v0.2
-uint8_t sendCAN_Speeduino_10Hz()
+uint8_t sendCAN_Speeduino_10Hz(void)
 {
-  uint8_t canErrCode = CAN_OK;
+  uint8_t canErrCode = CAN0.checkError();
   
   if(canErrCode == CAN_OK) { canErrCode = canTx_EngineSensor1(); }
   if(canErrCode == CAN_OK) { canErrCode = canTx_EnginePosition1(); }
   if(canErrCode == CAN_OK) { canErrCode = canTx_EngineActuator1(); }
-  if(canErrCode == CAN_OK) { canErrCode = canTx_VehicleSpeed1(); }
+  //if(canErrCode == CAN_OK) { canErrCode = canTx_VehicleSpeed1(); }
     
   return canErrCode;
 }
 
 // Recieves Speeduino data on CAN. Compatible with data dictionary v0.1
-uint8_t recieveCAN_BroadCast()
+uint8_t recieveCAN_BroadCast(void)
 {
   uint8_t canErrCode = CAN_OK;
   
-  if(digitalRead(2) == 0) // Digital read INT pin on pin 2
-  { 
-  
-    CAN0.readMsgBuf(&CANrxId, &len, CANMsgdata);
+  if((digitalRead(pinCANInt) == 0) && (CAN0.checkReceive() == CAN_MSGAVAIL)) // Digital read CAN INT pin on pin 2 is low
+  {  
+    canErrCode = CAN0.readMsgBuf(&CANrxId, &len, CANMsgdata);
     
-      // O2 sensors using motec PLM's
-    if (configPage6.egoType == 2) // O2 sensor source set to read CAN
+    if (canErrCode == CAN_OK)  // alternate would be CAN_NOMSG
     {
-      if ((CANrxId == 460) && (len == 8)) { canRx_MotecPLM_O2(); }// Parse Motec PLM message at ID 460 for O2
-      if ((CANrxId == 461) && (len == 8)) { canRx_MotecPLM_O22; } // Parse Motec PLM message at ID 461 for 2nd O2
-    }
     
-    if (configPage2.vssMode == 1) // 1 is RX over CAN
-    {
-      if ((CANrxId == 470) && (len == 8)) { canRx_EPB_Vss(); } // Parse Electric Park Brake data on 470. This has vss gear and clutch data from EPB.
-    }
+        // O2 sensors using motec PLM's
+      if (configPage6.egoType == 2) // O2 sensor source set to read CAN
+      {
+        if ((CANrxId == 0x460) && (len == 8)) { canRx_MotecPLM_O2(); }// Parse Motec PLM message at ID 460 for O2
+        if ((CANrxId == 0x461) && (len == 8)) { canRx_MotecPLM_O22; } // Parse Motec PLM message at ID 461 for 2nd O2
+      }
       
+      if (configPage2.vssMode == 1) // 1 is RX over CAN
+      {
+        if ((CANrxId == 0x470) && (len == 8)) { canRx_EPB_Vss(); } // Parse Electric Park Brake data on 470. This has vss gear and clutch data from EPB.
+      }
+    }
   }
-  else if (BIT_CHECK(LOOP_TIMER, BIT_TIMER_10HZ)) // Time out variables to check if messages not recieved, sec x10
+  
+  if (BIT_CHECK(LOOP_TIMER, BIT_TIMER_10HZ)) // Time out variables to check if messages not recieved, sec x10
   { 
     if (canO2TimeSinceLast < 255) { canO2TimeSinceLast++; }
     if (canO22TimeSinceLast < 255) { canO22TimeSinceLast++; }
     if (canEPBTimeSinceLast < 255) { canEPBTimeSinceLast++; }
+    
+    // Timeout error handling
+    if ((configPage6.egoType == 2) && (canO2TimeSinceLast > 10)) { canRx_MotecPLM_O2_Dflt(); }
+    if ((configPage6.egoType == 2) && (canO22TimeSinceLast > 10)) { canRx_MotecPLM_O22_Dflt();}
+    if ((configPage2.vssMode == 1) && (canEPBTimeSinceLast > 20)) { canRx_EPB_Vss_Dflt(); }
   }  
-  
-  // Timeout error handling
-  if ((configPage6.egoType == 2) && (canO2TimeSinceLast > 10)) { canRx_EPB_Vss_Dflt(); }
-  if ((configPage6.egoType == 2) && (canO22TimeSinceLast > 10)) { canRx_MotecPLM_O22_Dflt(); }
-  if ((configPage2.vssMode == 1) && (canEPBTimeSinceLast > 20)) { canRx_EPB_Vss_Dflt(); }
-  
+    
   return canErrCode;
 }
 
 // Builds and sends engine sensor status 1 msg on CAN Id 401
-uint8_t canTx_EngineSensor1()
+uint8_t canTx_EngineSensor1(void)
 {
   CANMsgdata[0] = currentStatus.TPS;  //X * 0.5
   CANMsgdata[1] = highByte(currentStatus.MAP); //X
   CANMsgdata[2] = lowByte(currentStatus.MAP); //X
   CANMsgdata[3] = currentStatus.baro; //X
-  CANMsgdata[4] = currentStatus.IAT; //X - 40
-  CANMsgdata[5] = currentStatus.coolant;//X - 40
+  CANMsgdata[4] = (uint8_t)(currentStatus.IAT + CALIBRATION_TEMPERATURE_OFFSET); //X - 40
+  CANMsgdata[5] = (uint8_t)(currentStatus.coolant + CALIBRATION_TEMPERATURE_OFFSET);//X - 40
   CANMsgdata[6] = currentStatus.battery10; //X * 0.1
   CANMsgdata[7] = currentStatus.ethanolPct; //X
   
@@ -196,7 +199,7 @@ uint8_t canTx_EngineSensor1()
 }
 
 // Builds and sends engine position status 1 msg on CAN Id 402
-uint8_t canTx_EnginePosition1()
+uint8_t canTx_EnginePosition1(void)
 {
   CANMsgdata[0] = highByte(currentStatus.RPM); //X
   CANMsgdata[1] = lowByte(currentStatus.RPM); //X
@@ -211,7 +214,7 @@ uint8_t canTx_EnginePosition1()
 }
 
 // Builds and sends engine actuator status 1 msg on CAN Id 403
-uint8_t canTx_EngineActuator1()
+uint8_t canTx_EngineActuator1(void)
 {
   
   CANMsgdata[0] = highByte(currentStatus.PW1); //X * 0.001
@@ -227,7 +230,7 @@ uint8_t canTx_EngineActuator1()
 }
 
 // Builds and sends vehicle speed status 1 msg on CAN Id 410
-uint8_t canTx_VehicleSpeed1()
+uint8_t canTx_VehicleSpeed1(void)
 {
   
   CANMsgdata[0] = highByte(currentStatus.vss); //X
@@ -391,19 +394,19 @@ void canRx_EPB_Vss (void)
   canEPBTimeSinceLast = 0; //reset timeout 
   
   // Bytes 0 and 1 are vss X
-  currentStatus.vss = (CANMsgdata[1] << 8) | CANMsgdata[2]; //(highByte << 8) | lowByte
+  currentStatus.vss = (CANMsgdata[0] << 8) | CANMsgdata[1]; //(highByte << 8) | lowByte
   if (currentStatus.vss > 512) { currentStatus.vss = 512; } //basic error checking.
 
 
   // Byte 2 is gear
   // Byte 3 is reverse gearbox state, need to resolve both of them.
-  currentStatus.gear = CANMsgdata[3]; // Raw gear from EPB.
-  if ( currentStatus.gear = 6) { currentStatus.gear = 0; } // 0 and 6 are both neutral in speeduino gear logic.
-  if ((CANMsgdata[4] == 0) && (currentStatus.gear >= 2 )){ currentStatus.gear = 1; } // Reverse gearbox is in reverse, limit speeduino gear to 1st
-  else if (CANMsgdata[4] >= 2){ currentStatus.gear = 0; } // All other states of reverse gearbox are neutral
+  currentStatus.gear = CANMsgdata[2]; // Raw gear from EPB.
+  if ( currentStatus.gear == 6) { currentStatus.gear = 0; } // 0 and 6 are both neutral in speeduino gear logic.
+  if ((CANMsgdata[3] == 0) && (currentStatus.gear >= 2 )){ currentStatus.gear = 1; } // Reverse gearbox is in reverse, limit speeduino gear to 1st
+  else if (CANMsgdata[3] >= 2){ currentStatus.gear = 0; } // All other states of reverse gearbox are neutral
 
   // Read clutch trigger bit as the inverse of "clutch is top travel from EPB"
-  clutchTrigger = !(CANMsgdata[4] & 0b00000010); // Bit 1 inverted.
+  clutchTrigger = !(CANMsgdata[7] & 0b01000000); // Bit 1 inverted.
   // Other messages not read 
 
 }

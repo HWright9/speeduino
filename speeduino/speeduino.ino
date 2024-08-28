@@ -193,7 +193,7 @@ void loop()
           (BIT_CHECK(currentStatus.status4, BIT_STATUS4_CAN_ERROR) == false))
       {
         uint8_t canErr = recieveCAN_BroadCast();
-		    if (canErr != CAN_OK) { (BIT_SET(currentStatus.status4, BIT_STATUS4_CAN_ERROR)); }
+		    //if (canErr != CAN_OK) { (BIT_SET(currentStatus.status4, BIT_STATUS4_CAN_ERROR)); }
       }
       #endif
       
@@ -341,8 +341,9 @@ void loop()
     #if defined CAN_AVR_MCP2515
 	  if ((configPage2.enableAeroSSCAN == true) && (BIT_CHECK(currentStatus.status4, BIT_STATUS4_CAN_ERROR) == false)){
 		  uint8_t canErr = sendCAN_Speeduino_10Hz();
-		  if (canErr != CAN_OK)  // This locks can out from sending further messages untill reset ~10sec later.
-      { 
+		  if (canErr != CAN_OK)  // This locks can out from sending further messages untill reset ~5sec later.
+      {
+         canPrintErrors(canErr);        
          BIT_SET(currentStatus.status4, BIT_STATUS4_CAN_ERROR);
          CAN_ErrorTmr = 0;
       } 
@@ -473,13 +474,27 @@ void loop()
         if(configPage13.onboard_log_file_rate == LOGGER_RATE_1HZ) { writeSDLogEntry(); }
       #endif
       
-      //MCP2515 - This resets the CAN error allowing CAN to soft-recover after 10sec
+      //MCP2515 - This resets the CAN error allowing CAN to soft-recover after 5sec
       #if defined CAN_AVR_MCP2515
-      if ((configPage2.enableAeroSSCAN == true) && (BIT_CHECK(currentStatus.status4, BIT_STATUS4_CAN_ERROR))) { CAN_ErrorTmr++; }
-      if (CAN_ErrorTmr > 100)
+      if (configPage2.enableAeroSSCAN == true)
       {
-        CAN_ErrorTmr = 0;
+        if((BIT_CHECK(currentStatus.status4, BIT_STATUS4_CAN_ERROR)) && (CAN_ErrorTmr < 254) ) { CAN_ErrorTmr++; }
+        if (CAN_ErrorTmr > 5)
+        {
+          CAN_ErrorTmr = 0;
+          CAN0.abortTX(); //flush transmit buffer
+          byte CANStat = CAN0.begin(MCP_ANY, CAN_500KBPS, MCP_8MHZ); // attempt re-init can bus : baudrate = CAN_500KBPS, frequency MCP_8MHZ
+          if (CANStat == CAN_OK)
+          {
+            BIT_CLEAR(currentStatus.status4, BIT_STATUS4_CAN_ERROR);
+            CAN0.setMode(MCP_NORMAL);
+          }
+        }
+      }
+      else 
+      {
         BIT_CLEAR(currentStatus.status4, BIT_STATUS4_CAN_ERROR);
+        CAN_ErrorTmr = 0;
       }
       #endif
 
@@ -1579,5 +1594,52 @@ void calculateIgnitionAngles(int dwellAngle)
     //Will hit the default case on >8 cylinders. Do nothing in these cases
     default:
       break;
+  }
+}
+
+//Just for testing
+void canPrintErrors(uint8_t CANStat)
+{
+  switch(CANStat)
+  {
+    case CAN_OK:
+      Serial.println(" CAN_OK ");
+    break;
+    
+    case CAN_FAILINIT:
+      Serial.println(" CAN_FAILINIT ");
+    break;
+    
+    case CAN_FAILTX:
+      Serial.println(" CAN_FAILTX ");
+    break;
+    
+    case CAN_MSGAVAIL:
+      Serial.println(" CAN_MSGAVAIL ");
+    break;
+    
+    case CAN_NOMSG:
+      Serial.println(" CAN_NOMSG ");
+    break;
+    
+    case CAN_CTRLERROR:
+      Serial.println(" CAN_CTRLERROR ");
+    break;
+    
+    case CAN_GETTXBFTIMEOUT:
+      Serial.println(" CAN_GETTXBFTIMEOUT ");
+    break;
+    
+    case CAN_SENDMSGTIMEOUT:
+      Serial.println(" CAN_SENDMSGTIMEOUT ");
+    break;
+    
+    case CAN_FAIL:
+      Serial.println(" CAN_FAIL ");
+    break;
+    
+    default:
+      Serial.println(" CAN_UNKNOWN_STAT ");
+    break;
   }
 }

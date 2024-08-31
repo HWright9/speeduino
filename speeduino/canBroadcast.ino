@@ -121,7 +121,8 @@ void DashMessage(uint16_t DashMessageID)
 /*Variables Local to this function*/
 unsigned char len = 0;
 uint32_t CANrxId;
-uint8_t CANMsgdata[8]; // Used by both TX and RX routines.
+uint8_t CAN_Tx_Msgdata[8]; // Used by both TX routines.
+uint8_t CAN_Rx_Msgdata[8]; // Used by both RX routines.
 uint8_t can0_Msg_FailCntr;
 
 uint8_t canO2TimeSinceLast;
@@ -148,7 +149,7 @@ uint8_t recieveCAN_BroadCast(void)
   
   if((digitalRead(pinCANInt) == 0) && (CAN0.checkReceive() == CAN_MSGAVAIL)) // Digital read CAN INT pin on pin 2 is low
   {  
-    canErrCode = CAN0.readMsgBuf(&CANrxId, &len, CANMsgdata);
+    canErrCode = CAN0.readMsgBuf(&CANrxId, &len, CAN_Rx_Msgdata);
     
     if (canErrCode == CAN_OK)  // alternate would be CAN_NOMSG
     {
@@ -185,64 +186,64 @@ uint8_t recieveCAN_BroadCast(void)
 // Builds and sends engine sensor status 1 msg on CAN Id 401
 uint8_t canTx_EngineSensor1(void)
 {
-  CANMsgdata[0] = currentStatus.TPS;  //X * 0.5
-  CANMsgdata[1] = highByte(currentStatus.MAP); //X
-  CANMsgdata[2] = lowByte(currentStatus.MAP); //X
-  CANMsgdata[3] = currentStatus.baro; //X
-  CANMsgdata[4] = (uint8_t)(currentStatus.IAT + CALIBRATION_TEMPERATURE_OFFSET); //X - 40
-  CANMsgdata[5] = (uint8_t)(currentStatus.coolant + CALIBRATION_TEMPERATURE_OFFSET);//X - 40
-  CANMsgdata[6] = currentStatus.battery10; //X * 0.1
-  CANMsgdata[7] = currentStatus.ethanolPct; //X
+  CAN_Tx_Msgdata[0] = currentStatus.TPS;  //X * 0.5
+  CAN_Tx_Msgdata[1] = highByte(currentStatus.MAP); //X
+  CAN_Tx_Msgdata[2] = lowByte(currentStatus.MAP); //X
+  CAN_Tx_Msgdata[3] = currentStatus.baro; //X
+  CAN_Tx_Msgdata[4] = (uint8_t)(currentStatus.IAT + CALIBRATION_TEMPERATURE_OFFSET); //X - 40
+  CAN_Tx_Msgdata[5] = (uint8_t)(currentStatus.coolant + CALIBRATION_TEMPERATURE_OFFSET);//X - 40
+  CAN_Tx_Msgdata[6] = currentStatus.battery10; //X * 0.1
+  CAN_Tx_Msgdata[7] = currentStatus.ethanolPct; //X
   
   //CANStat = CAN0.sendMsgBuf(theaddress, 0, 8, thedata);
-  return CAN0.sendMsgBuf(0x401, 0, 8, CANMsgdata);
+  return CAN0.sendMsgBuf(0x401, 0, 8, CAN_Tx_Msgdata);
 }
 
 // Builds and sends engine position status 1 msg on CAN Id 402
 uint8_t canTx_EnginePosition1(void)
 {
-  CANMsgdata[0] = highByte(currentStatus.RPM); //X
-  CANMsgdata[1] = lowByte(currentStatus.RPM); //X
-  CANMsgdata[2] = currentStatus.engine; //bitfield
-  CANMsgdata[3] = currentStatus.spark; //bitfield
-  CANMsgdata[4] = currentStatus.advance; //X
-  CANMsgdata[5] = currentStatus.idleLoad; // X
-  CANMsgdata[6] = currentStatus.CLIdleTarget; // X * 10
-  CANMsgdata[7] = currentStatus.engineProtectStatus; //bitfield
+  CAN_Tx_Msgdata[0] = highByte(currentStatus.RPM); //X
+  CAN_Tx_Msgdata[1] = lowByte(currentStatus.RPM); //X
+  CAN_Tx_Msgdata[2] = currentStatus.engine; //bitfield
+  CAN_Tx_Msgdata[3] = currentStatus.spark; //bitfield
+  CAN_Tx_Msgdata[4] = currentStatus.advance; //X
+  CAN_Tx_Msgdata[5] = currentStatus.idleLoad; // X
+  CAN_Tx_Msgdata[6] = currentStatus.CLIdleTarget; // X * 10
+  CAN_Tx_Msgdata[7] = currentStatus.engineProtectStatus; //bitfield
   
-  return CAN0.sendMsgBuf(0x402, 0, 8, CANMsgdata);
+  return CAN0.sendMsgBuf(0x402, 0, 8, CAN_Tx_Msgdata);
 }
 
 // Builds and sends engine actuator status 1 msg on CAN Id 403
 uint8_t canTx_EngineActuator1(void)
 {
   
-  CANMsgdata[0] = highByte(currentStatus.PW1); //X * 0.001
-  CANMsgdata[1] = lowByte(currentStatus.PW1); //X * 0.001
-  CANMsgdata[2] = highByte(currentStatus.PW2); //X * 0.001
-  CANMsgdata[3] = lowByte(currentStatus.PW2); //X * 0.001
-  CANMsgdata[4] = currentStatus.afrTarget; //X * 0.1
-  CANMsgdata[5] = 0xFF;
-  CANMsgdata[6] = 0xFF;
-  CANMsgdata[7] = 0xFF;
+  CAN_Tx_Msgdata[0] = highByte(currentStatus.PW1); //X * 0.001
+  CAN_Tx_Msgdata[1] = lowByte(currentStatus.PW1); //X * 0.001
+  CAN_Tx_Msgdata[2] = highByte(currentStatus.PW2); //X * 0.001
+  CAN_Tx_Msgdata[3] = lowByte(currentStatus.PW2); //X * 0.001
+  CAN_Tx_Msgdata[4] = currentStatus.afrTarget; //X * 0.1
+  CAN_Tx_Msgdata[5] = 0xFF;
+  CAN_Tx_Msgdata[6] = 0xFF;
+  CAN_Tx_Msgdata[7] = 0xFF;
   
-  return CAN0.sendMsgBuf(0x403, 0, 5, CANMsgdata);
+  return CAN0.sendMsgBuf(0x403, 0, 8, CAN_Tx_Msgdata);
 }
 
 // Builds and sends vehicle speed status 1 msg on CAN Id 410
 uint8_t canTx_VehicleSpeed1(void)
 {
   
-  CANMsgdata[0] = highByte(currentStatus.vss); //X
-  CANMsgdata[1] = lowByte(currentStatus.vss); //X
-  CANMsgdata[2] = currentStatus.gear; // Enum
-  CANMsgdata[3] = 0xFF;
-  CANMsgdata[4] = 0xFF;
-  CANMsgdata[5] = 0xFF;
-  CANMsgdata[6] = 0xFF;
-  CANMsgdata[7] = 0xFF;
+  CAN_Tx_Msgdata[0] = highByte(currentStatus.vss); //X
+  CAN_Tx_Msgdata[1] = lowByte(currentStatus.vss); //X
+  CAN_Tx_Msgdata[2] = currentStatus.gear; // Enum
+  CAN_Tx_Msgdata[3] = clutchTrigger; // 0 or 1
+  CAN_Tx_Msgdata[4] = 0xFF;
+  CAN_Tx_Msgdata[5] = 0xFF;
+  CAN_Tx_Msgdata[6] = 0xFF;
+  CAN_Tx_Msgdata[7] = 0xFF;
   
-  return CAN0.sendMsgBuf(0x410, 0, 3, CANMsgdata);
+  return CAN0.sendMsgBuf(0x410, 0, 8, CAN_Tx_Msgdata);
 }
 
 /* Recieve MotecPLM Can message frame on defined CAN ID */
@@ -253,10 +254,10 @@ void canRx_MotecPLM_O2 (void)
   //byte0 Compound ID
   
   // Check O2 data is valid using sensor status
-  if (CANMsgdata[7] == 0x00)
+  if (CAN_Rx_Msgdata[7] == 0x00)
   {
     //byte1 and 2 Calibrated Sensor Output Value Hi:lo*1 = x.xxxLa
-    uint32_t result = (CANMsgdata[1] << 8) | CANMsgdata[2]; //(highByte << 8) | lowByte - this is EQR from PLM
+    uint32_t result = (CAN_Rx_Msgdata[1] << 8) | CAN_Rx_Msgdata[2]; //(highByte << 8) | lowByte - this is EQR from PLM
     
     if (result < 600 ) { currentStatus.O2 = 255; } // catch divide by 0 and overflow later on.
     else { currentStatus.O2 = (uint8_t)(147000 / result); }//afr
@@ -274,7 +275,7 @@ void canRx_MotecPLM_O2 (void)
 
   //byte7 sensor state
   /*
-  switch (CANMsgdata[7])
+  switch (CAN_Rx_Msgdata[7])
   {
     case (0x00):
     EQRLH_State = e_EQRState_RUN;
@@ -325,10 +326,10 @@ void canRx_MotecPLM_O22 (void)
   //byte0 Compound ID
   
   // Check O2 data is valid using sensor status
-  if (CANMsgdata[7] == 0x00)
+  if (CAN_Rx_Msgdata[7] == 0x00)
   {
     //byte1 and 2 Calibrated Sensor Output Value Hi:lo*1 = x.xxxLa
-    uint32_t result = (CANMsgdata[1] << 8) | CANMsgdata[2]; //(highByte << 8) | lowByte - this is EQR from PLM
+    uint32_t result = (CAN_Rx_Msgdata[1] << 8) | CAN_Rx_Msgdata[2]; //(highByte << 8) | lowByte - this is EQR from PLM
     
     if (result < 600 ) { currentStatus.O2_2 = 255; } // catch divide by 0 and overflow later on.
     else { currentStatus.O2_2 = (uint8_t)(147000 / result); }//afr
@@ -345,7 +346,7 @@ void canRx_MotecPLM_O22 (void)
 
   //byte7 sensor state
   /*
-  switch (CANMsgdata[7])
+  switch (CAN_Rx_Msgdata[7])
   {
     case (0x00):
     EQRLH_State = e_EQRState_RUN;
@@ -394,19 +395,19 @@ void canRx_EPB_Vss (void)
   canEPBTimeSinceLast = 0; //reset timeout 
   
   // Bytes 0 and 1 are vss X
-  currentStatus.vss = (CANMsgdata[0] << 8) | CANMsgdata[1]; //(highByte << 8) | lowByte
+  currentStatus.vss = (CAN_Rx_Msgdata[0] << 8) | CAN_Rx_Msgdata[1]; //(highByte << 8) | lowByte
   if (currentStatus.vss > 512) { currentStatus.vss = 512; } //basic error checking.
 
 
   // Byte 2 is gear
   // Byte 3 is reverse gearbox state, need to resolve both of them.
-  currentStatus.gear = CANMsgdata[2]; // Raw gear from EPB.
+  currentStatus.gear = CAN_Rx_Msgdata[2]; // Raw gear from EPB.
   if ( currentStatus.gear == 6) { currentStatus.gear = 0; } // 0 and 6 are both neutral in speeduino gear logic.
-  if ((CANMsgdata[3] == 0) && (currentStatus.gear >= 2 )){ currentStatus.gear = 1; } // Reverse gearbox is in reverse, limit speeduino gear to 1st
-  else if (CANMsgdata[3] >= 2){ currentStatus.gear = 0; } // All other states of reverse gearbox are neutral
+  if ((CAN_Rx_Msgdata[3] == 0) && (currentStatus.gear >= 2 )){ currentStatus.gear = 1; } // Reverse gearbox is in reverse, limit speeduino gear to 1st
+  else if (CAN_Rx_Msgdata[3] >= 2){ currentStatus.gear = 0; } // All other states of reverse gearbox are neutral
 
   // Read clutch trigger bit as the inverse of "clutch is top travel from EPB"
-  clutchTrigger = !(CANMsgdata[7] & 0b01000000); // Bit 1 inverted.
+  clutchTrigger = !(CAN_Rx_Msgdata[7] & 0b01000000); // Bit 1 inverted.
   // Other messages not read 
 
 }

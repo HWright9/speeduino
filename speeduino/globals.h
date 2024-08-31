@@ -412,9 +412,6 @@
 
 #define AE_TPS_DOT_HIST_BINS 3
 
-#define CAN0_INT 2  /// MCP2515 interrupt pin
-#define MCP2515_CS_Pin 53 /// MCP2515 chip select pin
-
 #define CALIBRATION_TABLE_SIZE 512 ///< Calibration table size for CLT, IAT, O2
 #define CALIBRATION_TEMPERATURE_OFFSET 40 /**< All temperature measurements are stored offset by 40 degrees.
 This is so we can use an unsigned byte (0-255) to represent temperature ranges from -40 to 215 */

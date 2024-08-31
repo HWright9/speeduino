@@ -88,6 +88,7 @@ uint16_t staged_req_fuel_mult_pri = 0;
 uint16_t staged_req_fuel_mult_sec = 0;
 
 #if defined CAN_AVR_MCP2515
+#define CAN0_CS         53        // Set CS to pin 53 on Mega
 MCP_CAN CAN0(CAN0_CS);      // Set MCP_CAN CAN0 instance CS to pin 53
 uint8_t CAN_ErrorTmr = 0;
 #endif   
@@ -343,7 +344,7 @@ void loop()
 		  uint8_t canErr = sendCAN_Speeduino_10Hz();
 		  if (canErr != CAN_OK)  // This locks can out from sending further messages untill reset ~5sec later.
       {
-         canPrintErrors(canErr);        
+         //canPrintErrors(canErr);     //debug only   
          BIT_SET(currentStatus.status4, BIT_STATUS4_CAN_ERROR);
          CAN_ErrorTmr = 0;
       } 
@@ -479,15 +480,15 @@ void loop()
       if (configPage2.enableAeroSSCAN == true)
       {
         if((BIT_CHECK(currentStatus.status4, BIT_STATUS4_CAN_ERROR)) && (CAN_ErrorTmr < 254) ) { CAN_ErrorTmr++; }
-        if (CAN_ErrorTmr > 5)
+        if (CAN_ErrorTmr > 2)
         {
           CAN_ErrorTmr = 0;
           CAN0.abortTX(); //flush transmit buffer
           byte CANStat = CAN0.begin(MCP_ANY, CAN_500KBPS, MCP_8MHZ); // attempt re-init can bus : baudrate = CAN_500KBPS, frequency MCP_8MHZ
+          CAN0.setMode(MCP_NORMAL);
           if (CANStat == CAN_OK)
           {
             BIT_CLEAR(currentStatus.status4, BIT_STATUS4_CAN_ERROR);
-            CAN0.setMode(MCP_NORMAL);
           }
         }
       }
@@ -1642,4 +1643,7 @@ void canPrintErrors(uint8_t CANStat)
       Serial.println(" CAN_UNKNOWN_STAT ");
     break;
   }
+  Serial.print("Rx Err Count: "); Serial.println(CAN0.errorCountRX()); //Recieve Error Count
+  Serial.print("Tx Err Count: "); Serial.println(CAN0.errorCountTX()); //Transmitt Error Count
+  Serial.print("CTRL Err Code: "); Serial.println(CAN0.getError(),HEX); //Recieve Error Count
 }

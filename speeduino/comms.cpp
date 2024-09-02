@@ -628,8 +628,8 @@ void processSerialCommand()
       {
         //TS sends a total of 1024 bytes of calibration data, broken up into 256 byte chunks
         //As we're using an interpolated 2D table, we only need to store 32 values out of this 1024
-        void* pnt_TargetTable_values = (uint8_t *)&o2Calibration_values; //Pointer that will be used to point to the required target table values
-        uint16_t* pnt_TargetTable_bins = (uint16_t *)&o2Calibration_bins; //Pointer that will be used to point to the required target table bins
+        void* pnt_TargetTable_values = (uint8_t *)&configPage16.o2Calibration_values; //Pointer that will be used to point to the required target table values
+        uint16_t* pnt_TargetTable_bins = (uint16_t *)&configPage16.o2Calibration_bins; //Pointer that will be used to point to the required target table bins
 
         //Read through the current chunk (Should be 256 bytes long)
         for(uint16_t x = 0; x < calibrationLength; x++)
@@ -673,8 +673,8 @@ void processSerialCommand()
       }
       else if(cmd == IAT_CALIBRATION_PAGE)
       {
-        void* pnt_TargetTable_values = (uint16_t *)&iatCalibration_values;
-        uint16_t* pnt_TargetTable_bins = (uint16_t *)&iatCalibration_bins;
+        void* pnt_TargetTable_values = (uint16_t *)&configPage16.iatCalibration_values;
+        uint16_t* pnt_TargetTable_bins = (uint16_t *)&configPage16.iatCalibration_bins;
 
         //Temperature calibrations are sent as 32 16-bit values (ie 64 bytes total)
         if(calibrationLength == 64)
@@ -705,8 +705,8 @@ void processSerialCommand()
       }
       else if(cmd == CLT_CALIBRATION_PAGE)
       {
-        void* pnt_TargetTable_values = (uint16_t *)&cltCalibration_values;
-        uint16_t* pnt_TargetTable_bins = (uint16_t *)&cltCalibration_bins;
+        void* pnt_TargetTable_values = (uint16_t *)&configPage16.cltCalibration_values;
+        uint16_t* pnt_TargetTable_bins = (uint16_t *)&configPage16.cltCalibration_bins;
 
         //Temperature calibrations are sent as 32 16-bit values
         if(calibrationLength == 64)

@@ -1005,6 +1005,19 @@ void loop()
         }
 #endif
       }
+	  else //Fuel is off, set PW to zero
+	  {
+		  currentStatus.BaseFuel = 0;
+		  currentStatus.PW1 = 0;
+		  currentStatus.PW2 = 0;
+		  currentStatus.PW3 = 0;
+		  currentStatus.PW4 = 0;
+		  currentStatus.PW5 = 0;
+		  currentStatus.PW6 = 0;
+		  currentStatus.PW7 = 0;
+		  currentStatus.PW8 = 0;
+		  
+	  }
       //***********************************************************************************************
       //| BEGIN IGNITION SCHEDULES
       //Same as above, except for ignition

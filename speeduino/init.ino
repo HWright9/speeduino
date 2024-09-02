@@ -262,20 +262,20 @@ void initialiseAll()
     cltCalibrationTable.valueSize = SIZE_INT;
     cltCalibrationTable.axisSize = SIZE_INT;
     cltCalibrationTable.xSize = 32;
-    cltCalibrationTable.values = cltCalibration_values;
-    cltCalibrationTable.axisX = cltCalibration_bins;
+    cltCalibrationTable.values = configPage16.cltCalibration_values;
+    cltCalibrationTable.axisX = configPage16.cltCalibration_bins;
 
     iatCalibrationTable.valueSize = SIZE_INT;
     iatCalibrationTable.axisSize = SIZE_INT;
     iatCalibrationTable.xSize = 32;
-    iatCalibrationTable.values = iatCalibration_values;
-    iatCalibrationTable.axisX = iatCalibration_bins;
+    iatCalibrationTable.values = configPage16.iatCalibration_values;
+    iatCalibrationTable.axisX = configPage16.iatCalibration_bins;
 
     o2CalibrationTable.valueSize = SIZE_BYTE;
     o2CalibrationTable.axisSize = SIZE_INT;
     o2CalibrationTable.xSize = 32;
-    o2CalibrationTable.values = o2Calibration_values;
-    o2CalibrationTable.axisX = o2Calibration_bins;
+    o2CalibrationTable.values = configPage16.o2Calibration_values;
+    o2CalibrationTable.axisX = configPage16.o2Calibration_bins;
      
     ego_IntegralTable.valueSize = SIZE_BYTE;
     ego_IntegralTable.axisSize = SIZE_BYTE; //Set this table to use byte axis bins

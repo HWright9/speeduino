@@ -1263,17 +1263,7 @@ void initialiseAll()
 #if defined (CAN_AVR_MCP2515)
   if (configPage2.enableAeroSSCAN == true)
   {
-    byte CANStat = CAN0.begin(MCP_ANY, CAN_500KBPS, MCP_8MHZ); // init can bus : baudrate = CAN_500KBPS, frequency MCP_8MHZ
-    if(CANStat == CAN_OK)  
-    {
-      BIT_CLEAR(currentStatus.status4, BIT_STATUS4_CAN_ERROR);
-    }
-    else
-    {
-      BIT_SET(currentStatus.status4, BIT_STATUS4_CAN_ERROR);
-      CAN_ErrorTmr = 0;
-    }
-    CAN0.setMode(MCP_NORMAL);
+    can0_Init();
   }    
 #endif
 

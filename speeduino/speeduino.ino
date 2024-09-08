@@ -86,13 +86,7 @@ uint32_t rollingCutLastRev = 0; /**< Tracks whether we're on the same or a diffe
 
 uint16_t staged_req_fuel_mult_pri = 0;
 uint16_t staged_req_fuel_mult_sec = 0;
-
-#if defined CAN_AVR_MCP2515
-#define CAN0_CS         53        // Set CS to pin 53 on Mega
-MCP_CAN CAN0(CAN0_CS);      // Set MCP_CAN CAN0 instance CS to pin 53
-uint8_t CAN_ErrorTmr = 0;
-#endif   
-  
+ 
 #ifndef UNIT_TEST // Scope guard for unit testing
 void setup()
 {
@@ -193,8 +187,7 @@ void loop()
       if ((configPage2.enableAeroSSCAN == true) && 
           (BIT_CHECK(currentStatus.status4, BIT_STATUS4_CAN_ERROR) == false))
       {
-        uint8_t canErr = recieveCAN_BroadCast();
-		    //if (canErr != CAN_OK) { (BIT_SET(currentStatus.status4, BIT_STATUS4_CAN_ERROR)); }
+        recieveCAN_BroadCast();
       }
       #endif
       
@@ -338,19 +331,6 @@ void loop()
       
       getSpeed();
       getGear();
-      
-    #if defined CAN_AVR_MCP2515
-	  if ((configPage2.enableAeroSSCAN == true) && (BIT_CHECK(currentStatus.status4, BIT_STATUS4_CAN_ERROR) == false)){
-		  uint8_t canErr = sendCAN_Speeduino_10Hz();
-		  if (canErr != CAN_OK)  // This locks can out from sending further messages untill reset ~5sec later.
-      {
-         //canPrintErrors(canErr);     //debug only   
-         BIT_SET(currentStatus.status4, BIT_STATUS4_CAN_ERROR);
-         CAN_ErrorTmr = 0;
-      } 
-		  else { BIT_CLEAR(currentStatus.status4, BIT_STATUS4_CAN_ERROR); }
-	  }
-      #endif
 
       #ifdef SD_LOGGING
         if(configPage13.onboard_log_file_rate == LOGGER_RATE_10HZ) { writeSDLogEntry(); }
@@ -386,6 +366,13 @@ void loop()
 
       #ifdef SD_LOGGING
         if(configPage13.onboard_log_file_rate == LOGGER_RATE_30HZ) { writeSDLogEntry(); }
+      #endif
+      
+      #if defined CAN_AVR_MCP2515
+      if ((configPage2.enableAeroSSCAN == true) && (BIT_CHECK(currentStatus.status4, BIT_STATUS4_CAN_ERROR) == false))
+      {
+        sendCAN_Speeduino_30Hz();
+      } 
       #endif
 
       //Check for any outstanding EEPROM writes.
@@ -475,28 +462,9 @@ void loop()
         if(configPage13.onboard_log_file_rate == LOGGER_RATE_1HZ) { writeSDLogEntry(); }
       #endif
       
-      //MCP2515 - This resets the CAN error allowing CAN to soft-recover after 5sec
+      //MCP2515 - This resets the CAN error allowing CAN to soft-recover after 2sec
       #if defined CAN_AVR_MCP2515
-      if (configPage2.enableAeroSSCAN == true)
-      {
-        if((BIT_CHECK(currentStatus.status4, BIT_STATUS4_CAN_ERROR)) && (CAN_ErrorTmr < 254) ) { CAN_ErrorTmr++; }
-        if (CAN_ErrorTmr > 2)
-        {
-          CAN_ErrorTmr = 0;
-          CAN0.abortTX(); //flush transmit buffer
-          byte CANStat = CAN0.begin(MCP_ANY, CAN_500KBPS, MCP_8MHZ); // attempt re-init can bus : baudrate = CAN_500KBPS, frequency MCP_8MHZ
-          CAN0.setMode(MCP_NORMAL);
-          if (CANStat == CAN_OK)
-          {
-            BIT_CLEAR(currentStatus.status4, BIT_STATUS4_CAN_ERROR);
-          }
-        }
-      }
-      else 
-      {
-        BIT_CLEAR(currentStatus.status4, BIT_STATUS4_CAN_ERROR);
-        CAN_ErrorTmr = 0;
-      }
+      can0_Maintainance();
       #endif
 
     } //1Hz timer
@@ -1609,54 +1577,4 @@ void calculateIgnitionAngles(int dwellAngle)
     default:
       break;
   }
-}
-
-//Just for testing
-void canPrintErrors(uint8_t CANStat)
-{
-  switch(CANStat)
-  {
-    case CAN_OK:
-      Serial.println(" CAN_OK ");
-    break;
-    
-    case CAN_FAILINIT:
-      Serial.println(" CAN_FAILINIT ");
-    break;
-    
-    case CAN_FAILTX:
-      Serial.println(" CAN_FAILTX ");
-    break;
-    
-    case CAN_MSGAVAIL:
-      Serial.println(" CAN_MSGAVAIL ");
-    break;
-    
-    case CAN_NOMSG:
-      Serial.println(" CAN_NOMSG ");
-    break;
-    
-    case CAN_CTRLERROR:
-      Serial.println(" CAN_CTRLERROR ");
-    break;
-    
-    case CAN_GETTXBFTIMEOUT:
-      Serial.println(" CAN_GETTXBFTIMEOUT ");
-    break;
-    
-    case CAN_SENDMSGTIMEOUT:
-      Serial.println(" CAN_SENDMSGTIMEOUT ");
-    break;
-    
-    case CAN_FAIL:
-      Serial.println(" CAN_FAIL ");
-    break;
-    
-    default:
-      Serial.println(" CAN_UNKNOWN_STAT ");
-    break;
-  }
-  Serial.print("Rx Err Count: "); Serial.println(CAN0.errorCountRX()); //Recieve Error Count
-  Serial.print("Tx Err Count: "); Serial.println(CAN0.errorCountTX()); //Transmitt Error Count
-  Serial.print("CTRL Err Code: "); Serial.println(CAN0.getError(),HEX); //Recieve Error Count
 }

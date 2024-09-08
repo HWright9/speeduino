@@ -22,6 +22,7 @@ void DashMessages(uint16_t DashMessageID);
 #if defined CAN_AVR_MCP2515
 
 /*--------------- canbus config options -------------- */
+
 /* CAN 0 */
 #define CAN0_INT        2         // Set INT to pin 2
 #define CAN0_CS         53        // Set CS to pin 53 on Mega
@@ -44,11 +45,14 @@ void DashMessages(uint16_t DashMessageID);
 #define CAN_250KBPS   12
 #define CAN_500KBPS   13
 #define CAN_1000KBPS  14
+
 /*-----------------------------------------------------*/
 
 
-uint8_t sendCAN_Speeduino_10Hz(void);
+void can0_Init(void);
+void can0_Maintainance(void);
 
+uint8_t sendCAN_Speeduino_30Hz(void);
 uint8_t recieveCAN_BroadCast(void);
 
 uint8_t canTx_EngineSensor1(void);

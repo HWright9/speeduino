@@ -239,6 +239,14 @@
 #define BIT_STATUS4_EGO1_INTCORR  6 //EGO Bank1 Integral Correcting
 #define BIT_STATUS4_EGO2_INTCORR  7 //EGO Bank2 Integral Correcting
 
+#define BIT_STATUS5_CAN_SPARE0    0 //CAN Bus MCP2515
+#define BIT_STATUS5_CAN_SPARE1    1 //CAN Bus MCP2515
+#define BIT_STATUS5_CAN_RXEPBDFLT 2 //CAN Bus MCP2515 Recieved message timeout for VSS
+#define BIT_STATUS5_CAN_RXEP      3 //CAN Bus MCP2515 Error RX error passive state (REC >= 128)
+#define BIT_STATUS5_CAN_TXEP      4 //CAN Bus MCP2515 Error TX error passive state (TEC >= 128)
+#define BIT_STATUS5_CAN_TXBO      5 //CAN Bus MCP2515 Error BUS is off
+#define BIT_STATUS5_CAN_TXOVRFLOW 6 //CAN Bus MCP2515 Error TX overflow
+#define BIT_STATUS5_CAN_RXOVRFLOW 7 //CAN Bus MCP2515 Error RX overflow
 
 #define VALID_MAP_MAX 1022 //The largest ADC value that is valid for the MAP sensor
 #define VALID_MAP_MIN 2 //The smallest ADC value that is valid for the MAP sensor
@@ -761,6 +769,7 @@ struct statuses {
   byte engineProtectStatus;
   byte fanDuty;
   volatile byte status4; ///< Status bits (See BIT_STATUS4_* defines on top of this file)
+  volatile byte status5; ///< Status bits (See BIT_STATUS5_* defines on top of this file)
   int16_t vvt2Angle; //Has to be a long for PID calcs (CL VVT control)
   byte vvt2TargetAngle;
   long vvt2Duty; //Has to be a long for PID calcs (CL VVT control)

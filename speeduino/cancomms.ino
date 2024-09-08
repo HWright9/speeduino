@@ -347,6 +347,7 @@ void sendcanValues(uint16_t offset, uint16_t packetLength, byte cmd, byte portTy
   fullStatus[123] = lowByte(currentStatus.InjectorDeltaPress); // Injector Differential Pressure
   fullStatus[124] = highByte(currentStatus.InjectorDeltaPress);
   fullStatus[125] = currentStatus.injPressCorrection; // Injector Pressure Differential Correction
+  fullStatus[126] = currentStatus.status5; //CAN Bus error status
 
   for(byte x=0; x<packetLength; x++)
   {

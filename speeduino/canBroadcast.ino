@@ -118,42 +118,116 @@ void DashMessage(uint16_t DashMessageID)
 #if defined CAN_AVR_MCP2515
 #include "globals.h"
 
+MCP_CAN CAN0(CAN0_CS);      // Set MCP_CAN CAN0 instance CS to pin 53
+
 /*Variables Local to this function*/
-unsigned char len = 0;
+uint8_t len = 0;
 uint32_t CANrxId;
 uint8_t CAN_Tx_Msgdata[8]; // Used by both TX routines.
 uint8_t CAN_Rx_Msgdata[8]; // Used by both RX routines.
-uint8_t can0_Msg_FailCntr;
+uint8_t CAN_ErrorTmr = 0;
 
 uint8_t canO2TimeSinceLast;
 uint8_t canO22TimeSinceLast;
 uint8_t canEPBTimeSinceLast;
 
-// Broadcasts Speeduino Generic data on CAN. Compatible with data dictionary v0.2
-uint8_t sendCAN_Speeduino_10Hz(void)
+void can0_Init(void)
 {
-  uint8_t canErrCode = CAN0.checkError();
+  uint8_t canErr = CAN0.begin(MCP_STDEXT, CAN_500KBPS, MCP_8MHZ); // init can bus : baudrate = CAN_500KBPS, frequency MCP_8MHZ
   
-  if(canErrCode == CAN_OK) { canErrCode = canTx_EngineSensor1(); }
-  if(canErrCode == CAN_OK) { canErrCode = canTx_EnginePosition1(); }
-  if(canErrCode == CAN_OK) { canErrCode = canTx_EngineActuator1(); }
-  //if(canErrCode == CAN_OK) { canErrCode = canTx_VehicleSpeed1(); }
+  if(canErr == CAN_OK)  
+  {
+    CAN0.init_Mask(0,0,0x0FF00000);                // Init first mask... looking at first two bytes of ID
+    CAN0.init_Filt(0,0,0x04700000);                // Init first filter... Only allow  0x47x
+    CAN0.init_Filt(1,0,0x04600000);                // Init second filter... Only allow  0x46x
+    CAN0.setMode(MCP_NORMAL);
+    BIT_CLEAR(currentStatus.status4, BIT_STATUS4_CAN_ERROR);
+  }
+  else
+  {
+    BIT_SET(currentStatus.status4, BIT_STATUS4_CAN_ERROR);
+    CAN_ErrorTmr = 0;
+  }
     
-  return canErrCode;
+}
+
+void can0_Maintainance(void)
+{
+  if (configPage2.enableAeroSSCAN == true)
+  {
+    if((BIT_CHECK(currentStatus.status4, BIT_STATUS4_CAN_ERROR)) && (CAN_ErrorTmr < 254) ) { CAN_ErrorTmr++; }
+    if (CAN_ErrorTmr > 2)
+    {
+      CAN0.abortTX(); //flush transmit buffer
+      can0_Init();
+    }
+  }
+  else 
+  {
+    BIT_CLEAR(currentStatus.status4, BIT_STATUS4_CAN_ERROR);
+    CAN_ErrorTmr = 0;
+  }
+}
+
+// Broadcasts Speeduino Generic data on CAN. Compatible with data dictionary v0.2
+uint8_t sendCAN_Speeduino_30Hz(void)
+{
+  uint8_t canErr = CAN0.checkError();
+  
+  if(canErr != CAN_FAIL) { canErr = canTx_EngineSensor1(); }
+  if(canErr != CAN_FAIL) { canErr = canTx_EnginePosition1(); }
+  if(canErr != CAN_FAIL) { canErr = canTx_EngineActuator1(); }
+  //if(canErrCode != CAN_FAIL) { canErrCode = canTx_VehicleSpeed1(); }
+  
+  //Error Handling
+  //Serial.print(" canErr: "); Serial.print(canErr,HEX);
+  if (canErr != CAN_OK)  // CAN error, may be TX or RX or Controller related
+  {
+    //canPrintErrors(canErr);     //debug only 
+    if(canErr == CAN_FAIL) // No comms with controller
+    {
+      BIT_SET(currentStatus.status4, BIT_STATUS4_CAN_ERROR);
+      CAN_ErrorTmr = 0;
+    }
+    else if ((canErr == CAN_GETTXBFTIMEOUT) || (canErr == CAN_SENDMSGTIMEOUT))
+    {
+      CAN0.abortTX(); // clear tx buffer
+      BIT_SET(currentStatus.status5, BIT_STATUS5_CAN_RXEPBDFLT);
+      BIT_SET(currentStatus.status4, BIT_STATUS4_CAN_ERROR);
+      CAN_ErrorTmr = 0;
+    }
+    else if(canErr == CAN_CTRLERROR)
+    {
+      // Recoverable bus error, record error values.
+      currentStatus.status5 = CAN0.getError() & 0b11111000; // ignore the last 3 warning bits in this buffer.
+      //Serial.println(" CAN_RX0BUFFOVERFLOW ");
+    }
+    else // some other error
+    {
+      BIT_SET(currentStatus.status4, BIT_STATUS4_CAN_ERROR);
+      CAN_ErrorTmr = 0;
+    }          
+  } 
+  else 
+  { 
+    BIT_CLEAR(currentStatus.status4, BIT_STATUS4_CAN_ERROR);
+    currentStatus.status5 = 0x00 & 0b11111000; // clear error flags     
+  }
+    
+  return canErr;
 }
 
 // Recieves Speeduino data on CAN. Compatible with data dictionary v0.1
 uint8_t recieveCAN_BroadCast(void)
 {
-  uint8_t canErrCode = CAN_OK;
+  uint8_t canErr = CAN_OK;
   
-  if((digitalRead(pinCANInt) == 0) && (CAN0.checkReceive() == CAN_MSGAVAIL)) // Digital read CAN INT pin on pin 2 is low
+  while((digitalRead(pinCANInt) == false) && (CAN0.checkReceive() == CAN_MSGAVAIL)) // Digital read CAN INT pin on pin 2 is low
   {  
-    canErrCode = CAN0.readMsgBuf(&CANrxId, &len, CAN_Rx_Msgdata);
+    canErr = CAN0.readMsgBuf(&CANrxId, &len, CAN_Rx_Msgdata);
     
-    if (canErrCode == CAN_OK)  // alternate would be CAN_NOMSG
+    if (canErr == CAN_OK)  // alternate would be CAN_NOMSG
     {
-    
         // O2 sensors using motec PLM's
       if (configPage6.egoType == 2) // O2 sensor source set to read CAN
       {
@@ -177,10 +251,17 @@ uint8_t recieveCAN_BroadCast(void)
     // Timeout error handling
     if ((configPage6.egoType == 2) && (canO2TimeSinceLast > 10)) { canRx_MotecPLM_O2_Dflt(); }
     if ((configPage6.egoType == 2) && (canO22TimeSinceLast > 10)) { canRx_MotecPLM_O22_Dflt();}
-    if ((configPage2.vssMode == 1) && (canEPBTimeSinceLast > 20)) { canRx_EPB_Vss_Dflt(); }
+    if ((configPage2.vssMode == 1) && (canEPBTimeSinceLast > 10)) { canRx_EPB_Vss_Dflt(); }
   }  
-    
-  return canErrCode;
+  
+  //Error handling
+  if(canErr == CAN_FAIL) // No comms with controller
+      {
+        BIT_SET(currentStatus.status4, BIT_STATUS4_CAN_ERROR);
+        CAN_ErrorTmr = 0;
+      }
+      
+  return canErr;
 }
 
 // Builds and sends engine sensor status 1 msg on CAN Id 401
@@ -393,6 +474,7 @@ void canRx_MotecPLM_O22_Dflt(void)
 void canRx_EPB_Vss (void)
 {
   canEPBTimeSinceLast = 0; //reset timeout 
+  BIT_CLEAR(currentStatus.status5, BIT_STATUS5_CAN_RXEPBDFLT); 
   
   // Bytes 0 and 1 are vss X
   currentStatus.vss = (CAN_Rx_Msgdata[0] << 8) | CAN_Rx_Msgdata[1]; //(highByte << 8) | lowByte
@@ -418,6 +500,61 @@ void canRx_EPB_Vss_Dflt(void)
   currentStatus.vss = 0;
   currentStatus.gear = 0;
   clutchTrigger = 0;
+  BIT_SET(currentStatus.status5, BIT_STATUS5_CAN_RXEPBDFLT); 
+}
+
+
+//Just for testing
+void canPrintErrors(uint8_t CANStat)
+{
+  switch(CANStat)
+  {
+    case CAN_OK:
+      Serial.println(" CAN_OK ");
+    break;
+    
+    case CAN_FAILINIT:
+      Serial.println(" CAN_FAILINIT ");
+    break;
+    
+    case CAN_FAILTX:
+      Serial.println(" CAN_FAILTX ");
+    break;
+    
+    case CAN_MSGAVAIL:
+      Serial.println(" CAN_MSGAVAIL ");
+    break;
+    
+    case CAN_NOMSG:
+      Serial.println(" CAN_NOMSG ");
+    break;
+    
+    case CAN_CTRLERROR:
+      Serial.println(" CAN_CTRLERROR ");
+    break;
+    
+    case CAN_GETTXBFTIMEOUT:
+      Serial.println(" CAN_GETTXBFTIMEOUT ");
+    break;
+    
+    case CAN_SENDMSGTIMEOUT:
+      Serial.println(" CAN_SENDMSGTIMEOUT ");
+    break;
+    
+    case CAN_FAIL:
+      Serial.println(" CAN_FAIL ");
+    break;
+    
+    default:
+      Serial.println(" CAN_UNKNOWN_STAT ");
+    break;
+  }
+  if (CANStat != CAN_FAIL) // No communication to controller
+  {
+    Serial.print("Rx Err Count: "); Serial.println(CAN0.errorCountRX()); //Recieve Error Count
+    Serial.print("Tx Err Count: "); Serial.println(CAN0.errorCountTX()); //Transmitt Error Count
+    Serial.print("CTRL Err Code: "); Serial.println(CAN0.getError(),HEX); //CAN EFLG register
+  }
 }
 
 #endif

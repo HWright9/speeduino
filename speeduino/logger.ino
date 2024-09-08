@@ -169,6 +169,7 @@ byte getTSLogEntry(uint16_t byteNum)
     case 124: statusValue = lowByte(currentStatus.InjectorDeltaPress); break; //Injector Delta Pressure
     case 125: statusValue = highByte(currentStatus.InjectorDeltaPress); break;
     case 126: statusValue = currentStatus.injPressCorrection; break; //Injector Differential Correction (%)
+    case 127: statusValue = currentStatus.status5; break; //CAN bus status flags
   }
 
   return statusValue;

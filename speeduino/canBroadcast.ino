@@ -133,13 +133,15 @@ uint8_t canEPBTimeSinceLast;
 
 void can0_Init(void)
 {
-  uint8_t canErr = CAN0.begin(MCP_STDEXT, CAN_500KBPS, MCP_8MHZ); // init can bus : baudrate = CAN_500KBPS, frequency MCP_8MHZ
+  uint8_t canErr = CAN0.begin(MCP_ANY, CAN_500KBPS, MCP_8MHZ); // init can bus : baudrate = CAN_500KBPS, frequency MCP_8MHZ
   
   if(canErr == CAN_OK)  
   {
-    CAN0.init_Mask(0,0,0x0FF00000);                // Init first mask... looking at first two bytes of ID
+    /*
+    CAN0.init_Mask(0,0,0x07F00000);                // Init first mask... looking at first two bytes of ID
     CAN0.init_Filt(0,0,0x04700000);                // Init first filter... Only allow  0x47x
     CAN0.init_Filt(1,0,0x04600000);                // Init second filter... Only allow  0x46x
+    */
     CAN0.setMode(MCP_NORMAL);
     BIT_CLEAR(currentStatus.status4, BIT_STATUS4_CAN_ERROR);
   }
@@ -177,7 +179,7 @@ uint8_t sendCAN_Speeduino_30Hz(void)
   if(canErr != CAN_FAIL) { canErr = canTx_EngineSensor1(); }
   if(canErr != CAN_FAIL) { canErr = canTx_EnginePosition1(); }
   if(canErr != CAN_FAIL) { canErr = canTx_EngineActuator1(); }
-  //if(canErrCode != CAN_FAIL) { canErrCode = canTx_VehicleSpeed1(); }
+  //if(canErrCode != CAN_FAIL) { canErr = canTx_VehicleSpeed1(); }
   
   //Error Handling
   //Serial.print(" canErr: "); Serial.print(canErr,HEX);
@@ -199,6 +201,7 @@ uint8_t sendCAN_Speeduino_30Hz(void)
     else if(canErr == CAN_CTRLERROR)
     {
       // Recoverable bus error, record error values.
+      CAN0.abortTX(); // clear tx buffer
       currentStatus.status5 = CAN0.getError() & 0b11111000; // ignore the last 3 warning bits in this buffer.
       //Serial.println(" CAN_RX0BUFFOVERFLOW ");
     }
@@ -226,7 +229,7 @@ uint8_t recieveCAN_BroadCast(void)
   {  
     canErr = CAN0.readMsgBuf(&CANrxId, &len, CAN_Rx_Msgdata);
     
-    if (canErr == CAN_OK)  // alternate would be CAN_NOMSG
+    if ((canErr == CAN_OK) && ((CANrxId & 0x80000000) != 0x80000000))  // alternate would be CAN_NOMSG, also not extended frame
     {
         // O2 sensors using motec PLM's
       if (configPage6.egoType == 2) // O2 sensor source set to read CAN

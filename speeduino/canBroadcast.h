@@ -52,7 +52,7 @@ void DashMessages(uint16_t DashMessageID);
 void can0_Init(void);
 void can0_Maintainance(void);
 
-uint8_t sendCAN_Speeduino_30Hz(void);
+uint8_t sendCAN_Speeduino_100Hz(void);
 uint8_t recieveCAN_BroadCast(void);
 
 uint8_t canTx_EngineSensor1(void);
@@ -63,10 +63,13 @@ uint8_t canTx_VehicleSpeed1(void);
 void canRx_MotecPLM_O2(void);
 void canRx_MotecPLM_O22(void);
 void canRx_EPB_Vss(void);
+void canRx_EPBAccelGyro1(void);
 
 void canRx_MotecPLM_O2_Dflt(void);
 void canRx_MotecPLM_O22_Dflt(void);
 void canRx_EPB_Vss_Dflt(void);
+void canRx_EPB_Vss_Dflt(void);
+
 
 #endif
 

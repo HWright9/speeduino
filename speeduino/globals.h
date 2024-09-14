@@ -220,6 +220,7 @@
 #define BIT_TIMER_10HZ            2
 #define BIT_TIMER_15HZ            3
 #define BIT_TIMER_30HZ            4
+#define BIT_TIMER_100HZ           5
 
 #define BIT_STATUS3_RESET_PREVENT 0 //Indicates whether reset prevention is enabled
 #define BIT_STATUS3_NITROUS       1
@@ -759,6 +760,8 @@ struct statuses {
   long vvt1Duty; //Has to be a long for PID calcs (CL VVT control)
   uint16_t injAngle;
   uint16_t vss;      /**< Current speed reading. Natively stored in kph and converted to mph in TS if required */
+  int16_t longG;  /**< Longitudinal G force forwards is positive 2g is 32768. -2g is -32768 */
+  int16_t latG;  /**< Lateral G force right hand turn is positive 2g is 32768. -2g is -32768 */
   bool idleUpOutputActive; /**< Whether the idle up output is currently active */
   byte gear;         /**< Current gear (Calculated from vss) */
   int16_t fuelPressure; /**< Fuel pressure in kPa  */

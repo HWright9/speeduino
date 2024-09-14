@@ -267,7 +267,20 @@ void loop()
 
     //***Perform sensor reads***
     //-----------------------------------------------------------------------------------------------------
-    readMAP();  
+    readMAP(); 
+
+    if (BIT_CHECK(LOOP_TIMER, BIT_TIMER_100HZ)) 
+    {
+      BIT_CLEAR(TIMER_mask, BIT_TIMER_100HZ);
+      
+      #if defined CAN_AVR_MCP2515
+      if ((configPage2.enableAeroSSCAN == true) && (BIT_CHECK(currentStatus.status4, BIT_STATUS4_CAN_ERROR) == false))
+      {
+        sendCAN_Speeduino_100Hz();
+      } 
+      #endif
+      
+    }      
     
     if (BIT_CHECK(LOOP_TIMER, BIT_TIMER_15HZ)) //Every 32 loops
     {
@@ -324,6 +337,20 @@ void loop()
     {
       BIT_CLEAR(TIMER_mask, BIT_TIMER_10HZ);
       //updateFullStatus();
+      
+      fuelPumpControl(); // Control the fuel pump at 10Hz
+    
+      // Injector priming control, once per ecu power cycle
+      if (configPage15.injPrimewCrank == true)
+      {
+        if ((injPrimed == false) && (fpOnTime > configPage2.primingDelay) && (engineIsMoving == true) && (currentStatus.hasSync == false) ) { beginInjectorPriming(); injPrimed = true; }
+      }
+      else // with ignition on
+      {
+        if ((injPrimed == false) && (fpOnTime > configPage2.primingDelay) && (currentStatus.hasSync == false) ) { beginInjectorPriming(); injPrimed = true; }
+      }
+      
+      
       checkProgrammableIO();
       idleControl(); //Perform any idle related actions. This needs to be run at 10Hz to align with the idle taper resolution of 0.1s
 
@@ -368,13 +395,6 @@ void loop()
         if(configPage13.onboard_log_file_rate == LOGGER_RATE_30HZ) { writeSDLogEntry(); }
       #endif
       
-      #if defined CAN_AVR_MCP2515
-      if ((configPage2.enableAeroSSCAN == true) && (BIT_CHECK(currentStatus.status4, BIT_STATUS4_CAN_ERROR) == false))
-      {
-        sendCAN_Speeduino_30Hz();
-      } 
-      #endif
-
       //Check for any outstanding EEPROM writes.
       if( (isEepromWritePending() == true) && (serialReceivePending == false) && (micros() > deferEEPROMWritesUntil)) { writeAllConfig(); } 
     }

@@ -27,6 +27,7 @@ Timers are typically low resolution (Compared to Schedulers), with maximum frequ
 void initialiseTimers()
 {
   lastRPM_100ms = 0;
+  loop10ms = 0;
   loop33ms = 0;
   loop66ms = 0;
   loop100ms = 0;
@@ -47,6 +48,7 @@ void oneMSInterval() //Most ARM chips can simply call a function
   ms_counter++;
 
   //Increment Loop Counters
+  loop10ms++;
   loop33ms++;
   loop66ms++;
   loop100ms++;
@@ -106,6 +108,14 @@ void oneMSInterval() //Most ARM chips can simply call a function
       }
     }
   }
+  
+    //30Hz loop
+  if (loop10ms == 10)
+  {
+    loop10ms = 0;
+    BIT_SET(TIMER_mask, BIT_TIMER_100HZ);
+  }
+  
 
   //30Hz loop
   if (loop33ms == 33)
@@ -132,18 +142,6 @@ void oneMSInterval() //Most ARM chips can simply call a function
 
     if ( BIT_CHECK(currentStatus.engine, BIT_ENGINE_RUN) ) { runSecsX10++; }
     else { runSecsX10 = 0; }
-    
-    fuelPumpControl(); // Control the fuel pump at 10Hz
-    
-    // Injector priming control, once per ecu power cycle
-    if (configPage15.injPrimewCrank == true)
-    {
-      if ((injPrimed == false) && (fpOnTime > configPage2.primingDelay) && (engineIsMoving == true) && (currentStatus.hasSync == false) ) { beginInjectorPriming(); injPrimed = true; }
-    }
-    else // with ignition on
-    {
-      if ((injPrimed == false) && (fpOnTime > configPage2.primingDelay) && (currentStatus.hasSync == false) ) { beginInjectorPriming(); injPrimed = true; }
-    }
   }
 
   //4Hz loop

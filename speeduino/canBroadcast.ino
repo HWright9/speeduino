@@ -131,6 +131,8 @@ uint8_t canO2TimeSinceLast;
 uint8_t canO22TimeSinceLast;
 uint8_t canEPBTimeSinceLast;
 
+uint8_t canMSGSeq = 0; // Message sequencer
+
 void can0_Init(void)
 {
   uint8_t canErr = CAN0.begin(MCP_ANY, CAN_500KBPS, MCP_8MHZ); // init can bus : baudrate = CAN_500KBPS, frequency MCP_8MHZ
@@ -172,13 +174,14 @@ void can0_Maintainance(void)
 }
 
 // Broadcasts Speeduino Generic data on CAN. Compatible with data dictionary v0.2
-uint8_t sendCAN_Speeduino_30Hz(void)
+uint8_t sendCAN_Speeduino_100Hz(void)
 {
   uint8_t canErr = CAN0.checkError();
   
-  if(canErr != CAN_FAIL) { canErr = canTx_EngineSensor1(); }
-  if(canErr != CAN_FAIL) { canErr = canTx_EnginePosition1(); }
-  if(canErr != CAN_FAIL) { canErr = canTx_EngineActuator1(); }
+  // To limit throughput each message is sent at 100hz/3 with even spacing.
+  if((canErr != CAN_FAIL) && (canMSGSeq == 0)) { canErr = canTx_EngineSensor1(); }
+  if((canErr != CAN_FAIL) && (canMSGSeq == 1)) { canErr = canTx_EnginePosition1(); }
+  if((canErr != CAN_FAIL) && (canMSGSeq == 2)) { canErr = canTx_EngineActuator1(); }
   //if(canErrCode != CAN_FAIL) { canErr = canTx_VehicleSpeed1(); }
   
   //Error Handling
@@ -216,6 +219,9 @@ uint8_t sendCAN_Speeduino_30Hz(void)
     BIT_CLEAR(currentStatus.status4, BIT_STATUS4_CAN_ERROR);
     currentStatus.status5 = 0x00 & 0b11111000; // clear error flags     
   }
+  
+  if (canMSGSeq < 2) { canMSGSeq++; }
+  else { canMSGSeq = 0; }
     
   return canErr;
 }
@@ -242,6 +248,8 @@ uint8_t recieveCAN_BroadCast(void)
       {
         if ((CANrxId == 0x470) && (len == 8)) { canRx_EPB_Vss(); } // Parse Electric Park Brake data on 470. This has vss gear and clutch data from EPB.
       }
+      
+      if ((CANrxId == 0x472) && (len == 8)) { canRx_EPBAccelGyro1(); } // Parse Electric Park Brake data on 472. This is the 3 axis gyro
     }
   }
   
@@ -254,7 +262,7 @@ uint8_t recieveCAN_BroadCast(void)
     // Timeout error handling
     if ((configPage6.egoType == 2) && (canO2TimeSinceLast > 10)) { canRx_MotecPLM_O2_Dflt(); }
     if ((configPage6.egoType == 2) && (canO22TimeSinceLast > 10)) { canRx_MotecPLM_O22_Dflt();}
-    if ((configPage2.vssMode == 1) && (canEPBTimeSinceLast > 10)) { canRx_EPB_Vss_Dflt(); }
+    if ((configPage2.vssMode == 1) && (canEPBTimeSinceLast > 10)) { canRx_EPB_Vss_Dflt();  canRx_EPBAccelGyro1_Dflt();}
   }  
   
   //Error handling
@@ -506,6 +514,20 @@ void canRx_EPB_Vss_Dflt(void)
   BIT_SET(currentStatus.status5, BIT_STATUS5_CAN_RXEPBDFLT); 
 }
 
+void canRx_EPBAccelGyro1(void)
+{
+  // Bytes 0 and 1 are Ax
+  currentStatus.longG = (CAN_Rx_Msgdata[0] << 8) | CAN_Rx_Msgdata[1]; //(highByte << 8) | lowByte 2g is 32768. -2g is -32768 
+  // Bytes 2 and 3 are Ay
+  currentStatus.latG = (CAN_Rx_Msgdata[2] << 8) | CAN_Rx_Msgdata[3]; //(highByte << 8) | lowByte 2g is 32768. -2g is -32768 
+}
+
+// Default action when message times out
+void canRx_EPBAccelGyro1_Dflt(void)
+{
+  currentStatus.longG = 0;
+  currentStatus.latG = 0;
+}
 
 //Just for testing
 void canPrintErrors(uint8_t CANStat)

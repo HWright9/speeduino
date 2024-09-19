@@ -169,11 +169,13 @@ byte getTSLogEntry(uint16_t byteNum)
     case 124: statusValue = lowByte(currentStatus.InjectorDeltaPress); break; //Injector Delta Pressure
     case 125: statusValue = highByte(currentStatus.InjectorDeltaPress); break;
     case 126: statusValue = currentStatus.injPressCorrection; break; //Injector Differential Correction (%)
-    case 127: statusValue = currentStatus.status5; break; //CAN bus status flags
-    case 128: statusValue = lowByte(currentStatus.longG); // Longitudinal G force
-    case 129: statusValue = highByte(currentStatus.longG);
-    case 130: statusValue = lowByte(currentStatus.latG); // Lateral G force
-    case 131: statusValue = highByte(currentStatus.latG);
+    case 127: statusValue = lowByte(currentStatus.longG); // Longitudinal G force
+    case 128: statusValue = highByte(currentStatus.longG);
+    case 129: statusValue = lowByte(currentStatus.latG); // Lateral G force
+    case 130: statusValue = highByte(currentStatus.latG);
+    case 131: statusValue = lowByte(currentStatus.fuelUsedThisKey); // Lateral G force
+    case 132: statusValue = highByte(currentStatus.fuelUsedThisKey);
+    case 133: statusValue = currentStatus.status5; break; //CAN bus status flags
   }
 
   return statusValue;

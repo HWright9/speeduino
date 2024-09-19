@@ -1272,6 +1272,9 @@ void initialiseAll()
     readIAT(false); // Init IAT ADC without filter.
     readTPS(false); // Need to read tps to detect flood clear state
     readBat(false); // Init battery ADC without filter.
+    
+    currentStatus.accumDuration = 0; // This is the accumulated duration of XXX for total fuel used calculations in uS minus injector open time.
+    currentStatus.fuelUsedThisKey = 0; // Litres *1000, max 65 litres
 
     initialisationComplete = true;
     digitalWrite(LED_BUILTIN, HIGH);

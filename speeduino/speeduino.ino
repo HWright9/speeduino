@@ -267,11 +267,16 @@ void loop()
 
     //***Perform sensor reads***
     //-----------------------------------------------------------------------------------------------------
-    readMAP(); 
+    //readMAP(); //-HRW
 
     if (BIT_CHECK(LOOP_TIMER, BIT_TIMER_100HZ)) 
     {
       BIT_CLEAR(TIMER_mask, BIT_TIMER_100HZ);
+      
+      readMAP();
+      #if TPS_READ_FREQUENCY == 100
+        readTPS();
+      #endif 
       
       #if defined CAN_AVR_MCP2515
       if ((configPage2.enableAeroSSCAN == true) && (BIT_CHECK(currentStatus.status4, BIT_STATUS4_CAN_ERROR) == false))
@@ -405,6 +410,8 @@ void loop()
       readCLT();
       readIAT();
       nitrousControl();
+      
+      totalFuelUsed(); // calculate total fuel used.
 
       //Lookup the current target idle RPM. This is aligned with coolant and so needs to be calculated at the same rate CLT is read
       if( (configPage2.idleAdvEnabled >= 1) || (configPage6.iacAlgorithm != IAC_ALGORITHM_NONE) )
@@ -1597,4 +1604,13 @@ void calculateIgnitionAngles(int dwellAngle)
     default:
       break;
   }
+}
+
+
+void totalFuelUsed(void)
+{
+  // injector flow rate is stored with a scale of 2
+  //currentStatus.fuelUsedThisKey = (currentStatus.accumDuration * (uint64_t)configPage15.injFlowRateCC<<1) / 60000000ULL;
+  currentStatus.fuelUsedThisKey = (currentStatus.accumDuration * 270) / 60000000ULL;
+
 }

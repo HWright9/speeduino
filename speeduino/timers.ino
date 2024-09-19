@@ -40,7 +40,7 @@ void initialiseTimers()
 //Timer2 Overflow Interrupt Vector, called when the timer overflows.
 //Executes every ~1ms.
 #if defined(CORE_AVR) //AVR chips use the ISR for this
-ISR(TIMER2_OVF_vect, ISR_NOBLOCK) //This MUST be no block. Turning NO_BLOCK off messes with timing accuracy
+ISR(TIMER2_COMPA_vect, ISR_NOBLOCK) //This MUST be no block. Turning NO_BLOCK off messes with timing accuracy
 #else
 void oneMSInterval() //Most ARM chips can simply call a function
 #endif
@@ -268,6 +268,7 @@ void oneMSInterval() //Most ARM chips can simply call a function
   }
 #if defined(CORE_AVR) //AVR chips use the ISR for this
     //Reset Timer2 to trigger in another ~1ms
-    TCNT2 = 131;            //Preload timer2 with 100 cycles, leaving 156 till overflow.
+    //TCNT2 = 131;            //Preload timer2 with 100 cycles, leaving 156 till overflow.
+    TIFR2  = 0x00;          //Timer2 INT Flag Reg: Clear Timer Overflow Flag
 #endif
 }

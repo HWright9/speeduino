@@ -347,13 +347,17 @@ void sendcanValues(uint16_t offset, uint16_t packetLength, byte cmd, byte portTy
   fullStatus[123] = lowByte(currentStatus.InjectorDeltaPress); // Injector Differential Pressure
   fullStatus[124] = highByte(currentStatus.InjectorDeltaPress);
   fullStatus[125] = currentStatus.injPressCorrection; // Injector Pressure Differential Correction
-  fullStatus[126] = currentStatus.status5; //CAN Bus error status
-  fullStatus[127] = lowByte(currentStatus.longG); // Longitudinal G force
-  fullStatus[128] = highByte(currentStatus.longG);
-  fullStatus[129] = lowByte(currentStatus.latG); // Lateral G force
-  fullStatus[130] = highByte(currentStatus.latG);
+  fullStatus[126] = lowByte(currentStatus.longG); // Longitudinal G force
+  fullStatus[127] = highByte(currentStatus.longG);
+  fullStatus[128] = lowByte(currentStatus.latG); // Lateral G force
+  fullStatus[129] = highByte(currentStatus.latG);
+  fullStatus[130] = lowByte(currentStatus.fuelUsedThisKey); // Fuel used since speeduino powered up in L
+  fullStatus[131] = highByte(currentStatus.fuelUsedThisKey);
+  fullStatus[132] = currentStatus.status5; //CAN Bus error status
 
-  for(byte x=0; x<packetLength; x++)
+  if (packetLength >= NEW_CAN_PACKET_SIZE) { packetLength = NEW_CAN_PACKET_SIZE - 1; } //protection against array out of bounds.
+  
+  for(uint16_t x=0; x<packetLength; x++)
   {
       if (portType == 1){ CANSerial.write(fullStatus[offset+x]); }
       else if (portType == 2)

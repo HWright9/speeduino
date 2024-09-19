@@ -315,9 +315,9 @@ uint8_t canTx_EngineActuator1(void)
   CAN_Tx_Msgdata[2] = highByte(currentStatus.PW2); //X * 0.001
   CAN_Tx_Msgdata[3] = lowByte(currentStatus.PW2); //X * 0.001
   CAN_Tx_Msgdata[4] = currentStatus.afrTarget; //X * 0.1
-  CAN_Tx_Msgdata[5] = 0xFF;
-  CAN_Tx_Msgdata[6] = 0xFF;
-  CAN_Tx_Msgdata[7] = 0xFF;
+  CAN_Tx_Msgdata[5] = highByte(currentStatus.fuelUsedThisKey); //X * 0.001
+  CAN_Tx_Msgdata[6] = lowByte(currentStatus.fuelUsedThisKey); //X * 0.001
+  CAN_Tx_Msgdata[7] = 0xFF; 
   
   return CAN0.sendMsgBuf(0x403, 0, 8, CAN_Tx_Msgdata);
 }

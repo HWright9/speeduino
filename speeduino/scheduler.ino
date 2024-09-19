@@ -834,6 +834,7 @@ static inline void fuelSchedule1Interrupt() //Most ARM chips can simply call a f
       inj1StartFunction();
       fuelSchedule1.Status = RUNNING; //Set the status to be in progress (ie The start callback has been called, but not the end callback)
       SET_COMPARE(FUEL1_COMPARE, FUEL1_COUNTER + uS_TO_TIMER_COMPARE(fuelSchedule1.duration) ); //Doing this here prevents a potential overflow on restarts
+      currentStatus.accumDuration += (fuelSchedule1.duration - inj_opentime_uS); //Add this duration without open time to the sum.
     }
     else if (fuelSchedule1.Status == RUNNING)
     {
@@ -871,6 +872,7 @@ static inline void fuelSchedule2Interrupt() //Most ARM chips can simply call a f
       inj2StartFunction();
       fuelSchedule2.Status = RUNNING; //Set the status to be in progress (ie The start callback has been called, but not the end callback)
       SET_COMPARE(FUEL2_COMPARE, FUEL2_COUNTER + uS_TO_TIMER_COMPARE(fuelSchedule2.duration) ); //Doing this here prevents a potential overflow on restarts
+      currentStatus.accumDuration += (fuelSchedule2.duration - inj_opentime_uS); //Add this duration without open time to the sum.
     }
     else if (fuelSchedule2.Status == RUNNING)
     {
@@ -906,6 +908,7 @@ static inline void fuelSchedule3Interrupt() //Most ARM chips can simply call a f
       inj3StartFunction();
       fuelSchedule3.Status = RUNNING; //Set the status to be in progress (ie The start callback has been called, but not the end callback)
       SET_COMPARE(FUEL3_COMPARE, FUEL3_COUNTER + uS_TO_TIMER_COMPARE(fuelSchedule3.duration) ); //Doing this here prevents a potential overflow on restarts
+      currentStatus.accumDuration += (fuelSchedule3.duration - inj_opentime_uS); //Add this duration without open time to the sum.
     }
     else if (fuelSchedule3.Status == RUNNING)
     {
@@ -941,6 +944,7 @@ static inline void fuelSchedule4Interrupt() //Most ARM chips can simply call a f
       inj4StartFunction();
       fuelSchedule4.Status = RUNNING; //Set the status to be in progress (ie The start callback has been called, but not the end callback)
       SET_COMPARE(FUEL4_COMPARE, FUEL4_COUNTER + uS_TO_TIMER_COMPARE(fuelSchedule4.duration) ); //Doing this here prevents a potential overflow on restarts
+      currentStatus.accumDuration += (fuelSchedule4.duration - inj_opentime_uS); //Add this duration without open time to the sum.
     }
     else if (fuelSchedule4.Status == RUNNING)
     {
@@ -975,6 +979,7 @@ static inline void fuelSchedule5Interrupt() //Most ARM chips can simply call a f
     inj5StartFunction();
     fuelSchedule5.Status = RUNNING; //Set the status to be in progress (ie The start callback has been called, but not the end callback)
     SET_COMPARE(FUEL5_COMPARE, FUEL5_COUNTER + uS_TO_TIMER_COMPARE(fuelSchedule5.duration) ); //Doing this here prevents a potential overflow on restarts
+    currentStatus.accumDuration += (fuelSchedule5.duration - inj_opentime_uS); //Add this duration without open time to the sum.
   }
   else if (fuelSchedule5.Status == RUNNING)
   {
@@ -1009,6 +1014,7 @@ static inline void fuelSchedule6Interrupt() //Most ARM chips can simply call a f
     inj6StartFunction();
     fuelSchedule6.Status = RUNNING; //Set the status to be in progress (ie The start callback has been called, but not the end callback)
     SET_COMPARE(FUEL6_COMPARE, FUEL6_COUNTER + uS_TO_TIMER_COMPARE(fuelSchedule6.duration) ); //Doing this here prevents a potential overflow on restarts
+    currentStatus.accumDuration += (fuelSchedule6.duration - inj_opentime_uS); //Add this duration without open time to the sum.
   }
   else if (fuelSchedule6.Status == RUNNING)
   {
@@ -1044,6 +1050,7 @@ static inline void fuelSchedule7Interrupt() //Most ARM chips can simply call a f
     inj7StartFunction();
     fuelSchedule7.Status = RUNNING; //Set the status to be in progress (ie The start callback has been called, but not the end callback)
     SET_COMPARE(FUEL7_COMPARE, FUEL7_COUNTER + uS_TO_TIMER_COMPARE(fuelSchedule7.duration) ); //Doing this here prevents a potential overflow on restarts
+    currentStatus.accumDuration += (fuelSchedule7.duration - inj_opentime_uS); //Add this duration without open time to the sum.
   }
   else if (fuelSchedule7.Status == RUNNING)
   {
@@ -1079,6 +1086,7 @@ static inline void fuelSchedule8Interrupt() //Most ARM chips can simply call a f
     inj8StartFunction();
     fuelSchedule8.Status = RUNNING; //Set the status to be in progress (ie The start callback has been called, but not the end callback)
     SET_COMPARE(FUEL8_COMPARE, FUEL8_COUNTER + uS_TO_TIMER_COMPARE(fuelSchedule8.duration) ); //Doing this here prevents a potential overflow on restarts
+    currentStatus.accumDuration += (fuelSchedule8.duration - inj_opentime_uS); //Add this duration without open time to the sum.
   }
   else if (fuelSchedule8.Status == RUNNING)
   {

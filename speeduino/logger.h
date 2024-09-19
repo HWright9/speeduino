@@ -12,8 +12,8 @@
 #include <assert.h>
 
 #ifndef UNIT_TEST // Scope guard for unit testing
-  #define LOG_ENTRY_SIZE      131 /**< The size of the live data packet. This MUST match ochBlockSize setting in the ini file */
-  #define SD_LOG_ENTRY_SIZE   131 /**< The size of the live data packet used by the SD card.*/
+  #define LOG_ENTRY_SIZE      133 /**< The size of the live data packet. This MUST match ochBlockSize setting in the ini file */
+  #define SD_LOG_ENTRY_SIZE   133 /**< The size of the live data packet used by the SD card.*/
 
 #else
   #define LOG_ENTRY_SIZE      1 /**< The size of the live data packet. This MUST match ochBlockSize setting in the ini file */
@@ -33,7 +33,7 @@ bool is2ByteEntry(uint8_t);
 // This array MUST remain in ascending order
 // !!!! WARNING: If any value above 255 is required in this array, changes MUST be made to is2ByteEntry() function !!!!
 
-const byte PROGMEM fsIntIndex[] = {4, 14, 17, 22, 26, 28, 33, 42, 44, 46, 48, 50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70, 72, 76, 78, 80, 82, 86, 88, 90, 94, 98, 103, 106, 110, 120, 124};
+const byte PROGMEM fsIntIndex[] = {4, 14, 17, 22, 26, 28, 33, 42, 44, 46, 48, 50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70, 72, 76, 78, 80, 82, 86, 88, 90, 94, 98, 103, 106, 110, 120, 124, 127, 129, 131};
 
 //List of logger field names. This must be in the same order and length as logger_updateLogdataCSV()
 const char header_0[] PROGMEM = "secl";

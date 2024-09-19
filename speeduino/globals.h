@@ -760,8 +760,6 @@ struct statuses {
   long vvt1Duty; //Has to be a long for PID calcs (CL VVT control)
   uint16_t injAngle;
   uint16_t vss;      /**< Current speed reading. Natively stored in kph and converted to mph in TS if required */
-  int16_t longG;  /**< Longitudinal G force forwards is positive 2g is 32768. -2g is -32768 */
-  int16_t latG;  /**< Lateral G force right hand turn is positive 2g is 32768. -2g is -32768 */
   bool idleUpOutputActive; /**< Whether the idle up output is currently active */
   byte gear;         /**< Current gear (Calculated from vss) */
   int16_t fuelPressure; /**< Fuel pressure in kPa  */
@@ -778,7 +776,11 @@ struct statuses {
   long vvt2Duty; //Has to be a long for PID calcs (CL VVT control)
   byte outputsStatus;
   byte TS_SD_Status; //TunerStudios SD card status
-};
+  int16_t longG;  /**< Longitudinal G force forwards is positive 2g is 32768. -2g is -32768 */
+  int16_t latG;  /**< Lateral G force right hand turn is positive 2g is 32768. -2g is -32768 */
+  uint64_t accumDuration; // This is the accumulated duration of XXX for total fuel used calculations in uS minus injector open time.
+  uint16_t fuelUsedThisKey; // Litres *1000, max 65 litres
+  };
 
 /** Page 2 of the config - mostly variables that are required for fuel.
  * These are "non-live" EFI setting, engine and "system" variables that remain fixed once sent
@@ -1511,6 +1513,9 @@ struct config15 {
   // Map Sample angle Table
   byte MAPSampleRPMBins[4];
   byte MAPSampleStrtAng[4];
+  
+  //injector flow for fuel used calc
+  byte injFlowRateCC; ///injector flow for fuel used calc
 
 #if defined(CORE_AVR)
   };

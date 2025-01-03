@@ -44,15 +44,8 @@ byte getTSLogEntry(uint16_t byteNum)
     case 23: statusValue = highByte(currentStatus.tpsDOT); break; //TPS DOT
     case 24: statusValue = currentStatus.advance; break;
     case 25: statusValue = currentStatus.TPS; break; // TPS (0% to 100%)
-    
-    case 26: 
-      if(currentStatus.loopsPerSecond > 60000) { currentStatus.loopsPerSecond = 60000;}
-      statusValue = lowByte(currentStatus.loopsPerSecond); 
-      break;
-    case 27: 
-      if(currentStatus.loopsPerSecond > 60000) { currentStatus.loopsPerSecond = 60000;}
-      statusValue = highByte(currentStatus.loopsPerSecond); 
-      break;
+    case 26: statusValue = lowByte(currentStatus.loopsPerSecond); break;
+    case 27: statusValue = highByte(currentStatus.loopsPerSecond); break;
     
     case 28: 
       currentStatus.freeRAM = freeRam();
@@ -135,7 +128,7 @@ byte getTSLogEntry(uint16_t byteNum)
     case 90: statusValue = lowByte(currentStatus.dwell); break;
     case 91: statusValue = highByte(currentStatus.dwell); break;
     case 92: statusValue = currentStatus.CLIdleTarget; break;
-    case 93: statusValue = currentStatus.mapDOT; break;
+    case 93: statusValue = (uint8_t)currentStatus.mapDOT; break;
     case 94: statusValue = lowByte(currentStatus.vvt1Angle); break; //2 bytes for vvt1Angle
     case 95: statusValue = highByte(currentStatus.vvt1Angle); break;
     case 96: statusValue = currentStatus.vvt1TargetAngle; break;
@@ -169,12 +162,12 @@ byte getTSLogEntry(uint16_t byteNum)
     case 124: statusValue = lowByte(currentStatus.InjectorDeltaPress); break; //Injector Delta Pressure
     case 125: statusValue = highByte(currentStatus.InjectorDeltaPress); break;
     case 126: statusValue = currentStatus.injPressCorrection; break; //Injector Differential Correction (%)
-    case 127: statusValue = lowByte(currentStatus.longG); // Longitudinal G force
-    case 128: statusValue = highByte(currentStatus.longG);
-    case 129: statusValue = lowByte(currentStatus.latG); // Lateral G force
-    case 130: statusValue = highByte(currentStatus.latG);
-    case 131: statusValue = lowByte(currentStatus.fuelUsedThisKey); // Lateral G force
-    case 132: statusValue = highByte(currentStatus.fuelUsedThisKey);
+    case 127: statusValue = lowByte(currentStatus.longG); break; // Longitudinal G force
+    case 128: statusValue = highByte(currentStatus.longG); break;
+    case 129: statusValue = lowByte(currentStatus.latG); break;// Lateral G force
+    case 130: statusValue = highByte(currentStatus.latG); break;
+    case 131: statusValue = lowByte(currentStatus.fuelUsedThisKey); break;// Lateral G force
+    case 132: statusValue = highByte(currentStatus.fuelUsedThisKey); break;
     case 133: statusValue = currentStatus.status5; break; //CAN bus status flags
   }
 

@@ -1610,7 +1610,9 @@ void calculateIgnitionAngles(int dwellAngle)
 void totalFuelUsed(void)
 {
   // injector flow rate is stored with a scale of 2
-  //currentStatus.fuelUsedThisKey = (currentStatus.accumDuration * (uint64_t)configPage15.injFlowRateCC<<1) / 60000000ULL;
-  currentStatus.fuelUsedThisKey = (currentStatus.accumDuration * 270) / 60000000ULL;
+  //currentStatus.accumDuration += 5602; //testing
+  currentStatus.fuelUsedThisKey = (uint16_t)((currentStatus.accumDuration * (uint64_t)configPage15.injFlowRateCC<<1) / 60000000ULL);
+  //currentStatus.fuelUsedThisKey = 24021; //ml
+  //currentStatus.fuelUsedThisKey = (currentStatus.accumDuration * 270) / 60000000ULL;
 
 }

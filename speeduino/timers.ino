@@ -182,7 +182,8 @@ void oneMSInterval() //Most ARM chips can simply call a function
     }
     //**************************************************************************************************************************************************
     //This records the number of main loops the system has completed in the last second
-    currentStatus.loopsPerSecond = mainLoopCount;
+    if (mainLoopCount > 60000) { currentStatus.loopsPerSecond = 60000;}
+    else { currentStatus.loopsPerSecond = mainLoopCount; }
     mainLoopCount = 0;
     //**************************************************************************************************************************************************
     //increment secl (secl is simply a counter that increments every second and is used to track whether the system has unexpectedly reset

@@ -12,15 +12,15 @@
 #include <assert.h>
 
 #ifndef UNIT_TEST // Scope guard for unit testing
-  #define LOG_ENTRY_SIZE      133 /**< The size of the live data packet. This MUST match ochBlockSize setting in the ini file */
-  #define SD_LOG_ENTRY_SIZE   133 /**< The size of the live data packet used by the SD card.*/
+  #define LOG_ENTRY_SIZE      134 /**< The size of the live data packet. This MUST match ochBlockSize setting in the ini file */
+  #define SD_LOG_ENTRY_SIZE   134 /**< The size of the live data packet used by the SD card.*/
 
 #else
   #define LOG_ENTRY_SIZE      1 /**< The size of the live data packet. This MUST match ochBlockSize setting in the ini file */
   #define SD_LOG_ENTRY_SIZE   1 /**< The size of the live data packet used by the SD card.*/
 #endif
 
-#define SD_LOG_NUM_FIELDS   91 /**< The number of fields that are in the log. This is always smaller than the entry size due to some fields being 2 bytes */
+#define SD_LOG_NUM_FIELDS   94 /**< The number of fields that are in the log. This is always smaller than the entry size due to some fields being 2 bytes */
 
 byte getTSLogEntry(uint16_t);
 int16_t getReadableLogEntry(uint16_t);
@@ -89,48 +89,48 @@ const char header_49[] PROGMEM = "AUX_IN 14";
 const char header_50[] PROGMEM = "AUX_IN 15";
 const char header_51[] PROGMEM = "TPS ADC";
 const char header_52[] PROGMEM = "Errors";
-const char header_53[] PROGMEM = "PW";
+const char header_53[] PROGMEM = "PW1";
 const char header_54[] PROGMEM = "PW2";
 const char header_55[] PROGMEM = "PW3";
 const char header_56[] PROGMEM = "PW4";
 const char header_57[] PROGMEM = "status3";
 const char header_58[] PROGMEM = "Engine Protect";
-const char header_59[] PROGMEM = "";
-const char header_60[] PROGMEM = "Fuel Load";
-const char header_61[] PROGMEM = "Ign Load";
-const char header_62[] PROGMEM = "Dwell";
-const char header_63[] PROGMEM = "Idle Target (RPM)";
-const char header_64[] PROGMEM = "MAP DOT";
-const char header_65[] PROGMEM = "VVT1 Angle";
-const char header_66[] PROGMEM = "VVT1 Target";
-const char header_67[] PROGMEM = "VVT1 Duty";
-const char header_68[] PROGMEM = "Flex Boost Adj";
-const char header_69[] PROGMEM = "Baro Correction";
-const char header_70[] PROGMEM = "VE Current";
-const char header_71[] PROGMEM = "ASE Correction";
-const char header_72[] PROGMEM = "Vehicle Speed";
-const char header_73[] PROGMEM = "Gear";
-const char header_74[] PROGMEM = "Fuel Pressure";
-const char header_75[] PROGMEM = "Oil Pressure";
-const char header_76[] PROGMEM = "status4";
-const char header_77[] PROGMEM = "VVT2 Angle";
-const char header_78[] PROGMEM = "VVT2 Target";
-const char header_79[] PROGMEM = "VVT2 Duty";
-const char header_80[] PROGMEM = "outputs";
-const char header_81[] PROGMEM = "Fuel Temp";
-const char header_82[] PROGMEM = "Fuel Temp Correction";
-const char header_83[] PROGMEM = "Advance 1";
-const char header_84[] PROGMEM = "Advance 2";
-const char header_85[] PROGMEM = "SD Status";
-const char header_86[] PROGMEM = "EMAP";
-const char header_87[] PROGMEM = "Fan Duty";
-const char header_88[] PROGMEM = "EGO2 Correction";
-const char header_89[] PROGMEM = "Inj Delta Press";
-const char header_90[] PROGMEM = "Fuel Press Correction";
+const char header_59[] PROGMEM = "Fuel Load";
+const char header_60[] PROGMEM = "Ign Load";
+const char header_61[] PROGMEM = "Dwell";
+const char header_62[] PROGMEM = "Idle Target (RPM)";
+const char header_63[] PROGMEM = "MAP DOT";
+const char header_64[] PROGMEM = "VVT1 Angle";
+const char header_65[] PROGMEM = "VVT1 Target";
+const char header_66[] PROGMEM = "VVT1 Duty";
+const char header_67[] PROGMEM = "Flex Boost Adj";
+const char header_68[] PROGMEM = "Baro Correction";
+const char header_69[] PROGMEM = "VE Current";
+const char header_70[] PROGMEM = "ASE Correction";
+const char header_71[] PROGMEM = "Vehicle Speed";
+const char header_72[] PROGMEM = "Gear";
+const char header_73[] PROGMEM = "Fuel Pressure";
+const char header_74[] PROGMEM = "Oil Pressure";
+const char header_75[] PROGMEM = "status4";
+const char header_76[] PROGMEM = "VVT2 Angle";
+const char header_77[] PROGMEM = "VVT2 Target";
+const char header_78[] PROGMEM = "VVT2 Duty";
+const char header_79[] PROGMEM = "outputs";
+const char header_80[] PROGMEM = "Fuel Temp";
+const char header_81[] PROGMEM = "Fuel Temp Correction";
+const char header_82[] PROGMEM = "Advance 1";
+const char header_83[] PROGMEM = "Advance 2";
+const char header_84[] PROGMEM = "SD Status";
+const char header_85[] PROGMEM = "EGT";
+const char header_86[] PROGMEM = "Fan Duty";
+const char header_87[] PROGMEM = "EGO2 Correction";
+const char header_88[] PROGMEM = "Inj Delta Press";
+const char header_89[] PROGMEM = "Fuel Press Correction";
+const char header_90[] PROGMEM = "Long G";
+const char header_91[] PROGMEM = "Lateral G";
+const char header_92[] PROGMEM = "Fuel Used";
+const char header_93[] PROGMEM = "status5";
 /*
-const char header_91[] PROGMEM = "";
-const char header_92[] PROGMEM = "";
-const char header_93[] PROGMEM = "";
 const char header_94[] PROGMEM = "";
 const char header_95[] PROGMEM = "";
 const char header_96[] PROGMEM = "";
@@ -252,10 +252,10 @@ const char* const header_table[] PROGMEM = {  header_0,\
                                               header_88,\
                                               header_89,\
                                               header_90,\
-                                              /*
                                               header_91,\
                                               header_92,\
                                               header_93,\
+                                              /*
                                               header_94,\
                                               header_95,\
                                               header_96,\

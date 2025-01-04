@@ -516,9 +516,9 @@ void canRx_EPB_Vss_Dflt(void)
 
 void canRx_EPBAccelGyro1(void)
 {
-  // Bytes 0 and 1 are Ax
+  // Bytes 0 and 1 are Ax, accel is positive
   currentStatus.longG = (CAN_Rx_Msgdata[0] << 8) | CAN_Rx_Msgdata[1]; //(highByte << 8) | lowByte 2g is 32768. -2g is -32768 
-  // Bytes 2 and 3 are Ay
+  // Bytes 2 and 3 are Ay, right turn is positive
   currentStatus.latG = (CAN_Rx_Msgdata[2] << 8) | CAN_Rx_Msgdata[3]; //(highByte << 8) | lowByte 2g is 32768. -2g is -32768 
 }
 

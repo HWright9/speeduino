@@ -237,6 +237,42 @@ uint8_t recieveCAN_BroadCast(void)
     
     if ((canErr == CAN_OK) && ((CANrxId & 0x80000000) != 0x80000000))  // alternate would be CAN_NOMSG, also not extended frame
     {
+      // OBD messages 
+      if ( (CANrxId == uint16_t(configPage9.obd_address + 0x100))  || (CANrxId== 0x7DF))      
+      {
+        // The address is the speeduino specific ecu canbus address 
+        // or the 0x7df(2015 dec) broadcast address
+        if (CAN_Rx_Msgdata[1] == 0x01)
+          {
+            // PID mode 0 , realtime data stream
+            obd_response(CAN_Rx_Msgdata[1], CAN_Rx_Msgdata[2], 0);     // get the obd response based on the data in byte2
+            CAN0.sendMsgBuf(0x7E8, 0, 8, CAN_Tx_Msgdata); //((configPage9.obd_address + 0x100)+ 8);         
+          }
+        if (CAN_Rx_Msgdata[1] == 0x22)
+          {
+            // PID mode 22h , custom mode , non standard data
+            obd_response(CAN_Rx_Msgdata[1], CAN_Rx_Msgdata[2], CAN_Rx_Msgdata[3]);     // get the obd response based on the data in byte2
+            CAN0.sendMsgBuf(0x7E8, 0, 8, CAN_Tx_Msgdata); //((configPage9.obd_address + 0x100)+ 8);        
+          }
+      }
+     if (CANrxId == uint16_t(configPage9.obd_address + 0x100))      
+      {
+        // The address is only the speeduino specific ecu canbus address    
+        if (CAN_Rx_Msgdata[1] == 0x09)
+          {
+           // PID mode 9 , vehicle information request
+           if (CAN_Rx_Msgdata[2] == 02)
+             {
+              //send the VIN number , 17 char long VIN sent in 5 messages.
+             }
+          else if (CAN_Rx_Msgdata[2] == 0x0A)
+             {
+              //code 20: send 20 ascii characters with ECU name , "ECU -SpeeduinoXXXXXX" , change the XXXXXX ONLY as required.  
+             }
+          }
+      }
+
+      /* Broadcast rx stuff below here */
         // O2 sensors using motec PLM's
       if (configPage6.egoType == 2) // O2 sensor source set to read CAN
       {

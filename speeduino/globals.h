@@ -339,12 +339,14 @@
 #define FUEL2_MODE_ADD      2
 #define FUEL2_MODE_CONDITIONAL_SWITCH   3
 #define FUEL2_MODE_INPUT_SWITCH 4
+#define FUEL2_MODE_BANKED   5
 
 #define SPARK2_MODE_OFF      0
 #define SPARK2_MODE_MULTIPLY 1
 #define SPARK2_MODE_ADD      2
 #define SPARK2_MODE_CONDITIONAL_SWITCH   3
 #define SPARK2_MODE_INPUT_SWITCH 4
+#define SPARK2_MODE_BANKED   5
 
 #define FUEL2_CONDITION_RPM 0
 #define FUEL2_CONDITION_MAP 1
@@ -452,6 +454,7 @@ This is so we can use an unsigned byte (0-255) to represent temperature ranges f
 #define LOGGER_FILENAMING_SEQENTIAL     2
 
 extern const char TSfirmwareVersion[] PROGMEM;
+extern const char VehicleIdentificationNumber[] PROGMEM;
 
 extern const byte data_structure_version; //This identifies the data structure when reading / writing. Now in use: CURRENT_DATA_VERSION (migration on-the fly) ?
 extern FastCRC32 CRC32; //Generic CRC32 instance for general use in pages etc. Note that the serial comms has its own CRC32 instance
@@ -758,7 +761,7 @@ struct statuses {
   int16_t vvt1Angle; //Has to be a long for PID calcs (CL VVT control)
   byte vvt1TargetAngle;
   long vvt1Duty; //Has to be a long for PID calcs (CL VVT control)
-  uint16_t injAngle;
+  uint16_t injCloseAngle;
   uint16_t vss;      /**< Current speed reading. Natively stored in kph and converted to mph in TS if required */
   bool idleUpOutputActive; /**< Whether the idle up output is currently active */
   byte gear;         /**< Current gear (Calculated from vss) */

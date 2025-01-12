@@ -1326,8 +1326,26 @@ uint16_t correctionsDwell(uint16_t dwell)
 * all these functions modify the injecton pulswidths PW1 to PW8. None of them can modify baseFuel since that is a global correction.
 */
 void correctionsFuel_Individual(void)
-{  
-  //Initially all the pulse widths are set the same. Adjustments are made in the functions below
+{
+  uint16_t Bank2PW = 0;
+  uint16_t nitrousAdderPW = 0;
+  
+  // Globally used variable calculatons
+  //Check that the duty cycle of the chosen pulsewidth isn't too high.
+  pwLimit = percentage(configPage2.dutyLim, revolutionTime); //The pulsewidth limit is determined to be the duty cycle limit (Eg 85%) by the total time it takes to perform 1 crank revolution
+  //Handle multiple squirts per rev
+  if (configPage2.strokes == FOUR_STROKE) { pwLimit = pwLimit * 2 / currentStatus.nSquirts; } 
+  else { pwLimit = pwLimit / currentStatus.nSquirts; }
+  
+   
+  //Nitrous addition
+  if( (currentStatus.nitrous_status == NITROUS_STAGE1) || (currentStatus.nitrous_status == NITROUS_BOTH) )
+  {
+    nitrousAdderPW = correctionNitrous(); // Calculate nitrous addition.
+    currentStatus.BaseFuel = currentStatus.BaseFuel + nitrousAdderPW;
+  }
+  
+  //all the pulse widths are set the same to start. 
   currentStatus.PW1 = currentStatus.BaseFuel;
   currentStatus.PW2 = currentStatus.BaseFuel;
   currentStatus.PW3 = currentStatus.BaseFuel;
@@ -1337,12 +1355,29 @@ void correctionsFuel_Individual(void)
   currentStatus.PW7 = currentStatus.BaseFuel;
   currentStatus.PW8 = currentStatus.BaseFuel;
   
-  // Globally used variable calculatons
-  //Check that the duty cycle of the chosen pulsewidth isn't too high.
-  pwLimit = percentage(configPage2.dutyLim, revolutionTime); //The pulsewidth limit is determined to be the duty cycle limit (Eg 85%) by the total time it takes to perform 1 crank revolution
-  //Handle multiple squirts per rev
-  if (configPage2.strokes == FOUR_STROKE) { pwLimit = pwLimit * 2 / currentStatus.nSquirts; } 
-  else { pwLimit = pwLimit / currentStatus.nSquirts; }
+  //Assign PW 1-8 to base fuel from global fuel or similar calculation for bank2.
+  if (configPage10.fuel2Mode == FUEL2_MODE_BANKED) // if banked assign VE2 to the injectors assigned to bank2.
+  {
+    Bank2PW = Calc_BaseFuel(req_fuel_uS, currentStatus.VE2, currentStatus.MAP, currentStatus.corrections); //respin the base fuel calc for VE2
+    Bank2PW = Bank2PW + nitrousAdderPW;
+    
+    if( (configPage9.injBank_Inj1 == INJ_BANK2) && (channel1InjEnabled == true) ) { currentStatus.PW1 = Bank2PW; }
+    if( (configPage9.injBank_Inj2 == INJ_BANK2) && (channel2InjEnabled == true) ) { currentStatus.PW2 = Bank2PW; }
+    if( (configPage9.injBank_Inj3 == INJ_BANK2) && (channel3InjEnabled == true) ) { currentStatus.PW3 = Bank2PW; }
+    if( (configPage9.injBank_Inj4 == INJ_BANK2) && (channel4InjEnabled == true) ) { currentStatus.PW4 = Bank2PW; }
+    #if INJ_CHANNELS >= 5                                                                               
+    if( (configPage9.injBank_Inj5 == INJ_BANK2) && (channel5InjEnabled == true) ) { currentStatus.PW5 = Bank2PW; }
+    #endif                                                                                              
+    #if INJ_CHANNELS >= 6                                                                              
+    if( (configPage9.injBank_Inj6 == INJ_BANK2) && (channel6InjEnabled == true) ) { currentStatus.PW6 = Bank2PW; }
+    #endif                                                                                              
+    #if INJ_CHANNELS >= 7                                                                               
+    if( (configPage9.injBank_Inj7 == INJ_BANK2) && (channel7InjEnabled == true) ) { currentStatus.PW7 = Bank2PW; }
+    #endif                                                                                              
+    #if INJ_CHANNELS >= 8                                                                               
+    if( (configPage9.injBank_Inj8 == INJ_BANK2) && (channel8InjEnabled == true) ) { currentStatus.PW8 = Bank2PW; }
+    #endif
+  }
   
   // Multiplications to fuel
   correctionEGOBank2();
@@ -1354,6 +1389,32 @@ void correctionsFuel_Individual(void)
   
   // Limits
   correctionFuelPWLimit();
+}
+
+/** Nitrous Correction
+* This adds fuel for nitrous. Works on PW chanels.
+* 
+*/
+uint16_t correctionNitrous(void)
+{
+uint16_t nitrousAdderPW = 0;
+  //Manual adder for nitrous.
+  if( (currentStatus.nitrous_status == NITROUS_STAGE1) || (currentStatus.nitrous_status == NITROUS_BOTH) )
+  { 
+    int16_t adderRange = (configPage10.n2o_stage1_maxRPM - configPage10.n2o_stage1_minRPM) * 100;
+    int16_t adderPercent = ((currentStatus.RPM - (configPage10.n2o_stage1_minRPM * 100)) * 100) / adderRange; //The percentage of the way through the RPM range
+    adderPercent = 100 - adderPercent; //Flip the percentage as we go from a higher adder to a lower adder as the RPMs rise
+    nitrousAdderPW = (configPage10.n2o_stage1_adderMax + percentage(adderPercent, (configPage10.n2o_stage1_adderMin - configPage10.n2o_stage1_adderMax))) * 100; //Calculate the above percentage of the calculated ms value.
+  }
+  if( (currentStatus.nitrous_status == NITROUS_STAGE2) || (currentStatus.nitrous_status == NITROUS_BOTH) )
+  {
+    int16_t adderRange = (configPage10.n2o_stage2_maxRPM - configPage10.n2o_stage2_minRPM) * 100;
+    int16_t adderPercent = ((currentStatus.RPM - (configPage10.n2o_stage2_minRPM * 100)) * 100) / adderRange; //The percentage of the way through the RPM range
+    adderPercent = 100 - adderPercent; //Flip the percentage as we go from a higher adder to a lower adder as the RPMs rise
+    nitrousAdderPW = (configPage10.n2o_stage2_adderMax + percentage(adderPercent, (configPage10.n2o_stage2_adderMin - configPage10.n2o_stage2_adderMax))) * 100; //Calculate the above percentage of the calculated ms value.
+  }
+  
+  return nitrousAdderPW;
 }
 
 /** Staging Correction

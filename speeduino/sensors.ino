@@ -191,7 +191,11 @@ static inline void instanteneousMAPReading(bool useFilter)
     currentStatus.MAP = fastMap10Bit(currentStatus.mapADC, configPage2.mapMin, configPage2.mapMax); //Get the current MAP value
     if(currentStatus.MAP < 0) { currentStatus.MAP = 0; } //Sanity check
   }
-  else { currentStatus.MAP = 101; } // MAP not used so set to default value
+  else 
+  { 
+    currentStatus.mapADC = 0;
+    currentStatus.MAP = 101; 
+  } // MAP not used so set to default value
     
   //Repeat for EMAP if it's enabled
   if(configPage6.useEMAP == true)
@@ -210,7 +214,11 @@ static inline void instanteneousMAPReading(bool useFilter)
     currentStatus.EMAP = fastMap10Bit(currentStatus.EMAPADC, configPage2.EMAPMin, configPage2.EMAPMax);
     if(currentStatus.EMAP < 0) { currentStatus.EMAP = 0; } //Sanity check
   }
-  else { currentStatus.EMAP = 101; } // EMAP not used so set to default value  
+  else 
+  { 
+    currentStatus.EMAPADC = 0;
+    currentStatus.EMAP = 101; 
+  } // EMAP not used so set to default value  
 }
 
 static inline void readMAP()
@@ -227,7 +235,7 @@ static inline void readMAP()
     case 1:
       //Average of a cycle
 
-      if ( (currentStatus.RPMdiv100 > configPage2.mapSwitchPoint) && ((currentStatus.hasSync == true) || BIT_CHECK(currentStatus.status3, BIT_STATUS3_HALFSYNC)) && (currentStatus.startRevolutions > 1) ) //If the engine isn't running and RPM below switch point, fall back to instantaneous reads
+      if ( (configPage10.useSensorMAP == true) && (currentStatus.RPMdiv100 > configPage2.mapSwitchPoint) && ((currentStatus.hasSync == true) || BIT_CHECK(currentStatus.status3, BIT_STATUS3_HALFSYNC)) && (currentStatus.startRevolutions > 1) ) //If the engine isn't running and RPM below switch point, fall back to instantaneous reads
       {
         if( (MAPcurRev == currentStatus.startRevolutions) || ( (MAPcurRev+1) == currentStatus.startRevolutions) ) //2 revolutions are looked at for 4 stroke. 2 stroke not currently catered for.
         {
@@ -307,7 +315,7 @@ static inline void readMAP()
 
     case 2:
       //Minimum reading in a cycle
-      if (currentStatus.RPMdiv100 > configPage2.mapSwitchPoint) //If the engine isn't running and RPM below switch point, fall back to instantaneous reads
+      if ( (configPage10.useSensorMAP == true) && (currentStatus.RPMdiv100 > configPage2.mapSwitchPoint) ) //If the engine isn't running and RPM below switch point, fall back to instantaneous reads
       {
         if( (MAPcurRev == currentStatus.startRevolutions) || ((MAPcurRev+1) == currentStatus.startRevolutions) ) //2 revolutions are looked at for 4 stroke. 2 stroke not currently catered for.
         {
@@ -350,7 +358,7 @@ static inline void readMAP()
 
     case 3:
       //Crank angle sampling, was ignition angle
-      if ( (currentStatus.RPMdiv100 > configPage2.mapSwitchPoint) && ((currentStatus.hasSync == true) || BIT_CHECK(currentStatus.status3, BIT_STATUS3_HALFSYNC)) && (currentStatus.startRevolutions > 1) ) //If the engine isn't running, fall back to instantaneous reads
+      if ( (configPage10.useSensorMAP == true) && (currentStatus.RPMdiv100 > configPage2.mapSwitchPoint) && ((currentStatus.hasSync == true) || BIT_CHECK(currentStatus.status3, BIT_STATUS3_HALFSYNC)) && (currentStatus.startRevolutions > 1) ) //If the engine isn't running, fall back to instantaneous reads
       {
         int cyl1CrankTDC = getCrankAngle();
         //int cyl2CrankTDC = cyl1CrankTDC - channel2InjDegrees;

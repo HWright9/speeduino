@@ -43,6 +43,7 @@ int8_t correctionKnock(int8_t);
 uint16_t correctionsDwell(uint16_t dwell);
 
 void correctionsFuel_Individual(void);
+uint16_t correctionNitrous(void);
 void correctionFuelStaging(void);
 void correctionEGOBank2(void);
 void correctionFuelTrim(void);

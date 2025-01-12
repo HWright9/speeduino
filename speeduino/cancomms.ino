@@ -473,8 +473,8 @@ void sendCancommand(uint8_t cmdtype, uint16_t canaddress, uint8_t candata1, uint
 #endif
 }
 
-// This routine builds the realtime data into packets that the obd requesting device can understand. This is only used by teensy and stm32 with onboard canbus
-void obd_response(uint8_t PIDmode, uint8_t requestedPIDlow, uint8_t requestedPIDhigh)
+// This routine supports the OBDII service 01 mode (sending realtime data)
+void obd_Service_01(uint8_t requestedPIDlow)
 { 
 //only build the PID if the mcu has onboard/attached can 
 
@@ -487,332 +487,498 @@ void obd_response(uint8_t PIDmode, uint8_t requestedPIDlow, uint8_t requestedPID
   uint16_t obdcalcG16;    //used in calcs
   uint16_t obdcalcH16;    //used in calcs  
   
-if (PIDmode == 0x01)
+  switch (requestedPIDlow)
   {
-     //currentStatus.canin[13] = therequestedPIDlow; 
-   switch (requestedPIDlow)
-         {
-          case 0:       //PID-0x00 PIDs supported 01-20  
-            CAN_Tx_Msgdata[0] =  0x06;    // sending 6 bytes
-            CAN_Tx_Msgdata[1] =  0x41;    // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc.
-            CAN_Tx_Msgdata[2] =  0x00;    // PID code
-            CAN_Tx_Msgdata[3] =  0x08;   //B0000 1000   1-8
-            CAN_Tx_Msgdata[4] =  B01111110;   //9-16
-            CAN_Tx_Msgdata[5] =  B10100000;   //17-24
-            CAN_Tx_Msgdata[6] =  B00010001;   //17-32
-            CAN_Tx_Msgdata[7] =  B00000000;   
-          break;
+    case 0:       //PID-0x00 PIDs supported 0x01-0x20  
+      CAN_Tx_Msgdata[0] =  0x06;    // sending 6 bytes
+      CAN_Tx_Msgdata[1] =  0x41;    // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc.
+      CAN_Tx_Msgdata[2] =  0x00;    // PID code
+      CAN_Tx_Msgdata[3] =  B00001101;   //1-8
+      CAN_Tx_Msgdata[4] =  B01111110;   //9-16
+      CAN_Tx_Msgdata[5] =  B10100000;   //17-24
+      CAN_Tx_Msgdata[6] =  B00011001;   //25-32
+      CAN_Tx_Msgdata[7] =  0x00;   
+    break;
 
-          case 5:      //PID-0x05 Engine coolant temperature , range is -40 to 215 deg C , formula == A-40
-            CAN_Tx_Msgdata[0] =  0x03;                 // sending 3 bytes
-            CAN_Tx_Msgdata[1] =  0x41;                 // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc.
-            CAN_Tx_Msgdata[2] =  0x05;                 // pid code
-            CAN_Tx_Msgdata[3] =  (byte)(currentStatus.coolant + CALIBRATION_TEMPERATURE_OFFSET);   //the data value A
-            CAN_Tx_Msgdata[4] =  0x00;                 //the data value B which is 0 as unused
-            CAN_Tx_Msgdata[5] =  0x00; 
-            CAN_Tx_Msgdata[6] =  0x00; 
-            CAN_Tx_Msgdata[7] =  0x00;
-          break;
-
-          case 10:        // PID-0x0A , Fuel Pressure (Gauge) , range is 0 to 765 kPa , formula == A / 3)
-            uint16_t temp_fuelpressure;
-            // Fuel pressure is in kPa
-            temp_fuelpressure = currentStatus.fuelPressure;
-            CAN_Tx_Msgdata[0] =  0x03;    // sending 3 byte
-            CAN_Tx_Msgdata[1] =  0x41;    // 
-            CAN_Tx_Msgdata[2] =  0x0A;    // pid code
-            CAN_Tx_Msgdata[3] =  lowByte(temp_fuelpressure);
-            CAN_Tx_Msgdata[4] =  0x00;
-            CAN_Tx_Msgdata[5] =  0x00; 
-            CAN_Tx_Msgdata[6] =  0x00; 
-            CAN_Tx_Msgdata[7] =  0x00;
-          break;
-
-          case 11:        // PID-0x0B , MAP , range is 0 to 255 kPa , Formula == A
-            CAN_Tx_Msgdata[0] =  0x03;    // sending 3 byte
-            CAN_Tx_Msgdata[1] =  0x41;    // 
-            CAN_Tx_Msgdata[2] =  0x0B;    // pid code
-            CAN_Tx_Msgdata[3] =  lowByte(currentStatus.MAP);    // absolute map
-            CAN_Tx_Msgdata[4] =  0x00;
-            CAN_Tx_Msgdata[5] =  0x00; 
-            CAN_Tx_Msgdata[6] =  0x00; 
-            CAN_Tx_Msgdata[7] =  0x00;
-          break;
-
-          case 12:        // PID-0x0C , RPM  , range is 0 to 16383.75 rpm , Formula == 256A+B / 4
-            uint16_t temp_revs; 
-            temp_revs = currentStatus.RPM << 2 ;      //
-            CAN_Tx_Msgdata[0] = 0x04;                        // sending 4 byte
-            CAN_Tx_Msgdata[1] = 0x41;                        // 
-            CAN_Tx_Msgdata[2] = 0x0C;                        // pid code
-            CAN_Tx_Msgdata[3] = highByte(temp_revs);         //obdcalcB; A
-            CAN_Tx_Msgdata[4] = lowByte(temp_revs);          //obdcalcD; B
-            CAN_Tx_Msgdata[5] = 0x00; 
-            CAN_Tx_Msgdata[6] = 0x00; 
-            CAN_Tx_Msgdata[7] = 0x00;
-          break;
-
-          case 13:        //PID-0x0D , Vehicle speed , range is 0 to 255 km/h , formula == A 
-            CAN_Tx_Msgdata[0] =  0x03;                       // sending 3 bytes
-            CAN_Tx_Msgdata[1] =  0x41;                       // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc.
-            CAN_Tx_Msgdata[2] =  0x0D;                       // pid code
-            CAN_Tx_Msgdata[3] =  lowByte(currentStatus.vss); // A
-            CAN_Tx_Msgdata[4] =  0x00;                       // B
-            CAN_Tx_Msgdata[5] =  0x00; 
-            CAN_Tx_Msgdata[6] =  0x00; 
-            CAN_Tx_Msgdata[7] =  0x00;
-          break;
-
-          case 14:      //PID-0x0E , Ignition Timing advance, range is -64 to 63.5 BTDC , formula == A/2 - 64 
-            int8_t temp_timingadvance;
-            temp_timingadvance = ((currentStatus.advance + 64) << 1);
-            //obdcalcA = ((timingadvance + 64) <<1) ; //((timingadvance + 64) *2)
-            CAN_Tx_Msgdata[0] =  0x03;                     // sending 3 bytes
-            CAN_Tx_Msgdata[1] =  0x41;                     // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc.
-            CAN_Tx_Msgdata[2] =  0x0E;                     // pid code
-            CAN_Tx_Msgdata[3] =  temp_timingadvance;       // A
-            CAN_Tx_Msgdata[4] =  0x00;                     // B
-            CAN_Tx_Msgdata[5] =  0x00; 
-            CAN_Tx_Msgdata[6] =  0x00; 
-            CAN_Tx_Msgdata[7] =  0x00;
-          break;
-
-          case 15:      //PID-0x0F , Inlet air temperature , range is -40 to 215 deg C, formula == A-40 
-            CAN_Tx_Msgdata[0] =  0x03;                                                         // sending 3 bytes
-            CAN_Tx_Msgdata[1] =  0x41;                                                         // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc.
-            CAN_Tx_Msgdata[2] =  0x0F;                                                         // pid code
-            CAN_Tx_Msgdata[3] =  (byte)(currentStatus.IAT + CALIBRATION_TEMPERATURE_OFFSET);   // A
-            CAN_Tx_Msgdata[4] =  0x00;                                                         // B
-            CAN_Tx_Msgdata[5] =  0x00; 
-            CAN_Tx_Msgdata[6] =  0x00; 
-            CAN_Tx_Msgdata[7] =  0x00;
-         break;
-
-         case 17:  // PID-0x11 , 
-           // TPS percentage, range is 0 to 100 percent, formula == 100/256 A 
-           uint16_t temp_tpsPC;
-           temp_tpsPC = currentStatus.TPS;
-           obdcalcA = (temp_tpsPC <<8) / 100;     // (tpsPC *256) /100;
-           if (obdcalcA > 255){ obdcalcA = 255;}
-           CAN_Tx_Msgdata[0] =  0x03;                    // sending 3 bytes
-           CAN_Tx_Msgdata[1] =  0x41;                    // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc.
-           CAN_Tx_Msgdata[2] =  0x11;                    // pid code
-           CAN_Tx_Msgdata[3] =  obdcalcA;                // A
-           CAN_Tx_Msgdata[4] =  0x00;                    // B
-           CAN_Tx_Msgdata[5] =  0x00; 
-           CAN_Tx_Msgdata[6] =  0x00; 
-           CAN_Tx_Msgdata[7] =  0x00;
-         break;
-  
-         case 19:      //PID-0x13 , oxygen sensors present, A0-A3 == bank1 , A4-A7 == bank2 , 
-           uint16_t O2present;
-           O2present = B00000011 ;       //realtimebufferA[24];         TEST VALUE !!!!!
-           CAN_Tx_Msgdata[0] =  0x03;           // sending 3 bytes
-           CAN_Tx_Msgdata[1] =  0x41;           // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc.
-           CAN_Tx_Msgdata[2] =  0x13;           // pid code
-           CAN_Tx_Msgdata[3] =  O2present ;     // A
-           CAN_Tx_Msgdata[4] =  0x00;           // B
-           CAN_Tx_Msgdata[5] =  0x00; 
-           CAN_Tx_Msgdata[6] =  0x00; 
-           CAN_Tx_Msgdata[7] =  0x00;
-         break;
-
-         case 28:      // PID-0x1C obd standard
-           uint16_t obdstandard;
-           obdstandard = 7;              // This is OBD2 / EOBD
-           CAN_Tx_Msgdata[0] =  0x03;           // sending 3 bytes
-           CAN_Tx_Msgdata[1] =  0x41;           // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc.
-           CAN_Tx_Msgdata[2] =  0x1C;           // pid code
-           CAN_Tx_Msgdata[3] =  obdstandard;    // A
-           CAN_Tx_Msgdata[4] =  0x00;           // B
-           CAN_Tx_Msgdata[5] =  0x00; 
-           CAN_Tx_Msgdata[6] =  0x00; 
-           CAN_Tx_Msgdata[7] =  0x00;
-         break;
-  
-        case 32:      // PID-0x20 PIDs supported [21-40]
-          CAN_Tx_Msgdata[0] =  0x06;          // sending 4 bytes
-          CAN_Tx_Msgdata[1] =  0x41;          // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc.
-          CAN_Tx_Msgdata[2] =  0x20;          // pid code
-          CAN_Tx_Msgdata[3] =  B00011000;     // 33-40
-          CAN_Tx_Msgdata[4] =  B00000000;     //41 - 48
-          CAN_Tx_Msgdata[5] =  B00100000;     //49-56
-          CAN_Tx_Msgdata[6] =  B00000001;     //57-64
-          CAN_Tx_Msgdata[7] = 0x00;
-        break;
-   
-        case 36:      // PID-0x24 O2 sensor2, AB: fuel/air equivalence ratio, CD: voltage ,  Formula == (2/65536)(256A +B) , 8/65536(256C+D) , Range is 0 to <2 and 0 to >8V 
-          //uint16_t O2_1e ;
-          //int16_t O2_1v ; 
-          obdcalcH16 = configPage2.stoich/10 ;            // configPage2.stoich(is *10 so 14.7 is 147)
-          obdcalcE32 = currentStatus.O2/10;            // afr(is *10 so 25.5 is 255) , needs a 32bit else will overflow
-          obdcalcF32 = (obdcalcE32<<8) / obdcalcH16;      //this is same as (obdcalcE32/256) / obdcalcH16 . this calculates the ratio      
-          obdcalcG16 = (obdcalcF32 *32768)>>8;          
-          obdcalcA = highByte(obdcalcG16);
-          obdcalcB = lowByte(obdcalcG16);       
-
-          obdcalcF32 = currentStatus.O2ADC ;             //o2ADC is wideband volts to send *100    
-          obdcalcG16 = (obdcalcF32 *20971)>>8;          
-          obdcalcC = highByte(obdcalcG16);
-          obdcalcD = lowByte(obdcalcG16);
+    case 5:      //PID-0x05 Engine coolant temperature , range is -40 to 215 deg C , formula == A-40
+      CAN_Tx_Msgdata[0] =  0x03;                 // sending 3 bytes
+      CAN_Tx_Msgdata[1] =  0x41;                 // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc.
+      CAN_Tx_Msgdata[2] =  0x05;                 // pid code
+      CAN_Tx_Msgdata[3] =  (byte)(currentStatus.coolant + CALIBRATION_TEMPERATURE_OFFSET);   //the data value A
+      CAN_Tx_Msgdata[4] =  0x00;                 //the data value B which is 0 as unused
+      CAN_Tx_Msgdata[5] =  0x00; 
+      CAN_Tx_Msgdata[6] =  0x00; 
+      CAN_Tx_Msgdata[7] =  0x00;
+    break;
     
-          CAN_Tx_Msgdata[0] =  0x06;    // sending 4 bytes
-          CAN_Tx_Msgdata[1] =  0x41;    // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc.
-          CAN_Tx_Msgdata[2] =  0x24;    // pid code
-          CAN_Tx_Msgdata[3] =  obdcalcA;   // A
-          CAN_Tx_Msgdata[4] =  obdcalcB;   // B
-          CAN_Tx_Msgdata[5] =  obdcalcC;   // C
-          CAN_Tx_Msgdata[6] =  obdcalcD;   // D
-          CAN_Tx_Msgdata[7] =  0x00;
-        break;
-
-        case 37:      //O2 sensor2, AB fuel/air equivalence ratio, CD voltage ,  2/65536(256A +B) ,8/65536(256C+D) , range is 0 to <2 and 0 to >8V
-          //uint16_t O2_2e ;
-          //int16_t O2_2V ; 
-          obdcalcH16 = configPage2.stoich/10 ;            // configPage2.stoich(is *10 so 14.7 is 147)
-          obdcalcE32 = currentStatus.O2_2/10;            // afr(is *10 so 25.5 is 255) , needs a 32bit else will overflow
-          obdcalcF32 = (obdcalcE32<<8) / obdcalcH16;      //this is same as (obdcalcE32/256) / obdcalcH16 . this calculates the ratio      
-          obdcalcG16 = (obdcalcF32 *32768)>>8;          
-          obdcalcA = highByte(obdcalcG16);
-          obdcalcB = lowByte(obdcalcG16);       
-
-          obdcalcF32 = currentStatus.O2_2ADC ;             //o2_2ADC is wideband volts to send *100    
-          obdcalcG16 = (obdcalcF32 *20971)>>8;          
-          obdcalcC = highByte(obdcalcG16);
-          obdcalcD = lowByte(obdcalcG16);
+    case 6:        // PID-0x06 , Short term fuel trim (STFT)—Bank 1 , range is -100 (subtracting fuel) to 100 (adding fuel) , formula == A*1.28+100)
+      int16_t temp_gEgo;
+      // Fuel Trim is in %
+      temp_gEgo = ((currentStatus.egoCorrection * 128) / 100) - 100;
+      CAN_Tx_Msgdata[0] =  0x03;    // sending 3 byte
+      CAN_Tx_Msgdata[1] =  0x41;    // 
+      CAN_Tx_Msgdata[2] =  0x06;    // pid code
+      CAN_Tx_Msgdata[3] =  lowByte(temp_gEgo);
+      CAN_Tx_Msgdata[4] =  0x00;
+      CAN_Tx_Msgdata[5] =  0x00; 
+      CAN_Tx_Msgdata[6] =  0x00; 
+      CAN_Tx_Msgdata[7] =  0x00;
+    break;
     
-          CAN_Tx_Msgdata[0] =  0x06;    // sending 4 bytes
-          CAN_Tx_Msgdata[1] =  0x41;    // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc.
-          CAN_Tx_Msgdata[2] =  0x25;    // pid code
-          CAN_Tx_Msgdata[3] =  obdcalcA;   // A
-          CAN_Tx_Msgdata[4] =  obdcalcB;   // B
-          CAN_Tx_Msgdata[5] =  obdcalcC;   // C
-          CAN_Tx_Msgdata[6] =  obdcalcD;   // D 
-          CAN_Tx_Msgdata[7] =  0x00;
-        break;
+    case 8:        // PID-0x08 , Short term fuel trim (STFT)—Bank 2 , range is -100 (subtracting fuel) to 100 (adding fuel) , formula == A*1.28+100)
+      int16_t temp_gEgo2;
+      // Fuel Trim is in %
+      temp_gEgo = ((currentStatus.ego2Correction * 128) / 100) - 100;
+      CAN_Tx_Msgdata[0] =  0x03;    // sending 3 byte
+      CAN_Tx_Msgdata[1] =  0x41;    // 
+      CAN_Tx_Msgdata[2] =  0x08;    // pid code
+      CAN_Tx_Msgdata[3] =  lowByte(temp_gEgo2);
+      CAN_Tx_Msgdata[4] =  0x00;
+      CAN_Tx_Msgdata[5] =  0x00; 
+      CAN_Tx_Msgdata[6] =  0x00; 
+      CAN_Tx_Msgdata[7] =  0x00;
+    break;
 
-        case 51:      //PID-0x33 Absolute Barometric pressure , range is 0 to 255 kPa , formula == A
-          CAN_Tx_Msgdata[0] =  0x03;                  // sending 3 bytes
-          CAN_Tx_Msgdata[1] =  0x41;                  // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc.
-          CAN_Tx_Msgdata[2] =  0x33;                  // pid code
-          CAN_Tx_Msgdata[3] =  currentStatus.baro ;   // A
-          CAN_Tx_Msgdata[4] =  0x00;                  // B which is 0 as unused
-          CAN_Tx_Msgdata[5] =  0x00; 
-          CAN_Tx_Msgdata[6] =  0x00; 
-          CAN_Tx_Msgdata[7] =  0x00;
-        break;
+    case 10:        // PID-0x0A , Fuel Pressure (Gauge) , range is 0 to 765 kPa , formula == A / 3)
+      uint16_t temp_fuelpressure;
+      // Fuel pressure is in kPa
+      temp_fuelpressure = (currentStatus.fuelPressure - currentStatus.baro) / 3;
+      CAN_Tx_Msgdata[0] =  0x03;    // sending 3 byte
+      CAN_Tx_Msgdata[1] =  0x41;    // 
+      CAN_Tx_Msgdata[2] =  0x0A;    // pid code
+      CAN_Tx_Msgdata[3] =  lowByte(temp_fuelpressure);
+      CAN_Tx_Msgdata[4] =  0x00;
+      CAN_Tx_Msgdata[5] =  0x00; 
+      CAN_Tx_Msgdata[6] =  0x00; 
+      CAN_Tx_Msgdata[7] =  0x00;
+    break;
+
+    case 11:        // PID-0x0B , MAP , range is 0 to 255 kPa , Formula == A
+      CAN_Tx_Msgdata[0] =  0x03;    // sending 3 byte
+      CAN_Tx_Msgdata[1] =  0x41;    // 
+      CAN_Tx_Msgdata[2] =  0x0B;    // pid code
+      CAN_Tx_Msgdata[3] =  lowByte(currentStatus.MAP);    // absolute map
+      CAN_Tx_Msgdata[4] =  0x00;
+      CAN_Tx_Msgdata[5] =  0x00; 
+      CAN_Tx_Msgdata[6] =  0x00; 
+      CAN_Tx_Msgdata[7] =  0x00;
+    break;
+
+    case 12:        // PID-0x0C , RPM  , range is 0 to 16383.75 rpm , Formula == 256A+B / 4
+      uint16_t temp_revs; 
+      temp_revs = currentStatus.RPM << 2 ;      //
+      CAN_Tx_Msgdata[0] = 0x04;                        // sending 4 byte
+      CAN_Tx_Msgdata[1] = 0x41;                        // 
+      CAN_Tx_Msgdata[2] = 0x0C;                        // pid code
+      CAN_Tx_Msgdata[3] = highByte(temp_revs);         //obdcalcB; A
+      CAN_Tx_Msgdata[4] = lowByte(temp_revs);          //obdcalcD; B
+      CAN_Tx_Msgdata[5] = 0x00; 
+      CAN_Tx_Msgdata[6] = 0x00; 
+      CAN_Tx_Msgdata[7] = 0x00;
+    break;
+
+    case 13:        //PID-0x0D , Vehicle speed , range is 0 to 255 km/h , formula == A 
+      CAN_Tx_Msgdata[0] =  0x03;                       // sending 3 bytes
+      CAN_Tx_Msgdata[1] =  0x41;                       // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc.
+      CAN_Tx_Msgdata[2] =  0x0D;                       // pid code
+      CAN_Tx_Msgdata[3] =  lowByte(currentStatus.vss); // A
+      CAN_Tx_Msgdata[4] =  0x00;                       // B
+      CAN_Tx_Msgdata[5] =  0x00; 
+      CAN_Tx_Msgdata[6] =  0x00; 
+      CAN_Tx_Msgdata[7] =  0x00;
+    break;
+
+    case 14:      //PID-0x0E , Ignition Timing advance, range is -64 to 63.5 BTDC , formula == A/2 - 64 
+      int8_t temp_timingadvance;
+      temp_timingadvance = ((currentStatus.advance + 64) << 1);
+      //obdcalcA = ((timingadvance + 64) <<1) ; //((timingadvance + 64) *2)
+      CAN_Tx_Msgdata[0] =  0x03;                     // sending 3 bytes
+      CAN_Tx_Msgdata[1] =  0x41;                     // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc.
+      CAN_Tx_Msgdata[2] =  0x0E;                     // pid code
+      CAN_Tx_Msgdata[3] =  temp_timingadvance;       // A
+      CAN_Tx_Msgdata[4] =  0x00;                     // B
+      CAN_Tx_Msgdata[5] =  0x00; 
+      CAN_Tx_Msgdata[6] =  0x00; 
+      CAN_Tx_Msgdata[7] =  0x00;
+    break;
+
+    case 15:      //PID-0x0F , Inlet air temperature , range is -40 to 215 deg C, formula == A-40 
+      CAN_Tx_Msgdata[0] =  0x03;                                                         // sending 3 bytes
+      CAN_Tx_Msgdata[1] =  0x41;                                                         // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc.
+      CAN_Tx_Msgdata[2] =  0x0F;                                                         // pid code
+      CAN_Tx_Msgdata[3] =  (byte)(currentStatus.IAT + CALIBRATION_TEMPERATURE_OFFSET);   // A
+      CAN_Tx_Msgdata[4] =  0x00;                                                         // B
+      CAN_Tx_Msgdata[5] =  0x00; 
+      CAN_Tx_Msgdata[6] =  0x00; 
+      CAN_Tx_Msgdata[7] =  0x00;
+   break;
+
+   case 17:  // PID-0x11 , 
+     // TPS percentage, range is 0 to 100 percent, formula == 100/256 A 
+     uint16_t temp_tpsPC;
+     temp_tpsPC = currentStatus.TPS;
+     obdcalcA = (temp_tpsPC <<8) / 200;     // (tpsPC *256) /200 (as TPS is stored as TPS *2);
+     if (obdcalcA > 255){ obdcalcA = 255;}
+     CAN_Tx_Msgdata[0] =  0x03;                    // sending 3 bytes
+     CAN_Tx_Msgdata[1] =  0x41;                    // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc.
+     CAN_Tx_Msgdata[2] =  0x11;                    // pid code
+     CAN_Tx_Msgdata[3] =  obdcalcA;                // A
+     CAN_Tx_Msgdata[4] =  0x00;                    // B
+     CAN_Tx_Msgdata[5] =  0x00; 
+     CAN_Tx_Msgdata[6] =  0x00; 
+     CAN_Tx_Msgdata[7] =  0x00;
+   break;
+
+   case 19:      //PID-0x13 , oxygen sensors present, A0-A3 == bank1 , A4-A7 == bank2 , 
+     uint8_t O2present;
+     if (configPage6.egoAlgorithm == EGO_ALGORITHM_SINGLEO2) { O2present = B00000001; }
+     else if (configPage6.egoAlgorithm == EGO_ALGORITHM_DUALO2) { O2present = B00010001; }
+     else { O2present = 0x00; }
+     CAN_Tx_Msgdata[0] =  0x03;           // sending 3 bytes
+     CAN_Tx_Msgdata[1] =  0x41;           // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc.
+     CAN_Tx_Msgdata[2] =  0x13;           // pid code
+     CAN_Tx_Msgdata[3] =  O2present;     // A
+     CAN_Tx_Msgdata[4] =  0x00;           // B
+     CAN_Tx_Msgdata[5] =  0x00; 
+     CAN_Tx_Msgdata[6] =  0x00; 
+     CAN_Tx_Msgdata[7] =  0x00;
+   break;
+
+   case 28:      // PID-0x1C obd standard
+     uint16_t obdstandard;
+     obdstandard = 7;              // This is OBD2 / EOBD (could also describe as 5 which is not OBD compliant)
+     CAN_Tx_Msgdata[0] =  0x03;           // sending 3 bytes
+     CAN_Tx_Msgdata[1] =  0x41;           // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc.
+     CAN_Tx_Msgdata[2] =  0x1C;           // pid code
+     CAN_Tx_Msgdata[3] =  obdstandard;    // A
+     CAN_Tx_Msgdata[4] =  0x00;           // B
+     CAN_Tx_Msgdata[5] =  0x00; 
+     CAN_Tx_Msgdata[6] =  0x00; 
+     CAN_Tx_Msgdata[7] =  0x00;
+   break;
    
-        case 64:      // PIDs supported [41-60]  
-          CAN_Tx_Msgdata[0] =  0x06;    // sending 4 bytes
-          CAN_Tx_Msgdata[1] =  0x41;    // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc.
-          CAN_Tx_Msgdata[2] =  0x40;    // pid code
-          CAN_Tx_Msgdata[3] =  B01000100;    // 65-72dec
-          CAN_Tx_Msgdata[4] =  B00000000;    // 73-80
-          CAN_Tx_Msgdata[5] =  B01000000;   //  81-88
-          CAN_Tx_Msgdata[6] =  B00010000;   //  89-96
-          CAN_Tx_Msgdata[7] =  0x00;
-        break;
+   case 29:      // PID-0x1D O2 sensors supported by bank 	Similar to PID $13, but [A0..A7] == [B1S1, B1S2, B2S1, B2S2, B3S1, B3S2, B4S1, B4S2]
+     uint8_t O2config;
+     if (configPage6.egoAlgorithm == EGO_ALGORITHM_SINGLEO2) { O2config = B00000001; } //B1S1
+     else if (configPage6.egoAlgorithm == EGO_ALGORITHM_DUALO2) { O2config = B00000101; } //B1S1 AND B2S1
+     else { O2config = 0x00; }
+     CAN_Tx_Msgdata[0] =  0x03;           // sending 3 bytes
+     CAN_Tx_Msgdata[1] =  0x41;           // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc.
+     CAN_Tx_Msgdata[2] =  0x1D;           // pid code
+     CAN_Tx_Msgdata[3] =  O2config;       // A
+     CAN_Tx_Msgdata[4] =  0x00;           // B
+     CAN_Tx_Msgdata[5] =  0x00; 
+     CAN_Tx_Msgdata[6] =  0x00; 
+     CAN_Tx_Msgdata[7] =  0x00;
+   break;
 
-        case 66:      //control module voltage, 256A+B / 1000 , range is 0 to 65.535v
-          uint16_t temp_ecuBatt;
-          temp_ecuBatt = currentStatus.battery10;   // create a 16bit temp variable to do the math
-          obdcalcA = temp_ecuBatt*100;              // should be *1000 but ecuBatt is already *10
-          CAN_Tx_Msgdata[0] =  0x04;                       // sending 4 bytes
-          CAN_Tx_Msgdata[1] =  0x41;                       // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc.
-          CAN_Tx_Msgdata[2] =  0x42;                       // pid code
-          CAN_Tx_Msgdata[3] =  highByte(obdcalcA) ;        // A
-          CAN_Tx_Msgdata[4] =  lowByte(obdcalcA) ;         // B
-          CAN_Tx_Msgdata[5] =  0x00; 
-          CAN_Tx_Msgdata[6] =  0x00; 
-          CAN_Tx_Msgdata[7] =  0x00;
-        break;
+  case 32:      // PID-0x20 PIDs supported [0x21-0x40]
+    CAN_Tx_Msgdata[0] =  0x06;          // sending 4 bytes
+    CAN_Tx_Msgdata[1] =  0x41;          // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc.
+    CAN_Tx_Msgdata[2] =  0x20;          // pid code
+    CAN_Tx_Msgdata[3] =  B00011000;     // 33-40
+    CAN_Tx_Msgdata[4] =  B00000000;     // 41-48
+    CAN_Tx_Msgdata[5] =  B00100000;     // 49-56
+    CAN_Tx_Msgdata[6] =  B00010001;     // 57-64
+    CAN_Tx_Msgdata[7] = 0x00;
+  break;
 
-        case 70:        //PID-0x46 Ambient Air Temperature , range is -40 to 215 deg C , formula == A-40
-          uint16_t temp_ambientair;
-          temp_ambientair = 11;              // TEST VALUE !!!!!!!!!!
-          obdcalcA = temp_ambientair + 40 ;    // maybe later will be (byte)(currentStatus.AAT + CALIBRATION_TEMPERATURE_OFFSET)
-          CAN_Tx_Msgdata[0] =  0x03;             // sending 3 byte
-          CAN_Tx_Msgdata[1] =  0x41;             // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc.
-          CAN_Tx_Msgdata[2] =  0x46;             // pid code
-          CAN_Tx_Msgdata[3] =  obdcalcA;         // A 
-          CAN_Tx_Msgdata[4] =  0x00;
-          CAN_Tx_Msgdata[5] =  0x00; 
-          CAN_Tx_Msgdata[6] =  0x00; 
-          CAN_Tx_Msgdata[7] =  0x00;
-        break;
+  case 36:      // PID-0x24 O2 sensor1, AB: fuel/air equivalence ratio, CD: voltage ,  Formula == (2/65536)(256A +B) , 8/65536(256C+D) , Range is 0 to <2 and 0 to >8V 
+    obdcalcH16 = configPage2.stoich;            // configPage2.stoich(is *10 so 14.7 is 147)
+    obdcalcE32 = currentStatus.O2;            // afr(is *10 so 25.5 is 255) , needs a 32bit else will overflow
+    obdcalcF32 = (obdcalcE32<<8) / obdcalcH16;      //this is same as (obdcalcE32/256) / obdcalcH16 . this calculates the ratio      
+    obdcalcG16 = (obdcalcF32 *32768)>>8;          
+    obdcalcA = highByte(obdcalcG16);
+    obdcalcB = lowByte(obdcalcG16);       
 
-        case 82:        //PID-0x52 Ethanol fuel % , range is 0 to 100% , formula == (100/255)A
-          CAN_Tx_Msgdata[0] =  0x03;                       // sending 3 byte
-          CAN_Tx_Msgdata[1] =  0x41;                       // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc. 
-          CAN_Tx_Msgdata[2] =  0x52;                       // pid code
-          CAN_Tx_Msgdata[3] =  currentStatus.ethanolPct;   // A
-          CAN_Tx_Msgdata[4] =  0x00;
-          CAN_Tx_Msgdata[5] =  0x00; 
-          CAN_Tx_Msgdata[6] =  0x00; 
-          CAN_Tx_Msgdata[7] =  0x00;
-        break;
+    obdcalcF32 = currentStatus.O2ADC ;             //o2ADC is wideband volts to send *100    
+    obdcalcG16 = (obdcalcF32 *20971)>>8;          
+    obdcalcC = highByte(obdcalcG16);
+    obdcalcD = lowByte(obdcalcG16);
 
-        case 92:        //PID-0x5C Engine oil temperature , range is -40 to 210 deg C , formula == A-40
-          uint16_t temp_engineoiltemp;
-          temp_engineoiltemp = 40;              // TEST VALUE !!!!!!!!!! 
-          obdcalcA = temp_engineoiltemp+40 ;    // maybe later will be (byte)(currentStatus.EOT + CALIBRATION_TEMPERATURE_OFFSET)
-          CAN_Tx_Msgdata[0] =  0x03;                // sending 3 byte
-          CAN_Tx_Msgdata[1] =  0x41;                // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc. 
-          CAN_Tx_Msgdata[2] =  0x5C;                // pid code
-          CAN_Tx_Msgdata[3] =  obdcalcA ;           // A
-          CAN_Tx_Msgdata[4] =  0x00;
-          CAN_Tx_Msgdata[5] =  0x00; 
-          CAN_Tx_Msgdata[6] =  0x00; 
-          CAN_Tx_Msgdata[7] =  0x00;
-        break;
+    CAN_Tx_Msgdata[0] =  0x06;    // sending 4 bytes
+    CAN_Tx_Msgdata[1] =  0x41;    // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc.
+    CAN_Tx_Msgdata[2] =  0x24;    // pid code
+    CAN_Tx_Msgdata[3] =  obdcalcA;   // A
+    CAN_Tx_Msgdata[4] =  obdcalcB;   // B
+    CAN_Tx_Msgdata[5] =  obdcalcC;   // C
+    CAN_Tx_Msgdata[6] =  obdcalcD;   // D
+    CAN_Tx_Msgdata[7] =  0x00;
+  break;
 
-        case 96:       //PIDs supported [61-80]  
-          CAN_Tx_Msgdata[0] =  0x06;    // sending 4 bytes
-          CAN_Tx_Msgdata[1] =  0x41;    // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc.
-          CAN_Tx_Msgdata[2] =  0x60;    // pid code
-          CAN_Tx_Msgdata[3] =  0x00;    // B0000 0000
-          CAN_Tx_Msgdata[4] =  0x00;    // B0000 0000
-          CAN_Tx_Msgdata[5] =  0x00;    // B0000 0000
-          CAN_Tx_Msgdata[6] =  0x00;    // B0000 0000
-          CAN_Tx_Msgdata[7] =  0x00;
-        break;
+  case 37:      //O2 sensor2, AB fuel/air equivalence ratio, CD voltage ,  2/65536(256A +B) ,8/65536(256C+D) , range is 0 to <2 and 0 to >8V
+    obdcalcH16 = configPage2.stoich;            // configPage2.stoich(is *10 so 14.7 is 147)
+    obdcalcE32 = currentStatus.O2_2;            // afr(is *10 so 25.5 is 255) , needs a 32bit else will overflow
+    obdcalcF32 = (obdcalcE32<<8) / obdcalcH16;      //this is same as (obdcalcE32/256) / obdcalcH16 . this calculates the ratio      
+    obdcalcG16 = (obdcalcF32 *32768)>>8;          
+    obdcalcA = highByte(obdcalcG16);
+    obdcalcB = lowByte(obdcalcG16);       
 
-        default:
-        break;
-     }
-    } 
-  else if (PIDmode == 0x22)
-    {
-     // these are custom PID  not listed in the SAE std .
-     if (requestedPIDhigh == 0x77)
-       {
-        if ((requestedPIDlow >= 0x01) && (requestedPIDlow <= 0x10))
-             {   
-                 // PID 0x01 (1 dec) to 0x10 (16 dec)
-                 // Aux data / can data IN Channel 1 - 16  
-                 CAN_Tx_Msgdata[0] =  0x06;                                               // sending 8 bytes
-                 CAN_Tx_Msgdata[1] =  0x62;                                               // Same as query, except that 40h is added to the mode value. So:62h = custom mode
-                 CAN_Tx_Msgdata[2] =  requestedPIDlow;                                 // PID code
-                 CAN_Tx_Msgdata[3] =  0x77;                                               // PID code
-                 CAN_Tx_Msgdata[4] =  lowByte(currentStatus.canin[requestedPIDlow]);   // A
-                 CAN_Tx_Msgdata[5] =  highByte(currentStatus.canin[requestedPIDlow]);  // B
-                 CAN_Tx_Msgdata[6] =  0x00;                                               // C
-                 CAN_Tx_Msgdata[7] =  0x00;                                               // D
-            }
-       }
-     // this allows to get any value out of current status array.
-     else if (requestedPIDhigh == 0x78)
-       {
-          int16_t tempValue;
-          tempValue = ProgrammableIOGetData(requestedPIDlow);
-          CAN_Tx_Msgdata[0] =  0x06;                 // sending 6 bytes
-          CAN_Tx_Msgdata[1] =  0x62;                 // Same as query, except that 40h is added to the mode value. So:62h = custom mode
-          CAN_Tx_Msgdata[2] =  requestedPIDlow;      // PID code
-          CAN_Tx_Msgdata[3] =  0x78;                 // PID code
-          CAN_Tx_Msgdata[4] =  lowByte(tempValue);   // A
-          CAN_Tx_Msgdata[5] =  highByte(tempValue);  // B
-          CAN_Tx_Msgdata[6] =  0x00; 
-          CAN_Tx_Msgdata[7] =  0x00;
-      }
+    obdcalcF32 = currentStatus.O2_2ADC ;             //o2_2ADC is wideband volts to send *100    
+    obdcalcG16 = (obdcalcF32 *20971)>>8;          
+    obdcalcC = highByte(obdcalcG16);
+    obdcalcD = lowByte(obdcalcG16);
+
+    CAN_Tx_Msgdata[0] =  0x06;    // sending 4 bytes
+    CAN_Tx_Msgdata[1] =  0x41;    // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc.
+    CAN_Tx_Msgdata[2] =  0x25;    // pid code
+    CAN_Tx_Msgdata[3] =  obdcalcA;   // A
+    CAN_Tx_Msgdata[4] =  obdcalcB;   // B
+    CAN_Tx_Msgdata[5] =  obdcalcC;   // C
+    CAN_Tx_Msgdata[6] =  obdcalcD;   // D 
+    CAN_Tx_Msgdata[7] =  0x00;
+  break;
+
+  case 51:      //PID-0x33 Absolute Barometric pressure , range is 0 to 255 kPa , formula == A
+    CAN_Tx_Msgdata[0] =  0x03;                  // sending 3 bytes
+    CAN_Tx_Msgdata[1] =  0x41;                  // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc.
+    CAN_Tx_Msgdata[2] =  0x33;                  // pid code
+    CAN_Tx_Msgdata[3] =  currentStatus.baro ;   // A
+    CAN_Tx_Msgdata[4] =  0x00;                  // B which is 0 as unused
+    CAN_Tx_Msgdata[5] =  0x00; 
+    CAN_Tx_Msgdata[6] =  0x00; 
+    CAN_Tx_Msgdata[7] =  0x00;
+  break;
+  
+  case 60:      //PID-0x3C Catalyst Temperature B1 Sensor 1 -40	6,513.5 10* (256A+B)+ 40
+    obdcalcA = ((uint16_t)currentStatus.EGT * 10) + 40;
+    CAN_Tx_Msgdata[0] =  0x04;                  // sending 4 bytes
+    CAN_Tx_Msgdata[1] =  0x41;                  // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc.
+    CAN_Tx_Msgdata[2] =  0x3C;                  // pid code
+    CAN_Tx_Msgdata[3] =  highByte(obdcalcA);    // A
+    CAN_Tx_Msgdata[4] =  lowByte(obdcalcA);     // B 
+    CAN_Tx_Msgdata[5] =  0x00; 
+    CAN_Tx_Msgdata[6] =  0x00; 
+    CAN_Tx_Msgdata[7] =  0x00;
+  break;
+
+  case 64:      // PIDs supported [41-60]  
+    CAN_Tx_Msgdata[0] =  0x06;    // sending 4 bytes
+    CAN_Tx_Msgdata[1] =  0x41;    // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc.
+    CAN_Tx_Msgdata[2] =  0x40;    // pid code
+    CAN_Tx_Msgdata[3] =  B01100000;    // 65-72dec
+    CAN_Tx_Msgdata[4] =  B00000000;    // 73-80
+    CAN_Tx_Msgdata[5] =  B11000000;   //  81-88
+    CAN_Tx_Msgdata[6] =  B00010000;   //  89-96
+    CAN_Tx_Msgdata[7] =  0x00;
+  break;
+
+  case 66:      //PID-0x42 control module voltage, 256A+B / 1000 , range is 0 to 65.535v
+    uint16_t temp_ecuBatt;
+    temp_ecuBatt = currentStatus.battery10;   // create a 16bit temp variable to do the math
+    obdcalcA = temp_ecuBatt*100;              // should be *1000 but ecuBatt is already *10
+    CAN_Tx_Msgdata[0] =  0x04;                       // sending 4 bytes
+    CAN_Tx_Msgdata[1] =  0x41;                       // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc.
+    CAN_Tx_Msgdata[2] =  0x42;                       // pid code
+    CAN_Tx_Msgdata[3] =  highByte(obdcalcA) ;        // A
+    CAN_Tx_Msgdata[4] =  lowByte(obdcalcA) ;         // B
+    CAN_Tx_Msgdata[5] =  0x00; 
+    CAN_Tx_Msgdata[6] =  0x00; 
+    CAN_Tx_Msgdata[7] =  0x00;
+  break;
+  
+  case 67:      //PID-0x43 Absolute load value (%), 100*(256A+B) / 255 , range is 0 to 25,700%
+    obdcalcA = (currentStatus.fuelLoad*255)/100;         
+    CAN_Tx_Msgdata[0] =  0x04;                       // sending 4 bytes
+    CAN_Tx_Msgdata[1] =  0x41;                       // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc.
+    CAN_Tx_Msgdata[2] =  0x42;                       // pid code
+    CAN_Tx_Msgdata[3] =  highByte(obdcalcA) ;        // A
+    CAN_Tx_Msgdata[4] =  lowByte(obdcalcA) ;         // B
+    CAN_Tx_Msgdata[5] =  0x00; 
+    CAN_Tx_Msgdata[6] =  0x00; 
+    CAN_Tx_Msgdata[7] =  0x00;
+  break;
+
+  case 81:      // PID-0x51 Fuel Type Coding
+     uint16_t fuel_type;
+     fuel_type = 1;              // This is Gasoline
+     CAN_Tx_Msgdata[0] =  0x03;           // sending 3 bytes
+     CAN_Tx_Msgdata[1] =  0x41;           // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc.
+     CAN_Tx_Msgdata[2] =  0x51;           // pid code
+     CAN_Tx_Msgdata[3] =  fuel_type;      // A
+     CAN_Tx_Msgdata[4] =  0x00;           // B
+     CAN_Tx_Msgdata[5] =  0x00; 
+     CAN_Tx_Msgdata[6] =  0x00; 
+     CAN_Tx_Msgdata[7] =  0x00;
+   break;
+
+  case 82:        //PID-0x52 Ethanol fuel % , range is 0 to 100% , formula == (100/255)A
+    CAN_Tx_Msgdata[0] =  0x03;                       // sending 3 byte
+    CAN_Tx_Msgdata[1] =  0x41;                       // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc. 
+    CAN_Tx_Msgdata[2] =  0x52;                       // pid code
+    CAN_Tx_Msgdata[3] =  currentStatus.ethanolPct;   // A
+    CAN_Tx_Msgdata[4] =  0x00;
+    CAN_Tx_Msgdata[5] =  0x00; 
+    CAN_Tx_Msgdata[6] =  0x00; 
+    CAN_Tx_Msgdata[7] =  0x00;
+  break;
+ 
+
+  case 92:        //PID-0x5C Engine oil temperature , range is -40 to 210 deg C , formula == A-40
+    uint16_t temp_engineoiltemp;
+    temp_engineoiltemp = 40;              // TEST VALUE !!!!!!!!!! 
+    obdcalcA = temp_engineoiltemp+40 ;    // maybe later will be (byte)(currentStatus.EOT + CALIBRATION_TEMPERATURE_OFFSET)
+    CAN_Tx_Msgdata[0] =  0x03;                // sending 3 byte
+    CAN_Tx_Msgdata[1] =  0x41;                // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc. 
+    CAN_Tx_Msgdata[2] =  0x5C;                // pid code
+    CAN_Tx_Msgdata[3] =  obdcalcA ;           // A
+    CAN_Tx_Msgdata[4] =  0x00;
+    CAN_Tx_Msgdata[5] =  0x00; 
+    CAN_Tx_Msgdata[6] =  0x00; 
+    CAN_Tx_Msgdata[7] =  0x00;
+  break;
+
+  case 96:       //PIDs supported [61-80]  
+    CAN_Tx_Msgdata[0] =  0x06;    // sending 4 bytes
+    CAN_Tx_Msgdata[1] =  0x41;    // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc.
+    CAN_Tx_Msgdata[2] =  0x60;    // pid code
+    CAN_Tx_Msgdata[3] =  0x00;    // B0000 0000
+    CAN_Tx_Msgdata[4] =  0x00;    // B0000 0000
+    CAN_Tx_Msgdata[5] =  0x00;    // B0000 0000
+    CAN_Tx_Msgdata[6] =  0x00;    // B0000 0000
+    CAN_Tx_Msgdata[7] =  0x00;
+  break;
+
+  default:
+    CAN_Tx_Msgdata[0] =  0x00;    // error unsupported PID requested, send all zeros
+    CAN_Tx_Msgdata[1] =  0x00;    // error unsupported PID requested, send all zeros
+    CAN_Tx_Msgdata[2] =  0x00;    // error unsupported PID requested, send all zeros
+    CAN_Tx_Msgdata[3] =  0x00;    // error unsupported PID requested, send all zeros
+    CAN_Tx_Msgdata[4] =  0x00;    // error unsupported PID requested, send all zeros
+    CAN_Tx_Msgdata[5] =  0x00;    // error unsupported PID requested, send all zeros
+    CAN_Tx_Msgdata[6] =  0x00;    // error unsupported PID requested, send all zeros
+    CAN_Tx_Msgdata[7] =  0x00;    // error unsupported PID requested, send all zeros
+  break;
+  }
+  
+  //send the response
+  CAN0.sendMsgBuf(OBD_ECU_RESP_ADDR, 0, 8, CAN_Tx_Msgdata); //((configPage9.obd_address + 0x100)+ 8);       
+}
+
+// This routine supports the OBDII service 22 mode (sending realtime data from custom pids) these are custom PIDs not listed in the SAE std.
+void obd_Service_22(uint8_t requestedPIDlow, uint8_t requestedPIDhigh)
+{  
+  if (requestedPIDhigh == 0x77)
+  {
+    if ((requestedPIDlow >= 0x01) && (requestedPIDlow <= 0x10))
+    {   
+       // PID 0x01 (1 dec) to 0x10 (16 dec)
+       // Aux data / can data IN Channel 1 - 16  
+       CAN_Tx_Msgdata[0] =  0x06;                                               // sending 8 bytes
+       CAN_Tx_Msgdata[1] =  0x62;                                               // Same as query, except that 40h is added to the mode value. So:62h = custom mode
+       CAN_Tx_Msgdata[2] =  requestedPIDlow;                                 // PID code
+       CAN_Tx_Msgdata[3] =  0x77;                                               // PID code
+       CAN_Tx_Msgdata[4] =  lowByte(currentStatus.canin[requestedPIDlow]);   // A
+       CAN_Tx_Msgdata[5] =  highByte(currentStatus.canin[requestedPIDlow]);  // B
+       CAN_Tx_Msgdata[6] =  0x00;                                               // C
+       CAN_Tx_Msgdata[7] =  0x00;                                               // D
     }
+  }
+  // this allows to get any value out of current status array.
+  else if (requestedPIDhigh == 0x78)
+  {
+    int16_t tempValue;
+    tempValue = ProgrammableIOGetData(requestedPIDlow);
+    CAN_Tx_Msgdata[0] =  0x06;                 // sending 6 bytes
+    CAN_Tx_Msgdata[1] =  0x62;                 // Same as query, except that 40h is added to the mode value. So:62h = custom mode
+    CAN_Tx_Msgdata[2] =  requestedPIDlow;      // PID code
+    CAN_Tx_Msgdata[3] =  0x78;                 // PID code
+    CAN_Tx_Msgdata[4] =  lowByte(tempValue);   // A
+    CAN_Tx_Msgdata[5] =  highByte(tempValue);  // B
+    CAN_Tx_Msgdata[6] =  0x00; 
+    CAN_Tx_Msgdata[7] =  0x00;
+  }
+  
+  CAN0.sendMsgBuf(OBD_ECU_RESP_ADDR, 0, 8, CAN_Tx_Msgdata); //((configPage9.obd_address + 0x100)+ 8);      
+}
+
+// This routine supports the OBDII service 22 mode (vehicle information)
+void obd_Service_09(uint8_t requestedPIDlow)
+{
+  switch (requestedPIDlow)
+  {
+    case 0:       //PID-0x00 PIDs supported 01-20  
+      CAN_Tx_Msgdata[0] =  0x06;    // sending 6 bytes
+      CAN_Tx_Msgdata[1] =  0x49;    // Same as query, except that 40h is added to the mode value. So:49h = vehicle information
+      CAN_Tx_Msgdata[2] =  0x00;    // PID code
+      CAN_Tx_Msgdata[3] =  B01000000;   //1-8
+      CAN_Tx_Msgdata[4] =  B00100000;   //9-16
+      CAN_Tx_Msgdata[5] =  B00000000;   //17-24
+      CAN_Tx_Msgdata[6] =  B00000000;   //25-32
+      CAN_Tx_Msgdata[7] =  B00000000;
+      CAN0.sendMsgBuf(OBD_ECU_RESP_ADDR, 0, 8, CAN_Tx_Msgdata);      
+    break;
+    
+    case 2:       //PID-0x02 send the VIN number , 17 char long VIN sent via multiframe message.
+         
+      CAN_Tx_Msgdata[0] =  0x10;    //PCI
+      CAN_Tx_Msgdata[1] =  0x14;    // length 20 bytes
+      CAN_Tx_Msgdata[2] =  0x49;    // response SID Same as query, except that 40h is added to the mode value. So:49h = vehicle information
+      CAN_Tx_Msgdata[3] =  0x02;    // data identifier (Same as PID); 
+      CAN_Tx_Msgdata[4] =  0x01;    // Number Of Data Items (NODI)
+      CAN_Tx_Msgdata[5] =  VehicleIdentificationNumber[0];
+      CAN_Tx_Msgdata[6] =  VehicleIdentificationNumber[1];
+      CAN_Tx_Msgdata[7] =  VehicleIdentificationNumber[2];
+      CAN0.sendMsgBuf(OBD_ECU_RESP_ADDR, 0, 8, CAN_Tx_Msgdata);
+      
+      // Flow control??
+      
+      CAN_Tx_Msgdata[0] =  0x21;  // First consecutive frame
+      CAN_Tx_Msgdata[1] =  VehicleIdentificationNumber[3];
+      CAN_Tx_Msgdata[2] =  VehicleIdentificationNumber[4];
+      CAN_Tx_Msgdata[3] =  VehicleIdentificationNumber[5]; 
+      CAN_Tx_Msgdata[4] =  VehicleIdentificationNumber[6];
+      CAN_Tx_Msgdata[5] =  VehicleIdentificationNumber[7];
+      CAN_Tx_Msgdata[6] =  VehicleIdentificationNumber[8];
+      CAN_Tx_Msgdata[7] =  VehicleIdentificationNumber[9];
+      CAN0.sendMsgBuf(OBD_ECU_RESP_ADDR, 0, 8, CAN_Tx_Msgdata);
+      
+      CAN_Tx_Msgdata[0] =  0x22;  // 2nd consecutive frame
+      CAN_Tx_Msgdata[1] =  VehicleIdentificationNumber[10];
+      CAN_Tx_Msgdata[2] =  VehicleIdentificationNumber[11];
+      CAN_Tx_Msgdata[3] =  VehicleIdentificationNumber[12]; 
+      CAN_Tx_Msgdata[4] =  VehicleIdentificationNumber[13];
+      CAN_Tx_Msgdata[5] =  VehicleIdentificationNumber[14];
+      CAN_Tx_Msgdata[6] =  VehicleIdentificationNumber[15];
+      CAN_Tx_Msgdata[7] =  VehicleIdentificationNumber[16];
+      CAN0.sendMsgBuf(OBD_ECU_RESP_ADDR, 0, 8, CAN_Tx_Msgdata);
+    break;
+    
+    case 10:       //PID-0x0A send the ECU Name. Multiple messages.  
+      CAN_Tx_Msgdata[0] =  0x0D; // 3 Bytes + 10 for the name
+      CAN_Tx_Msgdata[1] =  0x49;    // Same as query, except that 40h is added to the mode value. So:49h = vehicle information
+      CAN_Tx_Msgdata[2] =  0x0A;    // PID code
+      CAN_Tx_Msgdata[3] =  TSfirmwareVersion[0]; 
+      CAN_Tx_Msgdata[4] =  TSfirmwareVersion[1];
+      CAN_Tx_Msgdata[5] =  TSfirmwareVersion[2];
+      CAN_Tx_Msgdata[6] =  TSfirmwareVersion[3];
+      CAN_Tx_Msgdata[7] =  TSfirmwareVersion[4];
+      CAN0.sendMsgBuf(OBD_ECU_RESP_ADDR, 0, 8, CAN_Tx_Msgdata);
+      
+      CAN_Tx_Msgdata[0] =  TSfirmwareVersion[5];
+      CAN_Tx_Msgdata[1] =  TSfirmwareVersion[6];
+      CAN_Tx_Msgdata[2] =  TSfirmwareVersion[7];
+      CAN_Tx_Msgdata[3] =  TSfirmwareVersion[8];
+      CAN_Tx_Msgdata[4] =  TSfirmwareVersion[9];
+      CAN_Tx_Msgdata[5] =  0x00;
+      CAN_Tx_Msgdata[6] =  0x00;
+      CAN_Tx_Msgdata[7] =  0x00;
+      CAN0.sendMsgBuf(OBD_ECU_RESP_ADDR, 0, 8, CAN_Tx_Msgdata);
+    
+    default:
+    CAN_Tx_Msgdata[0] =  0x00;    // error unsupported PID requested, send all zeros
+    CAN_Tx_Msgdata[1] =  0x00;    // error unsupported PID requested, send all zeros
+    CAN_Tx_Msgdata[2] =  0x00;    // error unsupported PID requested, send all zeros
+    CAN_Tx_Msgdata[3] =  0x00;    // error unsupported PID requested, send all zeros
+    CAN_Tx_Msgdata[4] =  0x00;    // error unsupported PID requested, send all zeros
+    CAN_Tx_Msgdata[5] =  0x00;    // error unsupported PID requested, send all zeros
+    CAN_Tx_Msgdata[6] =  0x00;    // error unsupported PID requested, send all zeros
+    CAN_Tx_Msgdata[7] =  0x00;    // error unsupported PID requested, send all zeros
+    CAN0.sendMsgBuf(OBD_ECU_RESP_ADDR, 0, 8, CAN_Tx_Msgdata);
+    break;
+  }
+    
+  
+  //send the response
+         
 }

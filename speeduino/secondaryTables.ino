@@ -72,6 +72,12 @@ void calculateSecondaryFuel()
         currentStatus.VE = currentStatus.VE2;
       }
     }
+    else if (configPage10.fuel2Mode == FUEL2_MODE_BANKED)
+    {
+      BIT_SET(currentStatus.status3, BIT_STATUS3_FUEL2_ACTIVE); //Set the bit indicating that the 2nd fuel table is in use.
+      currentStatus.VE2 = getVE2(); // This is used later and assigned to the PW calcs for injectors on bank2.
+      // VE 1 remains the same.      
+    }
   }
 }
 
@@ -151,6 +157,12 @@ void calculateSecondarySpark()
         currentStatus.advance2 = getAdvance2();
         currentStatus.advance = currentStatus.advance2;
       }
+    }
+    else if(configPage10.spark2Mode == SPARK2_MODE_BANKED)
+    {
+      BIT_SET(currentStatus.spark2, BIT_SPARK2_SPARK2_ACTIVE); //Set the bit indicating that the 2nd spark table is in use.
+      currentStatus.advance2 = getAdvance2();
+      // leave current advance as it is.
     }
   }
 }

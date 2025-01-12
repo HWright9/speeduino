@@ -4,6 +4,7 @@
 #include "globals.h"
 
 const char TSfirmwareVersion[] PROGMEM = "Speeduino";
+const char VehicleIdentificationNumber[] PROGMEM = "6T9M32V97EE01X015";
 
 const byte data_structure_version = 2; //This identifies the data structure when reading / writing. (outdated ?)
 FastCRC32 CRC32;

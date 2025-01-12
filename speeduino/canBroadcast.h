@@ -48,6 +48,9 @@ void DashMessages(uint16_t DashMessageID);
 
 /*-----------------------------------------------------*/
 
+#define OBD_BROADCAST_ADDR       0x7DF      // Standard OBDII broadcast Address
+#define OBD_ECU_ID_ADDR          0x7E0      // Can be in the range 0x7E0 to 0x7E7, Unique per ECU on the CAN BUS
+#define OBD_ECU_RESP_ADDR       (OBD_ECU_ID_ADDR + 8)  // Always the ECU ID + 8
 
 void can0_Init(void);
 void can0_Maintainance(void);

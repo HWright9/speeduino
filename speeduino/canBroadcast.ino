@@ -251,7 +251,7 @@ uint8_t recieveCAN_BroadCast(void)
           obd_Service_22(CAN_Rx_Msgdata[2], CAN_Rx_Msgdata[3]);     // get the obd response based on the data in byte2 and 3  
         }
       }
-      if (CANrxId == OBD_ECU_ID_ADDR) // The address is only the speeduino specific ecu canbus address     
+      if (CANrxId == OBD_ECU_ID_ADDR || (CANrxId == OBD_BROADCAST_ADDR)) // The address is only the speeduino specific ecu canbus address     
       {
         if (CAN_Rx_Msgdata[1] == 0x09) // PID Service 9 , vehicle information request
         {
@@ -264,7 +264,7 @@ uint8_t recieveCAN_BroadCast(void)
       if (configPage6.egoType == 2) // O2 sensor source set to read CAN
       {
         if ((CANrxId == 0x460) && (len == 8)) { canRx_MotecPLM_O2(); }// Parse Motec PLM message at ID 460 for O2
-        if ((CANrxId == 0x461) && (len == 8)) { canRx_MotecPLM_O22; } // Parse Motec PLM message at ID 461 for 2nd O2
+        if ((CANrxId == 0x461) && (len == 8)) { canRx_MotecPLM_O22(); } // Parse Motec PLM message at ID 461 for 2nd O2
       }
       
       if (configPage2.vssMode == 1) // 1 is RX over CAN

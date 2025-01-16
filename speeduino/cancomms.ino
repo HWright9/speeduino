@@ -741,7 +741,7 @@ void obd_Service_01(uint8_t requestedPIDlow)
   break;
   
   case 60:      //PID-0x3C Catalyst Temperature B1 Sensor 1 -40	6,513.5 10* (256A+B)+ 40
-    obdcalcA = ((uint16_t)currentStatus.EGT * 10) + 40;
+    obdcalcA = ((uint16_t)currentStatus.EGT * 10) + 400;
     CAN_Tx_Msgdata[0] =  0x04;                  // sending 4 bytes
     CAN_Tx_Msgdata[1] =  0x41;                  // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc.
     CAN_Tx_Msgdata[2] =  0x3C;                  // pid code
@@ -906,6 +906,7 @@ void obd_Service_09(uint8_t requestedPIDlow)
       CAN_Tx_Msgdata[5] =  B00000000;   //17-24
       CAN_Tx_Msgdata[6] =  B00000000;   //25-32
       CAN_Tx_Msgdata[7] =  B00000000;
+      
       CAN0.sendMsgBuf(OBD_ECU_RESP_ADDR, 0, 8, CAN_Tx_Msgdata);      
     break;
     
@@ -921,7 +922,7 @@ void obd_Service_09(uint8_t requestedPIDlow)
       CAN_Tx_Msgdata[7] =  VehicleIdentificationNumber[2];
       CAN0.sendMsgBuf(OBD_ECU_RESP_ADDR, 0, 8, CAN_Tx_Msgdata);
       
-      // Flow control??
+      // Flow control... TBD
       
       CAN_Tx_Msgdata[0] =  0x21;  // First consecutive frame
       CAN_Tx_Msgdata[1] =  VehicleIdentificationNumber[3];
@@ -945,35 +946,37 @@ void obd_Service_09(uint8_t requestedPIDlow)
     break;
     
     case 10:       //PID-0x0A send the ECU Name. Multiple messages.  
-      CAN_Tx_Msgdata[0] =  0x0D; // 3 Bytes + 10 for the name
-      CAN_Tx_Msgdata[1] =  0x49;    // Same as query, except that 40h is added to the mode value. So:49h = vehicle information
-      CAN_Tx_Msgdata[2] =  0x0A;    // PID code
-      CAN_Tx_Msgdata[3] =  TSfirmwareVersion[0]; 
-      CAN_Tx_Msgdata[4] =  TSfirmwareVersion[1];
-      CAN_Tx_Msgdata[5] =  TSfirmwareVersion[2];
-      CAN_Tx_Msgdata[6] =  TSfirmwareVersion[3];
-      CAN_Tx_Msgdata[7] =  TSfirmwareVersion[4];
+      CAN_Tx_Msgdata[0] =  0x10;    //PCI
+      CAN_Tx_Msgdata[1] =  0x0D;    // Length 3 Bytes + 10 for the name
+      CAN_Tx_Msgdata[2] =  0x49;    // Same as query, except that 40h is added to the mode value. So:49h = vehicle information
+      CAN_Tx_Msgdata[3] =  0x0A;    // data identifier (Same as PID);
+      CAN_Tx_Msgdata[4] =  0x01;    // Number Of Data Items (NODI)
+      CAN_Tx_Msgdata[5] =  TSfirmwareVersion[0];
+      CAN_Tx_Msgdata[6] =  TSfirmwareVersion[1];
+      CAN_Tx_Msgdata[7] =  TSfirmwareVersion[2];
       CAN0.sendMsgBuf(OBD_ECU_RESP_ADDR, 0, 8, CAN_Tx_Msgdata);
       
-      CAN_Tx_Msgdata[0] =  TSfirmwareVersion[5];
-      CAN_Tx_Msgdata[1] =  TSfirmwareVersion[6];
-      CAN_Tx_Msgdata[2] =  TSfirmwareVersion[7];
-      CAN_Tx_Msgdata[3] =  TSfirmwareVersion[8];
-      CAN_Tx_Msgdata[4] =  TSfirmwareVersion[9];
-      CAN_Tx_Msgdata[5] =  0x00;
-      CAN_Tx_Msgdata[6] =  0x00;
-      CAN_Tx_Msgdata[7] =  0x00;
+      // Flow control... TBD
+      
+      CAN_Tx_Msgdata[0] =  0x21;  // First consecutive frame
+      CAN_Tx_Msgdata[1] =  TSfirmwareVersion[3];
+      CAN_Tx_Msgdata[2] =  TSfirmwareVersion[4];
+      CAN_Tx_Msgdata[3] =  TSfirmwareVersion[5];
+      CAN_Tx_Msgdata[4] =  TSfirmwareVersion[6];
+      CAN_Tx_Msgdata[5] =  TSfirmwareVersion[7];
+      CAN_Tx_Msgdata[6] =  TSfirmwareVersion[8];
+      CAN_Tx_Msgdata[7] =  TSfirmwareVersion[9];
       CAN0.sendMsgBuf(OBD_ECU_RESP_ADDR, 0, 8, CAN_Tx_Msgdata);
     
     default:
-    CAN_Tx_Msgdata[0] =  0x00;    // error unsupported PID requested, send all zeros
-    CAN_Tx_Msgdata[1] =  0x00;    // error unsupported PID requested, send all zeros
-    CAN_Tx_Msgdata[2] =  0x00;    // error unsupported PID requested, send all zeros
-    CAN_Tx_Msgdata[3] =  0x00;    // error unsupported PID requested, send all zeros
-    CAN_Tx_Msgdata[4] =  0x00;    // error unsupported PID requested, send all zeros
-    CAN_Tx_Msgdata[5] =  0x00;    // error unsupported PID requested, send all zeros
-    CAN_Tx_Msgdata[6] =  0x00;    // error unsupported PID requested, send all zeros
-    CAN_Tx_Msgdata[7] =  0x00;    // error unsupported PID requested, send all zeros
+    CAN_Tx_Msgdata[0] =  0x03;    // 3 Bytes
+    CAN_Tx_Msgdata[1] =  0x7F;    // error unsupported PID requested
+    CAN_Tx_Msgdata[2] =  0x49;    //  
+    CAN_Tx_Msgdata[3] =  0x31;    
+    CAN_Tx_Msgdata[4] =  0x00;    
+    CAN_Tx_Msgdata[5] =  0x00;    
+    CAN_Tx_Msgdata[6] =  0x00;    
+    CAN_Tx_Msgdata[7] =  0x00;    
     CAN0.sendMsgBuf(OBD_ECU_RESP_ADDR, 0, 8, CAN_Tx_Msgdata);
     break;
   }
@@ -982,3 +985,33 @@ void obd_Service_09(uint8_t requestedPIDlow)
   //send the response
          
 }
+
+// This routine builds a DTC into a two Byte return parmeter
+//uint16_t obd_BuildDTC(char DTC_Category, uint8_t DTC_Num1, uint8_t DTC_Num2, uint8_t DTC_Num3)
+//{
+//  uint16_t DTC_Word = 0x0000;
+//  
+//  switch (DTC_Category)
+//  {
+//    case 'P':  //Powertrain
+//      DTC_Word = 0x0000;
+//    break;
+//    case 'C':  //Chassis
+//      DTC_Word = 0x0001;
+//    break;
+//    case 'B':  //Body
+//      DTC_Word = 0x0002;
+//    break;
+//    case 'U':  //Network
+//      DTC_Word = 0x0003;
+//    break;
+//    
+//    default: //error, undefined DTC
+//      DTC_Word = 0x0000;
+//      return DTC_Word;
+//    break;
+//  }
+//  
+//  DTC_Word = DTC_Word | DTC_Num3
+//    
+//}

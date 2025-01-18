@@ -24,7 +24,7 @@
 //  2. Offset to intra-entity byte
 
 // Page sizes as defined in the .ini file
-constexpr const uint16_t PROGMEM ini_page_sizes[] = { 0, 128, 288, 288, 128, 288, 128, 240, 384, 192, 192, 288, 192, 128, 288, 256, 352 };
+constexpr const uint16_t PROGMEM ini_page_sizes[] = { 0, 128, 288, 288, 128, 288, 128, 240, 384, 192, 192, 288, 108, 128, 288, 256, 352 };
 
 // ========================= Table size calculations =========================
 // Note that these should be computed at compile time, assuming the correct
@@ -350,10 +350,10 @@ page_iterator_t map_page_offset_to_entity(uint8_t pageNumber, uint16_t offset)
 
     case wmiMapPage:
     {
-      CHECK_TABLE(wmiMapPage, offset, &wmiTable, 0)
-      CHECK_TABLE(wmiMapPage, offset, &vvt2Table, 1)
-      CHECK_TABLE(wmiMapPage, offset, &dwellTable, 2)
-      END_OF_PAGE(wmiMapPage, 3)
+      //CHECK_TABLE(wmiMapPage, offset, &wmiTable, 0)
+      CHECK_TABLE(wmiMapPage, offset, &vvt2Table, 0)
+      CHECK_TABLE(wmiMapPage, offset, &dwellTable, 1)
+      END_OF_PAGE(wmiMapPage, 2)
     }
     
     case ignMap2Page:

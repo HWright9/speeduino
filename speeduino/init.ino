@@ -734,7 +734,9 @@ void initialiseAll()
         channel2IgnDegrees = 72;
         channel3IgnDegrees = 144;
         channel4IgnDegrees = 216;
+		#if IGN_CHANNELS >= 5
         channel5IgnDegrees = 288;
+		#endif
         maxIgnOutputs = 5; //Only 4 actual outputs, so that's all that can be cut
 
         if(configPage4.sparkMode == IGN_MODE_SEQUENTIAL)
@@ -742,7 +744,9 @@ void initialiseAll()
           channel2IgnDegrees = 144;
           channel3IgnDegrees = 288;
           channel4IgnDegrees = 432;
+		  #if IGN_CHANNELS >= 5
           channel5IgnDegrees = 576;
+		  #endif
 
           CRANK_ANGLE_MAX_IGN = 720;
         }
@@ -757,7 +761,9 @@ void initialiseAll()
             channel2InjDegrees = 0;
             channel3InjDegrees = 0;
             channel4InjDegrees = 0;
-            channel5InjDegrees = 0; 
+			#if INJ_CHANNELS >= 5
+            channel5InjDegrees = 0;
+            #endif			
           }
           else
           {
@@ -765,27 +771,29 @@ void initialiseAll()
             channel2InjDegrees = 72;
             channel3InjDegrees = 144;
             channel4InjDegrees = 216;
+			#if INJ_CHANNELS >= 5
             channel5InjDegrees = 288;
+			#endif
 
             //Divide by currentStatus.nSquirts ?
           }
         }
-    #if INJ_CHANNELS >= 5
         else if (configPage2.injLayout == INJ_SEQUENTIAL)
         {
           channel1InjDegrees = 0;
           channel2InjDegrees = 144;
           channel3InjDegrees = 288;
           channel4InjDegrees = 432;
+		  #if INJ_CHANNELS >= 5
           channel5InjDegrees = 576;
 
           channel5InjEnabled = true;
+		  #endif
 
           CRANK_ANGLE_MAX_INJ = 720;
           currentStatus.nSquirts = 1;
           req_fuel_uS = req_fuel_uS * 2;
         }
-    #endif
 
         channel1InjEnabled = true;
         channel2InjEnabled = true;

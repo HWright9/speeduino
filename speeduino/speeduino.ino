@@ -59,18 +59,22 @@ int channel1IgnDegrees = 0; /**< The number of crank degrees until cylinder 1 is
 int channel2IgnDegrees = 0; /**< The number of crank degrees until cylinder 2 (and 5/6/7/8) is at TDC */
 int channel3IgnDegrees = 0; /**< The number of crank degrees until cylinder 3 (and 5/6/7/8) is at TDC */
 int channel4IgnDegrees = 0; /**< The number of crank degrees until cylinder 4 (and 5/6/7/8) is at TDC */
+#if IGN_CHANNELS >= 5
 int channel5IgnDegrees = 0; /**< The number of crank degrees until cylinder 5 is at TDC */
 int channel6IgnDegrees = 0; /**< The number of crank degrees until cylinder 6 is at TDC */
 int channel7IgnDegrees = 0; /**< The number of crank degrees until cylinder 7 is at TDC */
 int channel8IgnDegrees = 0; /**< The number of crank degrees until cylinder 8 is at TDC */
+#endif
 int channel1InjDegrees = 0; /**< The number of crank degrees until cylinder 1 is at TDC (This is obviously 0 for virtually ALL engines, but there's some weird ones) */
 int channel2InjDegrees = 0; /**< The number of crank degrees until cylinder 2 (and 5/6/7/8) is at TDC */
 int channel3InjDegrees = 0; /**< The number of crank degrees until cylinder 3 (and 5/6/7/8) is at TDC */
 int channel4InjDegrees = 0; /**< The number of crank degrees until cylinder 4 (and 5/6/7/8) is at TDC */
+#if INJ_CHANNELS >= 5
 int channel5InjDegrees = 0; /**< The number of crank degrees until cylinder 5 is at TDC */
 int channel6InjDegrees = 0; /**< The number of crank degrees until cylinder 6 is at TDC */
 int channel7InjDegrees = 0; /**< The number of crank degrees until cylinder 7 is at TDC */
 int channel8InjDegrees = 0; /**< The number of crank degrees until cylinder 8 is at TDC */
+#endif
 
 uint16_t req_fuel_uS = 0; /**< The required fuel variable (As calculated by TunerStudio) in uS */
 uint16_t inj_opentime_uS = 0;

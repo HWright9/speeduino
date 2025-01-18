@@ -469,7 +469,7 @@ extern struct table3d8RpmLoad boostTable; //8x8 boost map
 extern struct table3d8RpmLoad boostTableLookupDuty; //8x8 boost map
 extern struct table3d8RpmLoad vvtTable; //8x8 vvt map
 extern struct table3d8RpmLoad vvt2Table; //8x8 vvt map
-extern struct table3d8RpmLoad wmiTable; //8x8 wmi map
+//extern struct table3d8RpmLoad wmiTable; //8x8 wmi map
 
 typedef table3d6RpmLoad trimTable3d; 
 

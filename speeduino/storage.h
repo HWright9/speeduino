@@ -61,17 +61,17 @@
  * | 2368       |16          | Fuel2 table (Y axis) (MAP/TPS)       |                                    |
  * | 2384       |1           | HOLE ??                              |                                    |
  * | 2385       |2           | X and Y sizes for WMI table          |                                    |
- * | 2387       |64          | WMI table (8x8)                      | @ref EEPROM_CONFIG12_MAP           |
- * | 2451       |8           | WMI table (X axis) (RPM)             |                                    |
- * | 2459       |8           | WMI table (Y axis) (MAP)             |                                    |
- * | 2467       |2           | X and Y sizes VVT2 table             |                                    |
- * | 2469       |64          | VVT2 table (8x8)                     | @ref EEPROM_CONFIG12_MAP2          |
- * | 2553       |8           | VVT2 table (X axis) (RPM)            |                                    |
- * | 2541       |8           | VVT2 table (Y axis) (MAP)            |                                    |
- * | 2549       |2           | X and Y sizes dwell table            |                                    |
- * | 2551       |16          | Dwell table (4x4)                    | @ref EEPROM_CONFIG12_MAP3          |
- * | 2567       |4           | Dwell table (X axis) (RPM)           |                                    |
- * | 2571       |4           | Dwell table (Y axis) (MAP)           |                                    |
+ * | 2387       |64          | VVT2 table (8x8)                     | @ref EEPROM_CONFIG12_MAP           |
+ * | 2451       |8           | VVT2 table (X axis) (RPM)            |                                    |
+ * | 2459       |8           | VVT2 table (Y axis) (MAP)            |                                    |
+ * | 2467       |2           | X and Y sizes dwell table            |                                    |
+ * | 2469       |16          | Dwell table (4x4)                    | @ref EEPROM_CONFIG12_MAP2          |
+ * | 2485       |4           | Dwell table (X axis) (RPM)           |                                    |
+ * | 2489       |4           | Dwell table (Y axis) (MAP)           |                                    |
+ * | 2493       |82          | HOLE (removed wmi                   |
+ * | 2551                                                           | @ref EEPROM_CONFIG12_MAP3          |
+ * | 2567       
+ * | 2571       
  * | 2575       |5           | HOLE ??                              |                                    |
  * | 2580       |128         | Page 13 settings                     | @ref EEPROM_CONFIG13_START         |
  * | 2708       |2           | X and Y sizes for ignition2 table    |                                    |

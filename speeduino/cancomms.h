@@ -28,6 +28,8 @@ void sendcanValues(uint16_t offset, uint16_t packetLength, byte cmd, byte portNu
 void can_Command();
 void sendCancommand(uint8_t cmdtype , uint16_t canadddress, uint8_t candata1, uint8_t candata2, uint16_t sourcecanAddress);
 void obd_Service_01(uint8_t therequestedPIDlow);
+void obd_Service_03(void);
+void obd_Service_07(void);
 void obd_Service_22(uint8_t requestedPIDlow, uint8_t requestedPIDhigh);
 
 #endif // CANCOMMS_H

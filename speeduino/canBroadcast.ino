@@ -238,24 +238,66 @@ uint8_t recieveCAN_BroadCast(void)
     if ((canErr == CAN_OK) && ((CANrxId & 0x80000000) != 0x80000000))  // alternate would be CAN_NOMSG, also not extended frame
     {
       // OBD Service Support 
-      if ((CANrxId == OBD_ECU_ID_ADDR) || (CANrxId == OBD_BROADCAST_ADDR))      
+      if ((CANrxId == OBD_ECU_ID_ADDR) || (CANrxId == OBD_BROADCAST_ADDR))    // The address is the speeduino specific ecu canbus address or the 0x7df(2015 dec) broadcast address 
       {
-        // The address is the speeduino specific ecu canbus address 
-        // or the 0x7df(2015 dec) broadcast address
-        if (CAN_Rx_Msgdata[1] == 0x01) // PID Service 0 , realtime data stream
+        if (len >= CAN_Rx_Msgdata[0]) //CAN_Rx_Msgdata[0] is the number of bytes sent. protects against partial messages
         {
-          obd_Service_01(CAN_Rx_Msgdata[2]);     // get the obd response based on the data in byte2  
+          switch (CAN_Rx_Msgdata[1])  //Service ID (SID)
+          {
+            case 0x01: // PID Service 1 , realtime data stream
+              obd_Service_01(CAN_Rx_Msgdata[2]);     // get the obd response based on the data in byte2  
+            break;
+            
+            case 0x03: // PID Service 3 , report current DTCs
+              obd_Service_03();     // get the obd response  
+            break;
+            
+            case 0x07: // PID Service 7 , report current DTCs this drive cycle
+              obd_Service_07();     // get the obd response  
+            break;
+            
+            case 0x09: // PID Service 9 , Vehicle information
+              obd_Service_09(CAN_Rx_Msgdata[2]); // get the obd response based on the data in byte2
+            break;
+            
+            case 0x22: // PID Service 22h , custom mode , non standard data
+              obd_Service_22(CAN_Rx_Msgdata[2], CAN_Rx_Msgdata[3]);     // get the obd response based on the data in byte2 and 3  
+            break;
+            default:
+              //send service unsupported return code
+              CAN_Tx_Msgdata[0] =  0x7F;    //Negative response identfier
+              CAN_Tx_Msgdata[1] =  CAN_Rx_Msgdata[1] + 0x40;    // SID, 40h is added to the mode value. So:43h = DTC current
+              CAN_Tx_Msgdata[2] =  0x11;    // Response Code - Service Not Supported
+              CAN_Tx_Msgdata[3] =  0x58;    
+              CAN_Tx_Msgdata[4] =  0x00;    
+              CAN_Tx_Msgdata[5] =  0x00;    
+              CAN_Tx_Msgdata[6] =  0x00;    
+              CAN_Tx_Msgdata[7] =  0x00;    
+                                 
+              CAN0.sendMsgBuf(OBD_ECU_RESP_ADDR, 0, 8, CAN_Tx_Msgdata);
+            break;
+          }
         }
-        if (CAN_Rx_Msgdata[1] == 0x22) // PID Service 22h , custom mode , non standard data
+        else
         {
-          obd_Service_22(CAN_Rx_Msgdata[2], CAN_Rx_Msgdata[3]);     // get the obd response based on the data in byte2 and 3  
+          // incomplete message return code.
+          CAN_Tx_Msgdata[0] =  0x7F;    //Negative response identfier
+          CAN_Tx_Msgdata[1] =  CAN_Rx_Msgdata[1] + 0x40;    // SID, 40h is added to the mode value. So:43h = DTC current
+          CAN_Tx_Msgdata[2] =  0x12;    // Response Code - Sub function Not Supported invalid format
+          CAN_Tx_Msgdata[3] =  0x58;    
+          CAN_Tx_Msgdata[4] =  0x00;    
+          CAN_Tx_Msgdata[5] =  0x00;    
+          CAN_Tx_Msgdata[6] =  0x00;    
+          CAN_Tx_Msgdata[7] =  0x00;    
+                             
+          CAN0.sendMsgBuf(OBD_ECU_RESP_ADDR, 0, 8, CAN_Tx_Msgdata);
         }
       }
-      if (CANrxId == OBD_ECU_ID_ADDR || (CANrxId == OBD_BROADCAST_ADDR)) // The address is only the speeduino specific ecu canbus address     
+      if (CANrxId == OBD_ECU_ID_ADDR ) // The address is only the speeduino specific ecu canbus address     
       {
-        if (CAN_Rx_Msgdata[1] == 0x09) // PID Service 9 , vehicle information request
+        if (CAN_Rx_Msgdata[0] == 0x30) // Flow control feedback for multiframe.
         {
-          obd_Service_09(CAN_Rx_Msgdata[2]); // get the obd response based on the data in byte2
+          // Flow control message recieved and is for max data rate.
         }
       }
 

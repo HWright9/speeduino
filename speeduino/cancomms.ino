@@ -493,11 +493,22 @@ void obd_Service_01(uint8_t requestedPIDlow)
       CAN_Tx_Msgdata[0] =  0x06;    // sending 6 bytes
       CAN_Tx_Msgdata[1] =  0x41;    // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc.
       CAN_Tx_Msgdata[2] =  0x00;    // PID code
-      CAN_Tx_Msgdata[3] =  B00001101;   //1-8
+      CAN_Tx_Msgdata[3] =  B10001101;   //1-8
       CAN_Tx_Msgdata[4] =  B01111110;   //9-16
       CAN_Tx_Msgdata[5] =  B10100000;   //17-24
-      CAN_Tx_Msgdata[6] =  B00011001;   //25-32
+      CAN_Tx_Msgdata[6] =  B00010001;   //25-32
       CAN_Tx_Msgdata[7] =  0x00;   
+    break;
+    
+    case 1:      //PID-0x01 Monitor status since DTCs cleared.
+      CAN_Tx_Msgdata[0] =  0x08;                 // sending 8 bytes
+      CAN_Tx_Msgdata[1] =  0x41;                 // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc.
+      CAN_Tx_Msgdata[2] =  0x01;                 // pid code
+      CAN_Tx_Msgdata[3] =  B10000001;            //A7	State of the CEL/MIL (on/off). A6-A0	Number of confirmed emissions-related DTCs available for display.
+      CAN_Tx_Msgdata[4] =  B00000100;            //B6-B4	Bitmap indicating completeness of common tests (0=complete). B3	Indication of engine type 0 = Spark ignition.  B2-B0	Bitmap indicating availability of common tests.
+      CAN_Tx_Msgdata[5] =  0x00; 
+      CAN_Tx_Msgdata[6] =  0x00; 
+      CAN_Tx_Msgdata[7] =  0x00;
     break;
 
     case 5:      //PID-0x05 Engine coolant temperature , range is -40 to 215 deg C , formula == A-40
@@ -514,7 +525,7 @@ void obd_Service_01(uint8_t requestedPIDlow)
     case 6:        // PID-0x06 , Short term fuel trim (STFT)—Bank 1 , range is -100 (subtracting fuel) to 100 (adding fuel) , formula == A*1.28+100)
       int16_t temp_gEgo;
       // Fuel Trim is in %
-      temp_gEgo = ((currentStatus.egoCorrection * 128) / 100) - 100;
+      temp_gEgo = (int16_t)((currentStatus.egoCorrection * 128) / 100);
       CAN_Tx_Msgdata[0] =  0x03;    // sending 3 byte
       CAN_Tx_Msgdata[1] =  0x41;    // 
       CAN_Tx_Msgdata[2] =  0x06;    // pid code
@@ -528,7 +539,7 @@ void obd_Service_01(uint8_t requestedPIDlow)
     case 8:        // PID-0x08 , Short term fuel trim (STFT)—Bank 2 , range is -100 (subtracting fuel) to 100 (adding fuel) , formula == A*1.28+100)
       int16_t temp_gEgo2;
       // Fuel Trim is in %
-      temp_gEgo = ((currentStatus.ego2Correction * 128) / 100) - 100;
+      temp_gEgo = (int16_t)((currentStatus.ego2Correction * 128) / 100);
       CAN_Tx_Msgdata[0] =  0x03;    // sending 3 byte
       CAN_Tx_Msgdata[1] =  0x41;    // 
       CAN_Tx_Msgdata[2] =  0x08;    // pid code
@@ -656,21 +667,6 @@ void obd_Service_01(uint8_t requestedPIDlow)
      CAN_Tx_Msgdata[6] =  0x00; 
      CAN_Tx_Msgdata[7] =  0x00;
    break;
-   
-   case 29:      // PID-0x1D O2 sensors supported by bank 	Similar to PID $13, but [A0..A7] == [B1S1, B1S2, B2S1, B2S2, B3S1, B3S2, B4S1, B4S2]
-     uint8_t O2config;
-     if (configPage6.egoAlgorithm == EGO_ALGORITHM_SINGLEO2) { O2config = B00000001; } //B1S1
-     else if (configPage6.egoAlgorithm == EGO_ALGORITHM_DUALO2) { O2config = B00000101; } //B1S1 AND B2S1
-     else { O2config = 0x00; }
-     CAN_Tx_Msgdata[0] =  0x03;           // sending 3 bytes
-     CAN_Tx_Msgdata[1] =  0x41;           // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc.
-     CAN_Tx_Msgdata[2] =  0x1D;           // pid code
-     CAN_Tx_Msgdata[3] =  O2config;       // A
-     CAN_Tx_Msgdata[4] =  0x00;           // B
-     CAN_Tx_Msgdata[5] =  0x00; 
-     CAN_Tx_Msgdata[6] =  0x00; 
-     CAN_Tx_Msgdata[7] =  0x00;
-   break;
 
   case 32:      // PID-0x20 PIDs supported [0x21-0x40]
     CAN_Tx_Msgdata[0] =  0x06;          // sending 4 bytes
@@ -756,10 +752,21 @@ void obd_Service_01(uint8_t requestedPIDlow)
     CAN_Tx_Msgdata[0] =  0x06;    // sending 4 bytes
     CAN_Tx_Msgdata[1] =  0x41;    // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc.
     CAN_Tx_Msgdata[2] =  0x40;    // pid code
-    CAN_Tx_Msgdata[3] =  B01100000;    // 65-72dec
+    CAN_Tx_Msgdata[3] =  B11100000;    // 65-72dec
     CAN_Tx_Msgdata[4] =  B00000000;    // 73-80
     CAN_Tx_Msgdata[5] =  B11000000;   //  81-88
     CAN_Tx_Msgdata[6] =  B00010000;   //  89-96
+    CAN_Tx_Msgdata[7] =  0x00;
+  break;
+  
+  case 65:      //PID-0x41 Monitor status since DTCs cleared.
+    CAN_Tx_Msgdata[0] =  0x08;                 // sending 8 bytes
+    CAN_Tx_Msgdata[1] =  0x41;                 // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc.
+    CAN_Tx_Msgdata[2] =  0x41;                 // pid code
+    CAN_Tx_Msgdata[3] =  //0x00; //always 0 otherwise as per pid1
+    CAN_Tx_Msgdata[4] =  B00000100;            //B6-B4	Bitmap indicating completeness of common tests. B3	Indication of engine type 0 = Spark ignition.  B2-B0	Bitmap indicating availability of common tests.
+    CAN_Tx_Msgdata[5] =  0x00; 
+    CAN_Tx_Msgdata[6] =  0x00; 
     CAN_Tx_Msgdata[7] =  0x00;
   break;
 
@@ -864,7 +871,7 @@ void obd_Service_22(uint8_t requestedPIDlow, uint8_t requestedPIDhigh)
     {   
        // PID 0x01 (1 dec) to 0x10 (16 dec)
        // Aux data / can data IN Channel 1 - 16  
-       CAN_Tx_Msgdata[0] =  0x06;                                               // sending 8 bytes
+       CAN_Tx_Msgdata[0] =  0x06;                                               // sending 6 bytes
        CAN_Tx_Msgdata[1] =  0x62;                                               // Same as query, except that 40h is added to the mode value. So:62h = custom mode
        CAN_Tx_Msgdata[2] =  requestedPIDlow;                                 // PID code
        CAN_Tx_Msgdata[3] =  0x77;                                               // PID code
@@ -890,6 +897,44 @@ void obd_Service_22(uint8_t requestedPIDlow, uint8_t requestedPIDhigh)
   }
   
   CAN0.sendMsgBuf(OBD_ECU_RESP_ADDR, 0, 8, CAN_Tx_Msgdata); //((configPage9.obd_address + 0x100)+ 8);      
+}
+
+// This routine supports the OBDII service 3 mode (current DTCs)
+void obd_Service_03(void)
+{
+  //testing
+  if (1) // DTC set
+  {
+    CAN_Tx_Msgdata[0] =  0x08;    //sending 8 bytes
+    CAN_Tx_Msgdata[1] =  0x43;    // SID, 40h is added to the mode value. So:43h = DTC current
+    CAN_Tx_Msgdata[2] =  0x01;    // DTC#1 High Byte TESTING should be P0158 byte A
+    CAN_Tx_Msgdata[3] =  0x58;    // DTC#1 Low Byte  TESTING should be P0158 byte B
+    CAN_Tx_Msgdata[4] =  0x00;    // DTC#2 High Byte 
+    CAN_Tx_Msgdata[5] =  0x00;    // DTC#2 Low Byte
+    CAN_Tx_Msgdata[6] =  0x00;    // DTC#3 High Byte
+    CAN_Tx_Msgdata[7] =  0x00;    // DTC#4 Low Byte
+                                 
+    CAN0.sendMsgBuf(OBD_ECU_RESP_ADDR, 0, 8, CAN_Tx_Msgdata);
+  }
+}
+
+// This routine supports the OBDII service 7 mode (DTC's during current or last drive cycle), should match mode 3 data.
+void obd_Service_07(void)
+{
+  //testing
+  if (1) // DTC set
+  {
+    CAN_Tx_Msgdata[0] =  0x08;    //sending 8 bytes
+    CAN_Tx_Msgdata[1] =  0x43;    // SID, 40h is added to the mode value. So:43h = DTC current
+    CAN_Tx_Msgdata[2] =  0x01;    // Number of DTC's
+    CAN_Tx_Msgdata[3] =  0x01;    // DTC#1 High Byte TESTING should be P0158 byte A
+    CAN_Tx_Msgdata[4] =  0x58;    // DTC#1 Low Byte  TESTING should be P0158 byte B
+    CAN_Tx_Msgdata[5] =  0x00;    // DTC#2 High Byte 
+    CAN_Tx_Msgdata[6] =  0x00;    // DTC#2 Low Byte
+    CAN_Tx_Msgdata[7] =  0x00;    // zero, other DTC's in multiframe messages.
+                                 
+    CAN0.sendMsgBuf(OBD_ECU_RESP_ADDR, 0, 8, CAN_Tx_Msgdata);
+  }
 }
 
 // This routine supports the OBDII service 22 mode (vehicle information)

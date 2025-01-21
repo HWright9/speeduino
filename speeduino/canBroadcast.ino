@@ -132,6 +132,8 @@ uint8_t canO22TimeSinceLast;
 uint8_t canEPBTimeSinceLast;
 
 uint8_t canMSGSeq = 0; // Message sequencer
+uint8_t OBD_FlowCtrl_PendingService = 0x00; // Stores state of service pending flow control.
+uint8_t OBD_FlowCtrl_PendingINFTYP = 0x00; // Stores state of infotype pending flow control.
 
 void can0_Init(void)
 {
@@ -155,6 +157,7 @@ void can0_Init(void)
     
 }
 
+// Function to re-try the init of CAN if it is faulted due to an error (such as other modules being offline). Called at 1Hz
 void can0_Maintainance(void)
 {
   if (configPage2.enableAeroSSCAN == true)
@@ -238,18 +241,33 @@ uint8_t recieveCAN_BroadCast(void)
     if ((canErr == CAN_OK) && ((CANrxId & 0x80000000) != 0x80000000))  // alternate would be CAN_NOMSG, also not extended frame
     {
       // OBD Service Support 
-      if ((CANrxId == OBD_ECU_ID_ADDR) || (CANrxId == OBD_BROADCAST_ADDR))    // The address is the speeduino specific ecu canbus address or the 0x7df(2015 dec) broadcast address 
+      if (CANrxId == OBD_BROADCAST_ADDR)    // The address is the 0x7df(2015 dec) broadcast address 
       {
-        if (len >= CAN_Rx_Msgdata[0]) //CAN_Rx_Msgdata[0] is the number of bytes sent. protects against partial messages
+        if (len >= (CAN_Rx_Msgdata[0] + 1)) //CAN_Rx_Msgdata[0] is the number of bytes sent, not including itself. protects against partial messages
         {
+          if (OBD_FlowCtrl_PendingService != 0x00)
+          { // new command recieved instead of flow control. clear flow control and ack new request.
+            OBD_FlowCtrl_PendingService = 0x00;
+            OBD_FlowCtrl_PendingINFTYP = 0x00;
+          }
+            
+          
           switch (CAN_Rx_Msgdata[1])  //Service ID (SID)
           {
             case 0x01: // PID Service 1 , realtime data stream
-              obd_Service_01(CAN_Rx_Msgdata[2]);     // get the obd response based on the data in byte2  
+              obd_Service_01(CAN_Rx_Msgdata[2]);     // get the obd response based on the requested PID in byte2  
+            break;
+            
+            case 0x02: // PID Service 2 , report freeze Frame data
+              obd_Service_02(CAN_Rx_Msgdata[2]);     // get the obd response based on the requested PID in byte2 
             break;
             
             case 0x03: // PID Service 3 , report current DTCs
               obd_Service_03();     // get the obd response  
+            break;
+            
+            case 0x04: // PID Service 4 , clear DTC's and Monitors
+              obd_Service_04();     // get the obd response  
             break;
             
             case 0x07: // PID Service 7 , report current DTCs this drive cycle
@@ -293,11 +311,24 @@ uint8_t recieveCAN_BroadCast(void)
           CAN0.sendMsgBuf(OBD_ECU_RESP_ADDR, 0, 8, CAN_Tx_Msgdata);
         }
       }
-      if (CANrxId == OBD_ECU_ID_ADDR ) // The address is only the speeduino specific ecu canbus address     
+      if (CANrxId == OBD_ECU_ID_ADDR ) // The address is the speeduino specific ecu canbus address     
       {
-        if (CAN_Rx_Msgdata[0] == 0x30) // Flow control feedback for multiframe.
+        if (CAN_Rx_Msgdata[0] == 0x30) // Flow control feedback for multiframe messages. and is for max data rate.
         {
-          // Flow control message recieved and is for max data rate.
+          switch (OBD_FlowCtrl_PendingService)  //Service ID (SID) pending flow control feedback, only Service 3, 7 and 9 use flow control currently.
+          {
+            case 0x03: // PID Service 3 , report current DTCs
+              obd_Service_03();     // get the obd response  
+            break;
+            case 0x07: // PID Service 7 , report current DTCs this drive cycle
+              obd_Service_07();     // get the obd response  
+            break;
+            case 0x09: // PID Service 9 , Vehicle information
+              obd_Service_09(OBD_FlowCtrl_PendingINFTYP); // get the obd response based on the data in byte2
+            break;
+          }
+          OBD_FlowCtrl_PendingService = 0x00; // Clear flow control pending variables.
+          OBD_FlowCtrl_PendingINFTYP = 0x00;
         }
       }
 

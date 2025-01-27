@@ -798,7 +798,7 @@ void obd_Service_01(uint8_t requestedPIDlow)
     
     case 68:      //PID-0x44 Commanded air fuel ratio (lambda)
       obdcalcH16 = configPage2.stoich;            // configPage2.stoich(is *10 so 14.7 is 147)
-      obdcalcE32 = currentStatus.AFR;             // afr(is *10 so 25.5 is 255) , needs a 32bit else will overflow
+      obdcalcE32 = currentStatus.afrTarget;             // afr(is *10 so 25.5 is 255) , needs a 32bit else will overflow
       obdcalcF32 = (obdcalcE32<<8) / obdcalcH16;      //this is same as (obdcalcE32/256) / obdcalcH16 . this calculates the ratio      
       obdcalcG16 = (obdcalcF32 *32768)>>8;          
       obdcalcA = highByte(obdcalcG16);

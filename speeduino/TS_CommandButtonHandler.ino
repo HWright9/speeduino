@@ -69,7 +69,6 @@ void TS_CommandButtonsHandler(uint16_t buttonCommand)
       break;
 
     case TS_CMD_TEST_ENBL: // cmd is enable
-      // currentStatus.testactive = 1;
       BIT_SET(currentStatus.testOutputs, 1);
       break;
 

@@ -243,7 +243,7 @@ void sendcanValues(uint16_t offset, uint16_t packetLength, byte cmd, byte portTy
 
   fullStatus[30] = (byte)(currentStatus.boostTarget >> 1); //Divide boost target by 2 to fit in a byte
   fullStatus[31] = (byte)(currentStatus.boostDuty / 100);
-  fullStatus[32] = currentStatus.spark; //Spark related bitfield, launchHard(0), launchSoft(1), hardLimitOn(2), softLimitOn(3), boostCutSpark(4), error(5), idleControlOn(6), sync(7)
+  fullStatus[32] = currentStatus.spark; //Spark related bitfield, launchHard(0), launchSoft(1), hardLimitOn(2), softLimitOn(3), boostCutSpark(4), MILerror(5), idleControlOn(6), sync(7)
 
   //rpmDOT must be sent as a signed integer
   fullStatus[33] = lowByte(currentStatus.rpmDOT);
@@ -293,7 +293,7 @@ void sendcanValues(uint16_t offset, uint16_t packetLength, byte cmd, byte portTy
   fullStatus[73] = highByte(currentStatus.canin[15]);
   
   fullStatus[74] = currentStatus.tpsADC;
-  fullStatus[75] = getNextError(); // errorNum (0:1), currentError(2:7)
+  fullStatus[75] = reportDTCs_TS(); // errorNum (0:1), currentError(2:7)
 
   fullStatus[76] = lowByte(currentStatus.PW1); //Pulsewidth 1 multiplied by 10 in ms. Have to convert from uS to mS.
   fullStatus[77] = highByte(currentStatus.PW1); //Pulsewidth 1 multiplied by 10 in ms. Have to convert from uS to mS.
@@ -504,7 +504,7 @@ void obd_Service_01(uint8_t requestedPIDlow)
       CAN_Tx_Msgdata[0] =  0x08;                 // sending 8 bytes
       CAN_Tx_Msgdata[1] =  0x41;                 // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc.
       CAN_Tx_Msgdata[2] =  0x01;                 // pid code
-      CAN_Tx_Msgdata[3] =  B10000001;            //A7	State of the CEL/MIL (on/off). A6-A0	Number of confirmed emissions-related DTCs available for display.
+      CAN_Tx_Msgdata[3] =  getNumDTCS() | (BIT_CHECK(currentStatus.spark, BIT_SPARK_MIL) << 7);    //A7	State of the CEL/MIL (on/off). A6-A0	Number of confirmed emissions-related DTCs available for display.
       CAN_Tx_Msgdata[4] =  B00000100;            //B6-B4	Bitmap indicating completeness of common tests (0=complete). B3	Indication of engine type 0 = Spark ignition.  B2-B0	Bitmap indicating availability of common tests.
       CAN_Tx_Msgdata[5] =  0x00; 
       CAN_Tx_Msgdata[6] =  0x00; 
@@ -939,26 +939,57 @@ void obd_Service_02(uint8_t requestedPIDlow)
 // This routine supports the OBDII service 3 mode (current DTCs)
 void obd_Service_03(void)
 {
-  //testing
-  if (1) // DTC set
+  uint16_t nextDTC;
+  
+  CAN_Tx_Msgdata[0] =  0x07;    //sending 7 bytes
+  CAN_Tx_Msgdata[1] =  0x43;    // SID, 40h is added to the mode value. So:43h = DTC current
+  
+  if (getNumDTCS() == 0)
   {
-    CAN_Tx_Msgdata[0] =  0x07;    //sending 7 bytes
-    CAN_Tx_Msgdata[1] =  0x43;    // SID, 40h is added to the mode value. So:43h = DTC current
-    CAN_Tx_Msgdata[2] =  0x01;    // DTC#1 High Byte TESTING should be P0158 byte A
-    CAN_Tx_Msgdata[3] =  0x58;    // DTC#1 Low Byte  TESTING should be P0158 byte B
-    CAN_Tx_Msgdata[4] =  0x00;    // DTC#2 High Byte 
-    CAN_Tx_Msgdata[5] =  0x00;    // DTC#2 Low Byte
-    CAN_Tx_Msgdata[6] =  0x00;    // DTC#3 High Byte
-    CAN_Tx_Msgdata[7] =  0x00;    // DTC#4 Low Byte
-                                 
+    CAN_Tx_Msgdata[2] =  0x00;    // No DTC's so nothing to send
+    CAN_Tx_Msgdata[3] =  0x00;    
+    CAN_Tx_Msgdata[4] =  0x00;    
+    CAN_Tx_Msgdata[5] =  0x00;    
+    CAN_Tx_Msgdata[6] =  0x00;    
+    CAN_Tx_Msgdata[7] =  0x00;
+    
+    CAN0.sendMsgBuf(OBD_ECU_RESP_ADDR, 0, 8, CAN_Tx_Msgdata);    
+  }
+  else
+  {
+    nextDTC = getNextDTC(1); // reset
+    CAN_Tx_Msgdata[2] =  highByte(nextDTC);   // DTC#1 High Byte
+    CAN_Tx_Msgdata[3] =  lowByte(nextDTC);    // DTC#1 Low Byte 
+    nextDTC = getNextDTC(0); // continue
+    CAN_Tx_Msgdata[4] =  highByte(nextDTC);   // DTC#2 High Byte
+    CAN_Tx_Msgdata[5] =  lowByte(nextDTC);    // DTC#2 Low Byte 
+    nextDTC = getNextDTC(0); // continue
+    CAN_Tx_Msgdata[6] =  highByte(nextDTC);   // DTC#3 High Byte
+    CAN_Tx_Msgdata[7] =  lowByte(nextDTC);    // DTC#3 Low Byte
+    
     CAN0.sendMsgBuf(OBD_ECU_RESP_ADDR, 0, 8, CAN_Tx_Msgdata);
+    
+    for(uint8_t i = 3; i < getNumDTCS(); i = i+3 ) // Keep sending DTC's 3 at a time until we run out.
+    {
+      nextDTC = getNextDTC(0); // continue
+      CAN_Tx_Msgdata[2] =  highByte(nextDTC);   // DTC#1 High Byte
+      CAN_Tx_Msgdata[3] =  lowByte(nextDTC);    // DTC#1 Low Byte 
+      nextDTC = getNextDTC(0); // continue
+      CAN_Tx_Msgdata[4] =  highByte(nextDTC);   // DTC#2 High Byte
+      CAN_Tx_Msgdata[5] =  lowByte(nextDTC);    // DTC#2 Low Byte 
+      nextDTC = getNextDTC(0); // continue
+      CAN_Tx_Msgdata[6] =  highByte(nextDTC);   // DTC#3 High Byte
+      CAN_Tx_Msgdata[7] =  lowByte(nextDTC);    // DTC#3 Low Byte
+      
+      CAN0.sendMsgBuf(OBD_ECU_RESP_ADDR, 0, 8, CAN_Tx_Msgdata);
+    }
   }
 }
 
 // This routine supports the OBDII service 04 mode (clear DTCs and Monitors)
 void obd_Service_04(void)
 {
-  // TODO, clear DTC's, reset diag monitors....
+  clearAllDTCS();
   
   CAN_Tx_Msgdata[0] =  0x01;    //sending 1 bytes
   CAN_Tx_Msgdata[1] =  0x44;    // SID, 40h is added to the mode value. So:44h = Reset DTC's
@@ -974,23 +1005,40 @@ void obd_Service_04(void)
   CAN0.sendMsgBuf(OBD_ECU_RESP_ADDR, 0, 8, CAN_Tx_Msgdata);
 }
 
-// This routine supports the OBDII service 7 mode (DTC's during current or last drive cycle), should match mode 3 data.
+// This routine supports the OBDII service 7 mode (DTC's pending, not yet active), DTC takes more than one drive cycle to set.
 void obd_Service_07(void)
 {
-  //testing
-  if (1) // DTC set
+  uint16_t nextDTC;
+  
+  CAN_Tx_Msgdata[0] =  0x07;    //sending 7 bytes
+  CAN_Tx_Msgdata[1] =  0x47;    // SID, 40h is added to the mode value. So:47h = DTC current or pending
+  
+  if (1)//(getNumDTCS() == 0) Placeholder, mechanism to store DTCs over drivecycle not set.
   {
-    CAN_Tx_Msgdata[0] =  0x07;    //sending 7 bytes
-    CAN_Tx_Msgdata[1] =  0x43;    // SID, 40h is added to the mode value. So:43h = DTC current
-    CAN_Tx_Msgdata[2] =  0x01;    // Number of DTC's
-    CAN_Tx_Msgdata[3] =  0x01;    // DTC#1 High Byte TESTING should be P0158 byte A
-    CAN_Tx_Msgdata[4] =  0x58;    // DTC#1 Low Byte  TESTING should be P0158 byte B
-    CAN_Tx_Msgdata[5] =  0x00;    // DTC#2 High Byte 
-    CAN_Tx_Msgdata[6] =  0x00;    // DTC#2 Low Byte
-    CAN_Tx_Msgdata[7] =  0x00;    // zero, other DTC's in multiframe messages.
-                                 
-    CAN0.sendMsgBuf(OBD_ECU_RESP_ADDR, 0, 8, CAN_Tx_Msgdata);
+    CAN_Tx_Msgdata[2] =  0x00;
+    CAN_Tx_Msgdata[3] =  0x00;   
+    CAN_Tx_Msgdata[4] =  0x00;
+    CAN_Tx_Msgdata[5] =  0x00;
+    CAN_Tx_Msgdata[6] =  0x00;
+    CAN_Tx_Msgdata[7] =  0x00;   
   }
+  else //DTC's 1, 2 and 3
+  {
+    nextDTC = getNextDTC(1); // reset
+    CAN_Tx_Msgdata[2] =  highByte(nextDTC);   // DTC#1 High Byte
+    CAN_Tx_Msgdata[3] =  lowByte(nextDTC);    // DTC#1 Low Byte 
+    nextDTC = getNextDTC(0); // continue
+    CAN_Tx_Msgdata[4] =  highByte(nextDTC);   // DTC#2 High Byte
+    CAN_Tx_Msgdata[5] =  lowByte(nextDTC);    // DTC#2 Low Byte 
+    nextDTC = getNextDTC(0); // continue
+    CAN_Tx_Msgdata[6] =  highByte(nextDTC);   // DTC#3 High Byte
+    CAN_Tx_Msgdata[7] =  lowByte(nextDTC);    // DTC#3 Low Byte 
+  }
+                               
+  CAN0.sendMsgBuf(OBD_ECU_RESP_ADDR, 0, 8, CAN_Tx_Msgdata);
+  
+  //Todo, multiframe messages...
+  
 }
 
 // This routine supports the OBDII service 09 mode (vehicle information)

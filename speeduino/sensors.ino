@@ -143,21 +143,16 @@ static inline void validateMAP()
   {
     currentStatus.MAP = ERR_DEFAULT_MAP_LOW;
     mapErrorCount += 1;
-    setError(ERR_MAP_LOW);
+    setDTC(BIT_DTC_P0107);
   }
   else if(currentStatus.MAP > VALID_MAP_MAX)
   {
     currentStatus.MAP = ERR_DEFAULT_MAP_HIGH;
     mapErrorCount += 1;
-    setError(ERR_MAP_HIGH);
+    setDTC(BIT_DTC_P0108);
   }
   else
   {
-    if(errorCount > 0)
-    {
-      clearError(ERR_MAP_HIGH);
-      clearError(ERR_MAP_LOW);
-    }
     mapErrorCount = 0;
   }
 }
@@ -446,6 +441,7 @@ void readTPS(bool useFilter)
   {
     byte tempADC = 0;
     byte tempADC2 = 0;
+    uint8_t tpsFaulted = 0;
     
     #if defined(ANALOG_ISR)
       byte tempTPS = fastMap1023toX(AnChannel[pinTPS-A0], 255); //Get the current raw TPS ADC value and map it into a byte
@@ -460,8 +456,24 @@ void readTPS(bool useFilter)
     tempADC = currentStatus.tpsADC; //The tempADC value is used in order to allow TunerStudio to recover and redo the TPS calibration if this somehow gets corrupted
     
     //Check that the ADC values fall within the min and max ranges (Should always be the case, but noise can cause these to fluctuate outside the defined range).
-    if (currentStatus.tpsADC < configPage2.tpsMin) { tempADC = configPage2.tpsMin; }
-    else if(currentStatus.tpsADC > configPage2.tpsMax) { tempADC = configPage2.tpsMax; }
+    if (currentStatus.tpsADC < configPage2.tpsMin) 
+    { 
+      tempADC = configPage2.tpsMin;
+      if((BIT_CHECK(currentStatus.OBD_DTC_Ready, OBD_READY_BATT) == true) && (currentStatus.tpsADC < (configPage2.tpsMin / 2)) && (configPage2.tpsMin > 15))  // TPS Min is at least 0.3V and we are detecting at 0.15V .
+      {
+        setDTC(BIT_DTC_P0122); // TPS A low
+        tpsFaulted = 1;
+      }        
+    }
+    else if(currentStatus.tpsADC > configPage2.tpsMax) 
+    { 
+      tempADC = configPage2.tpsMax;
+      if((BIT_CHECK(currentStatus.OBD_DTC_Ready, OBD_READY_BATT) == true) && (currentStatus.tpsADC > (configPage2.tpsMax + ((255-configPage2.tpsMax) / 2))) && (configPage2.tpsMax <= 245))  // TPS Max lower than 4.7V and we are detecting at 0.15V .
+      {
+        setDTC(BIT_DTC_P0123); // TPS A high
+        tpsFaulted = 1;
+      }       
+    }
     
     if (configPage15.tpsType == TPS_MODE_DUALSENSOR )
     {
@@ -482,29 +494,33 @@ void readTPS(bool useFilter)
       else if(currentStatus.tps2ADC > configPage9.tps2Max) { tempADC2 = configPage9.tps2Max; }
     }
 
-    /* Map ADC to TPS depending on the sensor type */   
-    if (configPage15.tpsType == TPS_MODE_2POINT) // Traditional linear TPS, supports reversed connection.
-    {     
-      if(configPage2.tpsMax > configPage2.tpsMin) { currentStatus.TPS = map(tempADC, configPage2.tpsMin, configPage2.tpsMax, 0, 200); } //Take the raw TPS ADC value and convert it into a TPS% based on the calibrated values
-      else { currentStatus.TPS = map(tempADC, configPage2.tpsMin, configPage2.tpsMax, 200, 0); } // Reversed connection support. 
-    }
-    
-    if (configPage15.tpsType == TPS_MODE_3POINT) // Single sensor 3 point calibration for non-linear TPS and dual slope. Does not support backwards TPS wiring.
+    if (tpsFaulted == 0)
     {
-      if ( currentStatus.tpsADC < configPage9.tps2Min ) { currentStatus.TPS = map(tempADC, configPage2.tpsMin, configPage9.tps2Min, 0, configPage9.tpsMidPoint); }
-      else {currentStatus.TPS = map(tempADC, configPage9.tps2Min, configPage2.tpsMax, configPage9.tpsMidPoint, 200); }
+      /* Map ADC to TPS depending on the sensor type */   
+      if (configPage15.tpsType == TPS_MODE_2POINT) // Traditional linear TPS, supports reversed connection.
+      {     
+        if(configPage2.tpsMax > configPage2.tpsMin) { currentStatus.TPS = map(tempADC, configPage2.tpsMin, configPage2.tpsMax, 0, 200); } //Take the raw TPS ADC value and convert it into a TPS% based on the calibrated values
+        else { currentStatus.TPS = map(tempADC, configPage2.tpsMin, configPage2.tpsMax, 200, 0); } // Reversed connection support. 
+      }
+      
+      if (configPage15.tpsType == TPS_MODE_3POINT) // Single sensor 3 point calibration for non-linear TPS and dual slope. Does not support backwards TPS wiring.
+      {
+        if ( currentStatus.tpsADC < configPage9.tps2Min ) { currentStatus.TPS = map(tempADC, configPage2.tpsMin, configPage9.tps2Min, 0, configPage9.tpsMidPoint); }
+        else {currentStatus.TPS = map(tempADC, configPage9.tps2Min, configPage2.tpsMax, configPage9.tpsMidPoint, 200); }
+      }
+      
+      if (configPage15.tpsType == TPS_MODE_DUALSENSOR) // Two linear independent TPS sensors with an overlap in the range. Used on some BOSCH 4 wire TPS. Does not support backwards TPS wiring.
+      { //TPS 1 is 0% -> midpoint), TPS2 is (midpoint -> 100%)
+        if ( currentStatus.tpsADC < configPage2.tpsMax ) { currentStatus.TPS = map(tempADC, configPage2.tpsMin, configPage2.tpsMax, 0, configPage9.tpsMidPoint); }
+        else {currentStatus.TPS = map(tempADC2, configPage9.tps2Min, configPage9.tps2Max, configPage9.tpsMidPoint, 200); }
+      }
     }
-    
-    if (configPage15.tpsType == TPS_MODE_DUALSENSOR) // Two linear independent TPS sensors with an overlap in the range. Used on some BOSCH 4 wire TPS. Does not support backwards TPS wiring.
-    { //TPS 1 is 0% -> midpoint), TPS2 is (midpoint -> 100%)
-      if ( currentStatus.tpsADC < configPage2.tpsMax ) { currentStatus.TPS = map(tempADC, configPage2.tpsMin, configPage2.tpsMax, 0, configPage9.tpsMidPoint); }
-      else {currentStatus.TPS = map(tempADC2, configPage9.tps2Min, configPage9.tps2Max, configPage9.tpsMidPoint, 200); }
-    }
+    else { currentStatus.TPS = ERR_DEFAULT_TPS_Fault; } //value is fixed at 25.0%
   } // End TPS ADC enabled
   else 
   { 
     if (currentStatus.CTPSActive == true) { currentStatus.TPS = 0; } // Works to help DFCO run when there is only a CTPS and TPS is set to disabled
-    else { currentStatus.TPS = 50; } // Disable value is fixed at 25.0% should not trip DFCO etc.
+    else { currentStatus.TPS = ERR_DEFAULT_TPS_Fault; } // Disable value is fixed at 25.0% should not trip DFCO etc.
   }
 }
 
@@ -522,8 +538,26 @@ void readCLT(bool useFilter)
   if(useFilter == true) { currentStatus.cltADC = filterADC(tempReading, configPage4.ADCFILTER_CLT, currentStatus.cltADC); }
   else { currentStatus.cltADC = tempReading; }
   
-  if (currentStatus.cltADC >= 1022){currentStatus.coolant = 255 - CALIBRATION_TEMPERATURE_OFFSET;} //default action on open circuit - HRW
-  else{ currentStatus.coolant = table2D_getValue(&cltCalibrationTable, currentStatus.cltADC) - CALIBRATION_TEMPERATURE_OFFSET; //Temperature calibration values are stored as positive bytes. We subtract 40 from them to allow for negative temperatures
+  // Diagnostics
+  if (currentStatus.cltADC >= 1022)
+  {
+    currentStatus.coolant = ERR_DEFAULT_CLT_SHORT - CALIBRATION_TEMPERATURE_OFFSET; //default action on open circuit - HRW
+    if (BIT_CHECK(currentStatus.OBD_DTC_Ready, OBD_READY_BATT))
+    {
+      setDTC(BIT_DTC_P0118); // Coolant Temperature Circuit High Input
+    }
+  }
+  else if ( currentStatus.cltADC <= 1)
+  {
+    currentStatus.coolant = ERR_DEFAULT_CLT_GND - CALIBRATION_TEMPERATURE_OFFSET; //default action on open circuit - HRW
+    if (BIT_CHECK(currentStatus.OBD_DTC_Ready, OBD_READY_BATT))
+    {
+      setDTC(BIT_DTC_P0117); // Coolant Temperature Circuit Low Input
+    }
+  }    
+  else
+  { 
+    currentStatus.coolant = table2D_getValue(&cltCalibrationTable, currentStatus.cltADC) - CALIBRATION_TEMPERATURE_OFFSET; //Temperature calibration values are stored as positive bytes. We subtract 40 from them to allow for negative temperatures
   }
 }
 
@@ -539,7 +573,28 @@ void readIAT(bool useFilter)
   #endif
   if(useFilter == true) { currentStatus.iatADC = filterADC(tempReading, configPage4.ADCFILTER_IAT, currentStatus.iatADC); }
   else { currentStatus.iatADC = tempReading; }
-  currentStatus.IAT = table2D_getValue(&iatCalibrationTable, currentStatus.iatADC) - CALIBRATION_TEMPERATURE_OFFSET;
+  
+    // Diagnostics
+  if (currentStatus.iatADC >= 1022)
+  {
+    currentStatus.IAT = ERR_DEFAULT_IAT_SHORT - CALIBRATION_TEMPERATURE_OFFSET; //default action on open circuit - HRW
+    if (BIT_CHECK(currentStatus.OBD_DTC_Ready, OBD_READY_BATT))
+    {
+      setDTC(BIT_DTC_P0113); // Intake Air Temperature Circuit High Input
+    }
+  }
+  else if ( currentStatus.iatADC <= 1)
+  {
+    currentStatus.IAT = ERR_DEFAULT_IAT_GND - CALIBRATION_TEMPERATURE_OFFSET; //default action on open circuit - HRW
+    if (BIT_CHECK(currentStatus.OBD_DTC_Ready, OBD_READY_BATT))
+    {
+      setDTC(BIT_DTC_P0112); // Intake Air Temperature Circuit Low Input
+    }
+  } 
+  else
+  {  
+    currentStatus.IAT = table2D_getValue(&iatCalibrationTable, currentStatus.iatADC) - CALIBRATION_TEMPERATURE_OFFSET;
+  }
 }
 
 void readBaro(bool useFilter)
@@ -660,6 +715,25 @@ void readBat(bool useFilter)
 
   if(useFilter == true) { currentStatus.battery10 = filterADC(tempReading, configPage4.ADCFILTER_BAT, currentStatus.battery10); }
   else { currentStatus.battery10 = tempReading; }
+  
+  if (BIT_CHECK(currentStatus.OBD_DTC_Ready,OBD_READY_RUNNING) && BIT_CHECK(currentStatus.OBD_DTC_Ready,OBD_READY_TIME))
+  {
+    if (currentStatus.battery10 >= 200) // over 20V
+    {
+      setDTC(BIT_DTC_P0563); //System Voltage High
+    }
+    else if (currentStatus.battery10 <= 90)
+    {
+      setDTC(BIT_DTC_P0562); //System Voltage Low
+    }
+  }
+  
+  if ((checkDTC(BIT_DTC_P0563) == false) && (checkDTC(BIT_DTC_P0563) == false))
+  {
+    if ((currentStatus.battery10 >= 105) && (currentStatus.battery10 < 200)) { BIT_SET(currentStatus.OBD_DTC_Ready, OBD_READY_BATT); }      // Voltage over 10.5V diagnostics are valid
+    else if (currentStatus.battery10 < 100) { BIT_CLEAR(currentStatus.OBD_DTC_Ready, OBD_READY_BATT); }// Voltage under 10V disable DTC's
+  }
+  else { BIT_CLEAR(currentStatus.OBD_DTC_Ready, OBD_READY_BATT); }
 }
 
 /**
@@ -781,8 +855,11 @@ void readFuelPressure(bool useFilter)
       else // Not in range.
       {
         if (FuelPressErrorCounter < (30 * diagTmSclr)) { FuelPressErrorCounter = FuelPressErrorCounter + 1; }    //faulted for Hold last value and update fault counter until using default value
-        else { currentStatus.fuelPress_ADC = map(configPage10.fPress_RefPress, configPage10.fuelPressureMin, (int16_t)configPage10.fuelPressureMax, 0, 1024 ); } //After Diag counter exceeded use ADC version of safe value. 
-        //Future - add error code in else statement above.
+        else 
+        { 
+          currentStatus.fuelPress_ADC = map(configPage10.fPress_RefPress, configPage10.fuelPressureMin, (int16_t)configPage10.fuelPressureMax, 0, 1024 ); //After Diag counter exceeded use ADC version of safe value. 
+          setDTC(BIT_DTC_P0191);  //Fuel Rail Pressure Sensor Circuit Range/Performance
+        }
       }
     }
     else { currentStatus.fuelPress_ADC = tempReading; } // Bypass diagnostics and filter if not required

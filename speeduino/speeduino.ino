@@ -251,6 +251,7 @@ void loop()
       BIT_CLEAR(currentStatus.engine, BIT_ENGINE_CRANK); //Clear cranking bit (Can otherwise get stuck 'on' even with 0 rpm)
       BIT_CLEAR(currentStatus.engine, BIT_ENGINE_WARMUP); //Same as above except for WUE
       BIT_CLEAR(currentStatus.engine, BIT_ENGINE_RUN); //Same as above except for RUNNING status
+      BIT_CLEAR(currentStatus.OBD_DTC_Ready, OBD_READY_RUNNING); 
       BIT_CLEAR(currentStatus.engine, BIT_ENGINE_ASE); //Same as above except for ASE status
       BIT_CLEAR(currentStatus.engine, BIT_ENGINE_ACC); //Same as above but the accel enrich (If using MAP accel enrich a stall will cause this to trigger)
       BIT_CLEAR(currentStatus.engine, BIT_ENGINE_DCC); //Same as above but the decel enleanment
@@ -497,6 +498,8 @@ void loop()
       #if defined CAN_AVR_MCP2515
       can0_Maintainance();
       #endif
+      
+      DTCSetter_1000ms(); // DTC checks every 1 sec.
 
     } //1Hz timer
 
@@ -527,6 +530,7 @@ void loop()
         if(currentStatus.RPM > currentStatus.crankRPM) //Crank RPM in the config is stored as a x10. currentStatus.crankRPM is set in timers.ino and represents the true value
         {
           BIT_SET(currentStatus.engine, BIT_ENGINE_RUN); //Sets the engine running bit
+          BIT_SET(currentStatus.OBD_DTC_Ready, OBD_READY_RUNNING); // Set the OBD running bit (really the same as engine running)
           //Only need to do anything if we're transitioning from cranking to running
           if( BIT_CHECK(currentStatus.engine, BIT_ENGINE_CRANK) )
           {
@@ -539,6 +543,7 @@ void loop()
           //Sets the engine cranking bit, clears the engine running bit
           BIT_SET(currentStatus.engine, BIT_ENGINE_CRANK);
           BIT_CLEAR(currentStatus.engine, BIT_ENGINE_RUN);
+          BIT_CLEAR(currentStatus.OBD_DTC_Ready, OBD_READY_RUNNING); 
           currentStatus.runSecs = 0; //We're cranking (hopefully), so reset the engine run time to prompt ASE.
           if(configPage4.ignBypassEnabled > 0) { digitalWrite(pinIgnBypass, LOW); }
 

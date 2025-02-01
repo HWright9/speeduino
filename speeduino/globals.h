@@ -202,7 +202,7 @@
 #define BIT_SPARK_HRDLIM          2  //Hard limiter indicator
 #define BIT_SPARK_SFTLIM          3  //Soft limiter indicator
 #define BIT_SPARK_BOOSTCUT        4  //Spark component of MAP based boost cut out
-#define BIT_SPARK_ERROR           5  // Error is detected
+#define BIT_SPARK_MIL             5  // Malfunction Indicator Light (MIL) is active
 #define BIT_SPARK_IDLE            6  // idle on
 #define BIT_SPARK_SYNC            7  // Whether engine has sync or not
 
@@ -452,6 +452,12 @@ This is so we can use an unsigned byte (0-255) to represent temperature ranges f
 #define LOGGER_FILENAMING_OVERWRITE     0
 #define LOGGER_FILENAMING_DATETIME      1
 #define LOGGER_FILENAMING_SEQENTIAL     2
+
+//Bitfield of OBD ready flags used to inhibit or allow DTC setting.
+#define OBD_READY_BATT                  0
+#define OBD_READY_RUNNING               1
+#define OBD_READY_TIME                  2
+#define OBD_READY_SPEED                 3
 
 extern const char TSfirmwareVersion[] PROGMEM;
 extern const char VehicleIdentificationNumber[] PROGMEM;
@@ -737,7 +743,6 @@ struct statuses {
   volatile uint32_t startRevolutions; /**< A counter for how many revolutions have been completed since sync was achieved. */
   uint16_t boostTarget;
   byte testOutputs;   ///< Test Output bits (only first bit used/tested ?)
-  bool testActive;    // Not in use ? Replaced by testOutputs ?
   uint16_t boostDuty; ///< Boost Duty percentage value * 100 to give 2 points of precision
   byte idleLoad;      ///< Either the current steps or current duty cycle for the idle control
   uint16_t canin[16]; ///< 16bit raw value of selected canin data for channels 0-15
@@ -783,6 +788,7 @@ struct statuses {
   int16_t latG;  /**< Lateral G force right hand turn is positive 2g is 32768. -2g is -32768 */
   uint64_t accumDuration; // This is the accumulated duration of XXX for total fuel used calculations in uS minus injector open time.
   uint16_t fuelUsedThisKey; // Litres *1000, max 65 litres
+  uint8_t OBD_DTC_Ready; // Bitfield of variables that indicate the OBD system is ready to set DTC's
   };
 
 /** Page 2 of the config - mostly variables that are required for fuel.

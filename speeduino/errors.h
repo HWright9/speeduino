@@ -4,36 +4,37 @@
 /*
  * Up to 64 different error codes may be defined (6 bits)
  */
-#define ERR_NONE        0 //No error
-#define ERR_UNKNOWN     1 //Unknown error
-#define ERR_IAT_SHORT   2 //Inlet sensor shorted
-#define ERR_IAT_GND     3 //Inlet sensor grounded
-#define ERR_CLT_SHORT   4 //Coolant sensor shorted
-#define ERR_CLT_GND     5 //Coolant Sensor grounded
-#define ERR_O2_SHORT    6 //O2 sensor shorted
-#define ERR_O2_GND      7 //O2 sensor grounded
-#define ERR_TPS_SHORT   8 //TPS shorted (Is potentially valid)
-#define ERR_TPS_GND     9 //TPS grounded (Is potentially valid)
-#define ERR_BAT_HIGH    10 //Battery voltage is too high
-#define ERR_BAT_LOW     11 //Battery voltage is too low
-#define ERR_MAP_HIGH    12 //MAP output is too high
-#define ERR_MAP_LOW     13 //MAP output is too low
 
-#define ERR_DEFAULT_IAT_SHORT   80 //Note that the default is 40C. 80 is used due to the -40 offset
-#define ERR_DEFAULT_IAT_GND     80 //Note that the default is 40C. 80 is used due to the -40 offset
-#define ERR_DEFAULT_CKT_SHORT   80 //Note that the default is 40C. 80 is used due to the -40 offset
+//DTC's 0-15
+#define BIT_DTC_XX3     0  // Spare
+#define BIT_DTC_P0089   1  // Fuel Pressure Regulator Performance
+#define BIT_DTC_P0107   2  // Manifold Absolute Pressure/Barometric Pressure Circuit Low Input
+#define BIT_DTC_P0108   3  // Manifold Absolute Pressure/Barometric Pressure Circuit High Input
+#define BIT_DTC_P0112   4	 // Intake Air Temperature Circuit Low Input
+#define BIT_DTC_P0113   5	 // Intake Air Temperature Circuit High Input
+#define BIT_DTC_P0117   6	 // Engine Coolant Temperature Circuit Low Input
+#define BIT_DTC_P0118   7	 // Engine Coolant Temperature Circuit High Input
+#define BIT_DTC_P0122   8	 // Throttle/Pedal Position Sensor/Switch A Circuit Low Input
+#define BIT_DTC_P0123   9	 // Throttle/Pedal Position Sensor/Switch A Circuit High Input
+#define BIT_DTC_P0191	  10 //Fuel Rail Pressure Sensor Circuit Range/Performance
+#define BIT_DTC_P0341   11 // Camshaft Position Sensor Circuit Range/Performance
+#define BIT_DTC_P0562	  12 //System Voltage Low
+#define BIT_DTC_P0563   13 //System Voltage High
+#define BIT_DTC_XX1	    14 //Spare
+#define BIT_DTC_XX2	    15 //Spare
+
+
+#define ERR_DEFAULT_IAT_SHORT   65 //Note that the default is 25C. 65 is used due to the -40 offset
+#define ERR_DEFAULT_IAT_GND     65 //Note that the default is 25C. 65 is used due to the -40 offset
+#define ERR_DEFAULT_CLT_SHORT   80 //Note that the default is 40C. 80 is used due to the -40 offset
 #define ERR_DEFAULT_CLT_GND     80 //Note that the default is 40C. 80 is used due to the -40 offset
-#define ERR_DEFAULT_O2_SHORT    147 //14.7
-#define ERR_DEFAULT_O2_GND      147 //14.7
-#define ERR_DEFAULT_TPS_SHORT   50 //50%
-#define ERR_DEFAULT_TPS_GND     50 //50%
-#define ERR_DEFAULT_BAT_HIGH    130 //13v
-#define ERR_DEFAULT_BAT_LOW     130 //13v
+#define ERR_DEFAULT_O2_Fault    147 //14.7
+#define ERR_DEFAULT_TPS_Fault   50 //25%
 #define ERR_DEFAULT_MAP_HIGH    240
 #define ERR_DEFAULT_MAP_LOW     80
 
 
-#define MAX_ERRORS  4 //The number of errors the system can hold simultaneously. Should be a power of 2
+#define OBD_MAX_DTCS  16 //The number of DTCs in memory
 
 /*
  * This struct is a single byte in length and is sent to TS
@@ -46,10 +47,12 @@ struct packedError
   byte errorID  : 6;
 };
 
-byte getNextError();
-byte setError(byte);
-void clearError(byte);
-
-extern byte errorCount;
+uint8_t setDTC(uint8_t DTCref);
+uint8_t checkDTC(uint8_t DTCref);
+void clearAllDTCS(void);
+uint8_t getNumDTCS(void);
+uint16_t getNextDTC(uint8_t reset);
+uint8_t reportDTCs_TS();
+void DTCSetter_1000ms(void);
 
 #endif

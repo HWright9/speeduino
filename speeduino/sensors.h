@@ -69,8 +69,6 @@ volatile byte vssIndex;
 
 //These variables are used for tracking the number of running sensors values that appear to be errors. Once a threshold is reached, the sensor reading will go to default value and assume the sensor is faulty
 byte mapErrorCount = 0;
-byte iatErrorCount = 0;
-byte cltErrorCount = 0;
 
 static inline void instanteneousMAPReading(bool=true) __attribute__((always_inline));
 static inline void readMAP() __attribute__((always_inline));

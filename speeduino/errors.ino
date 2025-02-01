@@ -137,11 +137,11 @@ byte reportDTCs_TS()
 
     //currentError.errorNum = currentErrorNum;
     //currentError.errorID = errorCodes[currentErrorNum];
-    
-    currentError.errorNum = OBD_Num_DTCs;
-    if (BIT_CHECK(OBD_ActiveDTCs, currentErrorNum) == true)
+    if (OBD_Num_DTCs <= 4) { currentError.errorNum = OBD_Num_DTCs; }
+    else { currentError.errorNum = 4; } // Largest value in 2 bits is 4.
+    if (BIT_CHECK(OBD_ActiveDTCs, currentErrorNum) == true) // Returns DTC if active, otherwise 0. Takes OBD_MAX_DTCS sec to cycle though all possible DTCs
     {
-      currentError.errorID = OBD_DTC_List[currentErrorNum];
+      currentError.errorID = (uint16_t)pgm_read_word_near(OBD_DTC_List + currentErrorNum);
     }
     else
     {

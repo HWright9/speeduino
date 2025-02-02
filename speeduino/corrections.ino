@@ -125,10 +125,10 @@ uint16_t correctionsFuel()
     inj_opentime_uS = configPage2.injOpen * 10; // Set injector open time here so it's in one place
   }
 
-  currentStatus.iatCorrection = correctionIATDensity();
+  if( BIT_CHECK(LOOP_TIMER, BIT_TIMER_10HZ) ) { currentStatus.iatCorrection = correctionIATDensity(); }
   if (currentStatus.iatCorrection != 100) { sumCorrections = div100(sumCorrections * currentStatus.iatCorrection); }
 
-  currentStatus.baroCorrection = correctionBaro();
+  if( BIT_CHECK(LOOP_TIMER, BIT_TIMER_1HZ) ) { currentStatus.baroCorrection = correctionBaro(); }
   if (currentStatus.baroCorrection != 100) { sumCorrections = div100(sumCorrections * currentStatus.baroCorrection); }
 
   currentStatus.flexCorrection = correctionFlex();
@@ -480,11 +480,7 @@ This corrects for changes in air density from movement of the temperature.
 byte correctionIATDensity()
 {
   byte IATValue = 100;
-  
-  if( BIT_CHECK(LOOP_TIMER, BIT_TIMER_10HZ) ) // Value doesnt change fast. Saves loops
-  {
-    IATValue = table2D_getValue(&IATDensityCorrectionTable, currentStatus.IAT + CALIBRATION_TEMPERATURE_OFFSET); //currentStatus.IAT is the actual temperature, values in IATDensityCorrectionTable.axisX are temp+offset
-  }
+  IATValue = table2D_getValue(&IATDensityCorrectionTable, currentStatus.IAT + CALIBRATION_TEMPERATURE_OFFSET); //currentStatus.IAT is the actual temperature, values in IATDensityCorrectionTable.axisX are temp+offset
   return IATValue;
 }
 
@@ -494,11 +490,7 @@ byte correctionIATDensity()
 byte correctionBaro()
 {
   byte baroValue = 100;
-  if( BIT_CHECK(LOOP_TIMER, BIT_TIMER_1HZ) ) // Value doesnt change fast. Saves loops
-  {
   baroValue = table2D_getValue(&baroFuelTable, currentStatus.baro);
-  }
-
   return baroValue;
 }
 

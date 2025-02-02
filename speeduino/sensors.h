@@ -30,6 +30,8 @@
 #define VSS_SAMPLES         4 //Must be a power of 2 and smaller than 255
 
 #define TPS_READ_FREQUENCY  100 //ONLY VALID VALUES ARE 15 or 30 or 100!!!
+#define TPSDOT_DIVIDER  5 //This is a divider to the read frequency above for TPS_DOT update rate
+#define TPSDOT_READ_FREQUENCY  (TPS_READ_FREQUENCY/TPSDOT_DIVIDER)
 
 #define FPDIAG_DISABLED 0
 #define FPDIAG_QUICK 1

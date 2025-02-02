@@ -20,6 +20,7 @@ A full copy of the license may be found in the projects root directory
 
 uint8_t FuelPressErrorCounter = 0; // Fuel pressure diagnostic counter
 uint8_t BattV_DTC_Tmr_67ms = 0; //Battery voltage diag counter. 15Hz update rate
+uint8_t tpsReadCntr = 0; // Used for dividing read frequency for TPSDOT
 
 /** Init all ADC conversions by setting resolutions, etc.
  */
@@ -421,12 +422,14 @@ static inline void readMAP()
 
 void readTPS(bool useFilter)
 {
-  currentStatus.TPSlast = currentStatus.TPS; // Depreciated but kept here for any backwards compatabiltiy - HRW
+  if(tpsReadCntr < (TPS_READ_FREQUENCY - 1)) { tpsReadCntr++; } else { tpsReadCntr = 0; }
   
-  tpsHistory[0] = tpsHistory[1]; //oldest
-  tpsHistory[1] = tpsHistory[2];
-  tpsHistory[2] = currentStatus.TPS; //newest - Check AE_TPS_DOT_HIST_BINS to make sure array is indexed correctly.
-  
+  if (tpsReadCntr % TPSDOT_DIVIDER == 0) // This makes AE consistant, 1/5 update rate of TPS read frequency. See TPSDOT_READ_FREQUENCY
+  { 
+    tpsHistory[0] = tpsHistory[1]; //oldest
+    tpsHistory[1] = tpsHistory[2];
+    tpsHistory[2] = currentStatus.TPS; //newest - Check AE_TPS_DOT_HIST_BINS to make sure array is indexed correctly.
+  }
   
   //Check whether the closed throttle position sensor is active (shared calibrations with dual sensor so can only have one or the other.)
   if ( (configPage2.CTPSEnabled == true) && (configPage15.tpsType != TPS_MODE_DUALSENSOR) )

@@ -266,13 +266,9 @@ uint16_t correctionAccel()
     //Get the TPS rate change
    
     tpsDOTTimeFiltIdx = configPage15.tpsDOTTimeFilt; // Time base for calculating TPS Dot, 0 = 3 loops ago, 1 = 2 loops ago, 2 = previous loop.
-    if((tpsDOTTimeFiltIdx >= AE_TPS_DOT_HIST_BINS) ) { tpsDOTTimeFiltIdx = (AE_TPS_DOT_HIST_BINS - 1); } // Protection for array indexing if eeprom not set. 
+    if((tpsDOTTimeFiltIdx > (AE_TPS_DOT_HIST_BINS - 1)) ) { tpsDOTTimeFiltIdx = (AE_TPS_DOT_HIST_BINS - 1); } // Protection for array indexing if eeprom not set. 
     TPS_change = (currentStatus.TPS - tpsHistory[tpsDOTTimeFiltIdx]); // This provides an option to calculate TPS change over a longer time period. Longer time base = better fidelity at slow signals. Shorter Time base = better fidelity at fast signals.
-    currentStatus.tpsDOT = (TPS_READ_FREQUENCY * TPS_change) / (2*(AE_TPS_DOT_HIST_BINS - tpsDOTTimeFiltIdx)); //This is the % per second that the TPS has moved
-    
-    //TPS_change = (currentStatus.TPS - currentStatus.TPSlast);
-    //currentStatus.tpsDOT = ldiv(1000000, (TPS_time - TPSlast_time)).quot * TPS_change; //This is the % per second that the TPS has moved
-    //currentStatus.tpsDOT = (TPS_READ_FREQUENCY * TPS_change) / 2; //This is the % per second that the TPS has moved, adjusted for the 0.5% resolution of the TPS
+    currentStatus.tpsDOT = (TPSDOT_READ_FREQUENCY * TPS_change) / (2*(AE_TPS_DOT_HIST_BINS - tpsDOTTimeFiltIdx)); //This is the % per second that the TPS has moved
   }
   
 
@@ -484,8 +480,11 @@ This corrects for changes in air density from movement of the temperature.
 byte correctionIATDensity()
 {
   byte IATValue = 100;
-  IATValue = table2D_getValue(&IATDensityCorrectionTable, currentStatus.IAT + CALIBRATION_TEMPERATURE_OFFSET); //currentStatus.IAT is the actual temperature, values in IATDensityCorrectionTable.axisX are temp+offset
-
+  
+  if( BIT_CHECK(LOOP_TIMER, BIT_TIMER_10HZ) ) // Value doesnt change fast. Saves loops
+  {
+    IATValue = table2D_getValue(&IATDensityCorrectionTable, currentStatus.IAT + CALIBRATION_TEMPERATURE_OFFSET); //currentStatus.IAT is the actual temperature, values in IATDensityCorrectionTable.axisX are temp+offset
+  }
   return IATValue;
 }
 
@@ -495,7 +494,10 @@ byte correctionIATDensity()
 byte correctionBaro()
 {
   byte baroValue = 100;
+  if( BIT_CHECK(LOOP_TIMER, BIT_TIMER_1HZ) ) // Value doesnt change fast. Saves loops
+  {
   baroValue = table2D_getValue(&baroFuelTable, currentStatus.baro);
+  }
 
   return baroValue;
 }

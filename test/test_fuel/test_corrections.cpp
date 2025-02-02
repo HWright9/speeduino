@@ -257,7 +257,6 @@ void test_corrections_TAE_no_rpm_taper()
   configPage2.aeTaperMin = 50; //5000
   configPage2.aeTaperMax = 60; //6000
 
-  currentStatus.TPSlast = 0;
   currentStatus.TPS = 50; //25% actual value
 
   uint16_t accelValue = correctionAccel(); //Run the AE calcs
@@ -274,7 +273,6 @@ void test_corrections_TAE_50pc_rpm_taper()
   configPage2.aeTaperMin = 10; //1000
   configPage2.aeTaperMax = 50; //5000
 
-  currentStatus.TPSlast = 0;
   currentStatus.TPS = 50; //25% actual value
 
   uint16_t accelValue = correctionAccel(); //Run the AE calcs
@@ -291,7 +289,6 @@ void test_corrections_TAE_110pc_rpm_taper()
   configPage2.aeTaperMin = 10; //1000
   configPage2.aeTaperMax = 50; //5000
 
-  currentStatus.TPSlast = 0;
   currentStatus.TPS = 50; //25% actual value
 
   uint16_t accelValue = correctionAccel(); //Run the AE calcs
@@ -308,7 +305,6 @@ void test_corrections_TAE_under_threshold()
   configPage2.aeTaperMin = 10; //1000
   configPage2.aeTaperMax = 50; //5000
 
-  currentStatus.TPSlast = 0;
   currentStatus.TPS = 6; //3% actual value. TPSDot should be 90%/s
 	configPage2.taeThresh = 100; //Above the reading of 90%/s
 
@@ -326,7 +322,6 @@ void test_corrections_TAE_50pc_warmup_taper()
   configPage2.aeTaperMin = 50; //5000
   configPage2.aeTaperMax = 60; //6000
 
-  currentStatus.TPSlast = 0;
   currentStatus.TPS = 50; //25% actual value
 	
 	//Set a cold % of 50% increase

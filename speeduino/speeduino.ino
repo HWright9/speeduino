@@ -520,6 +520,8 @@ void loop()
 
     calculateSecondaryFuel();
     calculateSecondarySpark();
+    
+    
 
     //Always check for sync
     //Main loop runs within this clause
@@ -1259,6 +1261,10 @@ void loop()
     {
       digitalWrite(pinResetControl, LOW);
       BIT_CLEAR(currentStatus.status3, BIT_STATUS3_RESET_PREVENT);
+    }
+    else
+    {
+      currentStatus.corrections = correctionsFuel(); //this doesnt have any practical purpose. It just updates some variables for testing with the engine off.
     }
 } //loop()
 #endif //Unit test guard

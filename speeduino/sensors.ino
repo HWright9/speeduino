@@ -18,8 +18,8 @@ A full copy of the license may be found in the projects root directory
 #include "pages.h"
 #include "decoders.h"
 
-uint16_t FuelPressErrorCounter; // Fuel pressure diagnostic counter
-uint16_t OilPressDiagCntr; // Oil pressure diagnostic counter
+uint8_t FuelPressErrorCounter = 0; // Fuel pressure diagnostic counter
+uint8_t BattV_DTC_Tmr_67ms = 0; //Battery voltage diag counter. 15Hz update rate
 
 /** Init all ADC conversions by setting resolutions, etc.
  */
@@ -720,12 +720,16 @@ void readBat(bool useFilter)
   {
     if (currentStatus.battery10 >= 200) // over 20V
     {
-      setDTC(BIT_DTC_P0563); //System Voltage High
+	    if (BattV_DTC_Tmr_67ms < 254) { BattV_DTC_Tmr_67ms++; }
+      if (BattV_DTC_Tmr_67ms > 60) { setDTC(BIT_DTC_P0563); } //System Voltage High About 4 sec
     }
     else if (currentStatus.battery10 <= 90)
     {
-      setDTC(BIT_DTC_P0562); //System Voltage Low
+      if (BattV_DTC_Tmr_67ms < 254) { BattV_DTC_Tmr_67ms++; }
+      if (BattV_DTC_Tmr_67ms > 60) { setDTC(BIT_DTC_P0562); } //System Voltage Low About 4 sec
     }
+    else { BattV_DTC_Tmr_67ms = 0; } //reset timer
+    
   }
   
   if ((checkDTC(BIT_DTC_P0563) == false) && (checkDTC(BIT_DTC_P0563) == false))
@@ -733,7 +737,7 @@ void readBat(bool useFilter)
     if ((currentStatus.battery10 >= 105) && (currentStatus.battery10 < 200)) { BIT_SET(currentStatus.OBD_DTC_Ready, OBD_READY_BATT); }      // Voltage over 10.5V diagnostics are valid
     else if (currentStatus.battery10 < 100) { BIT_CLEAR(currentStatus.OBD_DTC_Ready, OBD_READY_BATT); }// Voltage under 10V disable DTC's
   }
-  else { BIT_CLEAR(currentStatus.OBD_DTC_Ready, OBD_READY_BATT); }
+  else { BIT_CLEAR(currentStatus.OBD_DTC_Ready, OBD_READY_BATT); } // Disable diags if we cant trust battery voltage.
 }
 
 /**
@@ -1000,6 +1004,29 @@ uint16_t filterADC(uint32_t input, uint32_t alpha, uint32_t prior)
     { 
       if (input > prior) { result = (uint16_t)prior + 1; }
       else { result = (uint16_t)prior - 1; }
+    } // Ensures filter convergence to input value when alpha filters are large and changes in result are <1.
+  }
+  // else result = input. and nothing to do.
+  return result;
+}
+
+/**
+ * @brief Calculates a low pass filter using an "alpha value." on a signed integer (+/-32767) Returns the filtered value
+ * 
+ * @param input The input value to be used to update the previous value.
+ * @param alpha The filter value. 128 would be a 50% per loop filter. Valid range 0-255
+ * @param prior The previous value.
+ */
+int16_t filterSigned(int32_t input, int32_t alpha, int32_t prior)
+{
+  int16_t result = (int16_t)input;
+  if ((input != prior) && (alpha > 0)) // only need to calculate filter if there is a difference or a filter value
+  {
+    result = (((input * (256 - alpha)) + (prior * alpha))) >> 8;
+    if (result == (int16_t)prior) // non-convergence detected
+    { 
+      if (input > prior) { result = (int16_t)prior + 1; }
+      else { result = (int16_t)prior - 1; }
     } // Ensures filter convergence to input value when alpha filters are large and changes in result are <1.
   }
   // else result = input. and nothing to do.

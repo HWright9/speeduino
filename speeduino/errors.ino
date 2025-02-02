@@ -19,7 +19,7 @@ uint8_t injectorPressure_DTC_Tmr_1s = 0;
 
 //This list must match the order of the defined DTC's
 const uint16_t OBD_DTC_List[OBD_MAX_DTCS] PROGMEM =
-{0x0000,  // Spare
+{0xC002,  // U0002
  0x0089,  // P0089
  0x0107,  // P0107
  0x0108,  // P0108
@@ -137,11 +137,11 @@ byte reportDTCs_TS()
 
     //currentError.errorNum = currentErrorNum;
     //currentError.errorID = errorCodes[currentErrorNum];
-    if (OBD_Num_DTCs <= 4) { currentError.errorNum = OBD_Num_DTCs; }
-    else { currentError.errorNum = 4; } // Largest value in 2 bits is 4.
-    if (BIT_CHECK(OBD_ActiveDTCs, currentErrorNum) == true) // Returns DTC if active, otherwise 0. Takes OBD_MAX_DTCS sec to cycle though all possible DTCs
+    if (OBD_Num_DTCs < 4) { currentError.errorNum = OBD_Num_DTCs; }
+    else { currentError.errorNum = B11; } // Largest value in 2 bits is 3.
+    if (BIT_CHECK(OBD_ActiveDTCs, currentErrorNum) == true) // Returns DTC bit position if active, otherwise 0. Takes OBD_MAX_DTCS sec to cycle though all possible DTCs
     {
-      currentError.errorID = (uint16_t)pgm_read_word_near(OBD_DTC_List + currentErrorNum);
+      currentError.errorID = currentErrorNum; //(uint16_t)pgm_read_word_near(OBD_DTC_List + currentErrorNum);
     }
     else
     {
@@ -185,20 +185,29 @@ void DTCSetter_1000ms(void)
   }
   
   // P0089 Fuel pressure performance, note seperate to error codes on the fuel pressure sender.
-  if (BIT_CHECK(currentStatus.OBD_DTC_Ready, OBD_READY_BATT) && BIT_CHECK(currentStatus.OBD_DTC_Ready, OBD_READY_RUNNING))
+  if ((currentStatus.fuelPumpOn == true) && (BIT_CHECK(currentStatus.OBD_DTC_Ready, OBD_READY_BATT) == true) && (BIT_CHECK(currentStatus.OBD_DTC_Ready, OBD_READY_RUNNING) == true))
   {
-    if ((currentStatus.InjectorDeltaPress < (configPage10.fPress_RefPress - 100)) || (currentStatus.InjectorDeltaPress > (configPage10.fPress_RefPress + 100))) // 1 Bar Variation
+	// 1 Bar Variation allowed
+    if (((configPage10.fPress_SensorType == FPRESS_TYPE_ABS) && 
+	      ((currentStatus.InjectorDeltaPress < (configPage10.fPress_RefPress - 201)) || 
+		     (currentStatus.InjectorDeltaPress > (configPage10.fPress_RefPress + 1)))) || // -101 as need to convert absolute reference pressure to gauge pressure.
+		    ((configPage10.fPress_SensorType == FPRESS_TYPE_GAUGE) && 
+	      ((currentStatus.InjectorDeltaPress < (configPage10.fPress_RefPress - 100)) || 
+		     (currentStatus.InjectorDeltaPress > (configPage10.fPress_RefPress + 100))))) 
     {
-      injectorPressure_DTC_Tmr_1s++; // update error timer
-      
+      if (injectorPressure_DTC_Tmr_1s < 254) { injectorPressure_DTC_Tmr_1s++; } // update error timer
       if (injectorPressure_DTC_Tmr_1s > 3) // 3 consecutive sec out of range.
       {
         setDTC(BIT_DTC_P0089);	//Fuel Pressure Regulator Performance
       }
     }
-    else
-    {
-      injectorPressure_DTC_Tmr_1s = 0; // ok reset timer.
-    }
+    else { injectorPressure_DTC_Tmr_1s = 0; } // reset timer.
+  }
+  else { injectorPressure_DTC_Tmr_1s = 0; } // reset timer.
+  
+  // U0002	High Speed CAN Communication Bus Performance, fault while running.
+  if ((currentStatus.status5 > 0) && (BIT_CHECK(currentStatus.OBD_DTC_Ready, OBD_READY_BATT) == true) && (BIT_CHECK(currentStatus.OBD_DTC_Ready, OBD_READY_RUNNING) == true))
+  { // This could be any signal not recieved, or sent, bus faults, or module faults.
+    setDTC(BIT_DTC_U0002);	//High Speed CAN Communication Bus Performance
   }
 }

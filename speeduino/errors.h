@@ -6,7 +6,7 @@
  */
 
 //DTC's 0-15
-#define BIT_DTC_XX3     0  // Spare
+#define BIT_DTC_U0002   0  // High Speed CAN Communication Bus Performance
 #define BIT_DTC_P0089   1  // Fuel Pressure Regulator Performance
 #define BIT_DTC_P0107   2  // Manifold Absolute Pressure/Barometric Pressure Circuit Low Input
 #define BIT_DTC_P0108   3  // Manifold Absolute Pressure/Barometric Pressure Circuit High Input
@@ -16,12 +16,12 @@
 #define BIT_DTC_P0118   7	 // Engine Coolant Temperature Circuit High Input
 #define BIT_DTC_P0122   8	 // Throttle/Pedal Position Sensor/Switch A Circuit Low Input
 #define BIT_DTC_P0123   9	 // Throttle/Pedal Position Sensor/Switch A Circuit High Input
-#define BIT_DTC_P0191	  10 //Fuel Rail Pressure Sensor Circuit Range/Performance
+#define BIT_DTC_P0191	  10 // Fuel Rail Pressure Sensor Circuit Range/Performance
 #define BIT_DTC_P0341   11 // Camshaft Position Sensor Circuit Range/Performance
-#define BIT_DTC_P0562	  12 //System Voltage Low
-#define BIT_DTC_P0563   13 //System Voltage High
-#define BIT_DTC_XX1	    14 //Spare
-#define BIT_DTC_XX2	    15 //Spare
+#define BIT_DTC_P0562	  12 // System Voltage Low
+#define BIT_DTC_P0563   13 // System Voltage High
+#define BIT_DTC_XX1	    14 // Spare
+#define BIT_DTC_XX2	    15 // Spare
 
 
 #define ERR_DEFAULT_IAT_SHORT   65 //Note that the default is 25C. 65 is used due to the -40 offset

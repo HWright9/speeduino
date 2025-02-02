@@ -678,8 +678,8 @@ byte correctionFuelPress()
       if ((configPage10.fPress_InjSupplyRef == FPRESS_REF_MAP)  && (mapErrorCount == 0)) { fPress_InjSupply = currentStatus.MAP + configPage10.fPress_RefPress; }
       else if (configPage10.fPress_InjSupplyRef == FPRESS_REF_BARO) { fPress_InjSupply = currentStatus.baro + configPage10.fPress_RefPress; }
       else { fPress_InjSupply = 101 + configPage10.fPress_RefPress; } // Fixed uses refernce value plus 101, making the reference value gauge pressure.
-      
-      if (configPage10.fPress_SensorType == FPRESS_TYPE_ABS) { fPress_InjSupply = fPress_InjSupply - 101; } // If user preferrs absolute pressure units then need to modify the refPress variable to remove this.
+       // If user preferrs absolute pressure units then need to modify the fPress_InjSupply variable output above to make it gauge pressure.
+      if (configPage10.fPress_SensorType == FPRESS_TYPE_ABS) { fPress_InjSupply = fPress_InjSupply - 101; }
     }
     
     // Calculate pressure accross the injectors and use lookup table for compensation factor.

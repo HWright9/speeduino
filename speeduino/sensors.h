@@ -87,6 +87,7 @@ void readEGT(bool=true); //Allows the option to override the use of the filter
 uint16_t readAuxanalog(uint8_t analogPin);
 uint16_t readAuxdigital(uint8_t digitalPin);
 uint16_t filterADC(uint32_t input, uint32_t alpha, uint32_t prior); // replaces inline macro ADC_FILTER
+int16_t filterSigned(int32_t input, int32_t alpha, int32_t prior); // Filter for signed numbers
 void readCLT(bool=true); //Allows the option to override the use of the filter
 void readIAT(bool=true); //Allows the option to override the use of the filter
 void readO2();

@@ -612,10 +612,14 @@ void canRx_EPB_Vss_Dflt(void)
 
 void canRx_EPBAccelGyro1(void)
 {
+  int16_t tempValue = 0;
   // Bytes 0 and 1 are Ax, accel is positive
-  currentStatus.longG = (CAN_Rx_Msgdata[0] << 8) | CAN_Rx_Msgdata[1]; //(highByte << 8) | lowByte 2g is 32768. -2g is -32768 
+  tempValue = (CAN_Rx_Msgdata[0] << 8) | CAN_Rx_Msgdata[1]; //Long G (highByte << 8) | lowByte 2g is 32767. -2g is -32767 
+  currentStatus.longG = filterSigned(tempValue, 204, currentStatus.longG); // Reasonable filter 0.2 of new value
+
   // Bytes 2 and 3 are Ay, right turn is positive
-  currentStatus.latG = (CAN_Rx_Msgdata[2] << 8) | CAN_Rx_Msgdata[3]; //(highByte << 8) | lowByte 2g is 32768. -2g is -32768 
+  tempValue = (CAN_Rx_Msgdata[2] << 8) | CAN_Rx_Msgdata[3]; // LatG //(highByte << 8) | lowByte 2g is 32767. -2g is -32767
+  currentStatus.latG = filterSigned(tempValue, 204, currentStatus.latG); // Reasonable filter 0.2 of new value
 }
 
 // Default action when message times out

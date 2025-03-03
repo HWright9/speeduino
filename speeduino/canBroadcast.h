@@ -65,13 +65,13 @@ uint8_t canTx_VehicleSpeed1(void);
 
 void canRx_MotecPLM_O2(void);
 void canRx_MotecPLM_O22(void);
-void canRx_EPB_Vss(void);
+void canRx_EPB_Status1(void);
 void canRx_EPBAccelGyro1(void);
 
 void canRx_MotecPLM_O2_Dflt(void);
 void canRx_MotecPLM_O22_Dflt(void);
-void canRx_EPB_Vss_Dflt(void);
-void canRx_EPB_Vss_Dflt(void);
+void canRx_EPB_Status1_Dflt(void);
+void canRx_EPB_Status1_Dflt(void);
 
 
 #endif

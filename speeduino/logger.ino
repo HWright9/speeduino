@@ -169,6 +169,7 @@ byte getTSLogEntry(uint16_t byteNum)
     case 131: statusValue = lowByte(currentStatus.fuelUsedThisKey); break;// Lateral G force
     case 132: statusValue = highByte(currentStatus.fuelUsedThisKey); break;
     case 133: statusValue = currentStatus.status5; break; //CAN bus status flags
+    case 134: statusValue = currentStatus.fuelLevel; break; //Fuel level via can
   }
 
   return statusValue;

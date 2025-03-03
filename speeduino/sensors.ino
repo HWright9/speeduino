@@ -21,6 +21,7 @@ A full copy of the license may be found in the projects root directory
 uint8_t FuelPressErrorCounter = 0; // Fuel pressure diagnostic counter
 uint8_t BattV_DTC_Tmr_67ms = 0; //Battery voltage diag counter. 15Hz update rate
 uint8_t tpsReadCntr = 0; // Used for dividing read frequency for TPSDOT
+uint8_t tps_Fault_tmr_10ms = 0; // Used for diagnostic timer for TPS 100hz update rate
 
 /** Init all ADC conversions by setting resolutions, etc.
  */
@@ -462,21 +463,32 @@ void readTPS(bool useFilter)
     if (currentStatus.tpsADC < configPage2.tpsMin) 
     { 
       tempADC = configPage2.tpsMin;
-      if((BIT_CHECK(currentStatus.OBD_DTC_Ready, OBD_READY_BATT) == true) && (currentStatus.tpsADC < (configPage2.tpsMin / 2)) && (configPage2.tpsMin > 15))  // TPS Min is at least 0.3V and we are detecting at 0.15V .
+      if((BIT_CHECK(currentStatus.OBD_DTC_Ready, OBD_READY_BATT) == true) && (configPage2.tpsMin > 6) && (currentStatus.tpsADC < 3))  // TPS Min is at least 0.1V and we are detecting at <0.05V .
       {
-        setDTC(BIT_DTC_P0122); // TPS A low
-        tpsFaulted = 1;
-      }        
+        if (tps_Fault_tmr_10ms < 255) { tps_Fault_tmr_10ms++; }
+        if (tps_Fault_tmr_10ms > 50) //0.5sec timer
+        {
+          setDTC(BIT_DTC_P0122); // TPS A low
+          tpsFaulted = 1;
+        }
+      }      
+      else { tps_Fault_tmr_10ms = 0; } 
     }
     else if(currentStatus.tpsADC > configPage2.tpsMax) 
     { 
       tempADC = configPage2.tpsMax;
-      if((BIT_CHECK(currentStatus.OBD_DTC_Ready, OBD_READY_BATT) == true) && (currentStatus.tpsADC > (configPage2.tpsMax + ((255-configPage2.tpsMax) / 2))) && (configPage2.tpsMax <= 245))  // TPS Max lower than 4.7V and we are detecting at 0.15V .
+      if((BIT_CHECK(currentStatus.OBD_DTC_Ready, OBD_READY_BATT) == true) && (configPage2.tpsMax < 249) && (currentStatus.tpsADC > 252))  // TPS Max lower than 4.9V and we are detecting at 4.95V .
       {
+        if (tps_Fault_tmr_10ms < 255) { tps_Fault_tmr_10ms++; }
+        if (tps_Fault_tmr_10ms > 50) //0.5sec timer
+        {
         setDTC(BIT_DTC_P0123); // TPS A high
         tpsFaulted = 1;
-      }       
+        }
+      }
+      else { tps_Fault_tmr_10ms = 0; }      
     }
+    else { tps_Fault_tmr_10ms = 0; }
     
     if (configPage15.tpsType == TPS_MODE_DUALSENSOR )
     {

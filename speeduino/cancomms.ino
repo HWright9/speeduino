@@ -354,6 +354,7 @@ void sendcanValues(uint16_t offset, uint16_t packetLength, byte cmd, byte portTy
   fullStatus[131] = lowByte(currentStatus.fuelUsedThisKey); // Fuel used since speeduino powered up in L
   fullStatus[132] = highByte(currentStatus.fuelUsedThisKey);
   fullStatus[133] = currentStatus.status5; //CAN Bus error status
+  fullStatus[134] = currentStatus.fuelLevel; //Fuel level
 
   if (packetLength >= NEW_CAN_PACKET_SIZE) { packetLength = NEW_CAN_PACKET_SIZE - 1; } //protection against array out of bounds.
   
@@ -501,7 +502,7 @@ void obd_Service_01(uint8_t requestedPIDlow)
     break;
     
     case 1:      //PID-0x01 Monitor status since DTCs cleared.
-      CAN_Tx_Msgdata[0] =  0x08;                 // sending 8 bytes
+      CAN_Tx_Msgdata[0] =  0x07;                 // sending 8 bytes
       CAN_Tx_Msgdata[1] =  0x41;                 // Same as query, except that 40h is added to the mode value. So:41h = show current data ,42h = freeze frame ,etc.
       CAN_Tx_Msgdata[2] =  0x01;                 // pid code
       CAN_Tx_Msgdata[3] =  getNumDTCS() | (BIT_CHECK(currentStatus.spark, BIT_SPARK_MIL) << 7);    //A7	State of the CEL/MIL (on/off). A6-A0	Number of confirmed emissions-related DTCs available for display.

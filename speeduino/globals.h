@@ -770,6 +770,7 @@ struct statuses {
   bool idleUpOutputActive; /**< Whether the idle up output is currently active */
   byte gear;         /**< Current gear (Calculated from vss) */
   int16_t fuelPressure; /**< Fuel pressure in kPa  */
+  uint8_t fuelLevel; /** Fuel Level in Litres */
   uint16_t InjectorDeltaPress; /**< Injector delta pressure in kPa Absolute */
   int fuelPress_ADC; 
   byte oilPressure;  /**< Oil pressure in KPa x 4 Absolute*/

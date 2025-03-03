@@ -176,7 +176,7 @@ void can0_Maintainance(void)
   }
 }
 
-// Broadcasts Speeduino Generic data on CAN. Compatible with data dictionary v0.2
+// Broadcasts Speeduino Generic data on CAN. Compatible with data dictionary v0.3
 uint8_t sendCAN_Speeduino_100Hz(void)
 {
   uint8_t canErr = CAN0.checkError();
@@ -342,8 +342,9 @@ uint8_t recieveCAN_BroadCast(void)
       
       if (configPage2.vssMode == 1) // 1 is RX over CAN
       {
-        if ((CANrxId == 0x470) && (len == 8)) { canRx_EPB_Vss(); } // Parse Electric Park Brake data on 470. This has vss gear and clutch data from EPB.
+        if ((CANrxId == 0x470) && (len == 8)) { canRx_EPB_Status1(); } // Parse Electric Park Brake data on 470. This has vss gear and clutch data from EPB.
       }
+      // We don't RX the data in 0x471 (yet)
       
       if ((CANrxId == 0x472) && (len == 8)) { canRx_EPBAccelGyro1(); } // Parse Electric Park Brake data on 472. This is the 3 axis gyro
     }
@@ -358,7 +359,7 @@ uint8_t recieveCAN_BroadCast(void)
     // Timeout error handling
     if ((configPage6.egoType == 2) && (canO2TimeSinceLast > 10)) { canRx_MotecPLM_O2_Dflt(); }
     if ((configPage6.egoType == 2) && (canO22TimeSinceLast > 10)) { canRx_MotecPLM_O22_Dflt();}
-    if ((configPage2.vssMode == 1) && (canEPBTimeSinceLast > 10)) { canRx_EPB_Vss_Dflt();  canRx_EPBAccelGyro1_Dflt();}
+    if ((configPage2.vssMode == 1) && (canEPBTimeSinceLast > 10)) { canRx_EPB_Status1_Dflt();  canRx_EPBAccelGyro1_Dflt();}
   }  
   
   //Error handling
@@ -578,7 +579,7 @@ void canRx_MotecPLM_O22_Dflt(void)
 }
 
 /* Recieve EPB data on 470 */
-void canRx_EPB_Vss (void)
+void canRx_EPB_Status1 (void)
 {
   canEPBTimeSinceLast = 0; //reset timeout 
   BIT_CLEAR(currentStatus.status5, BIT_STATUS5_CAN_RXEPBDFLT); 
@@ -595,21 +596,30 @@ void canRx_EPB_Vss (void)
   if ((CAN_Rx_Msgdata[3] == 0) && (currentStatus.gear >= 2 )){ currentStatus.gear = 1; } // Reverse gearbox is in reverse, limit speeduino gear to 1st
   else if (CAN_Rx_Msgdata[3] >= 2){ currentStatus.gear = 0; } // All other states of reverse gearbox are neutral
 
-  // Read clutch trigger bit as the inverse of "clutch is top travel from EPB"
+  // Byte 4 is EBP control state
+  
+  // Byte 5 is Cruise Control State
+  
+  // Byte 6 is fuel level
+  currentStatus.fuelLevel = CAN_Rx_Msgdata[6]; // Fuel level is 0 to 25.5 L X*0.1
+
+  // Byte 7 Read clutch trigger bit as the inverse of "clutch is top travel from EPB"
   clutchTrigger = !(CAN_Rx_Msgdata[7] & 0b01000000); // Bit 1 inverted.
   // Other messages not read 
 
 }
 
 // Default action when message times out
-void canRx_EPB_Vss_Dflt(void)
+void canRx_EPB_Status1_Dflt(void)
 {
   currentStatus.vss = 0;
   currentStatus.gear = 0;
+  currentStatus.fuelLevel = 0;
   clutchTrigger = 0;
   BIT_SET(currentStatus.status5, BIT_STATUS5_CAN_RXEPBDFLT); 
 }
 
+/* Recieve EPB data on 472 */
 void canRx_EPBAccelGyro1(void)
 {
   int16_t tempValue = 0;

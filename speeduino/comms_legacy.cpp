@@ -744,13 +744,13 @@ void sendValuesLegacy()
   bytestosend -= Serial.write(99); // cold_adv_deg
   bytestosend -= Serial.write(99); // cold_adv_deg
 
-  temp = currentStatus.tpsDOT;
-  bytestosend -= Serial.write(temp>>8); // TPSdot
-  bytestosend -= Serial.write(temp); // TPSdot
+  temp = currentStatus.aeChangeRate; //was tpsDOT
+  bytestosend -= Serial.write(temp>>8); 
+  bytestosend -= Serial.write(temp); 
 
-  temp = currentStatus.mapDOT;
-  bytestosend -= Serial.write(temp >> 8); // MAPdot
-  bytestosend -= Serial.write(temp); // MAPdot
+  temp = currentStatus.aeChangeRate; //was mapDOT
+  bytestosend -= Serial.write(temp >> 8); // rate of change of ae input variable
+  bytestosend -= Serial.write(temp); 
 
   temp = currentStatus.dwell * 10;
   bytestosend -= Serial.write(temp>>8); // dwell
@@ -985,9 +985,9 @@ void sendPageASCII()
       Serial.println(F("\nPg 4 Cfg"));
       Serial.println(configPage4.triggerAngle);// configPage4.triggerAngle is an int so just display it without complication
       // Following loop displays byte values after that first int up to but not including the first array in config page 2
-      serial_println_range((byte*)&configPage4.FixAng, configPage4.taeBins);
-      serial_print_space_delimited_array(configPage4.taeBins);
-      serial_print_space_delimited_array(configPage4.taeValues);
+      serial_println_range((byte*)&configPage4.FixAng, configPage4.aePosBins);
+      serial_print_space_delimited_array(configPage4.aePosBins);
+      serial_print_space_delimited_array(configPage4.aeValues);
       serial_print_space_delimited_array(configPage4.wueBins);
       Serial.println(configPage4.dwellLimit);// Little lonely byte stuck between two arrays. No complications just display it.
       serial_print_space_delimited_array(configPage4.dwellCorrectionValues);

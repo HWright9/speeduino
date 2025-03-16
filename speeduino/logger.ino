@@ -34,14 +34,14 @@ byte getTSLogEntry(uint16_t byteNum)
     case 13: statusValue = currentStatus.wueCorrection; break; //Warmup enrichment (%)
     case 14: statusValue = lowByte(currentStatus.RPM); break; //rpm HB
     case 15: statusValue = highByte(currentStatus.RPM); break; //rpm LB
-    case 16: statusValue = (byte)(currentStatus.AEamount >> 1); break; //TPS acceleration enrichment (%) divided by 2 (Can exceed 255)
+    case 16: statusValue = (byte)(currentStatus.AEamount >> 1); break; //acceleration enrichment (%) divided by 2 (Can exceed 255)
     case 17: statusValue = lowByte(currentStatus.corrections); break; //Total GammaE (%)
     case 18: statusValue = highByte(currentStatus.corrections); break; //Total GammaE (%)
     case 19: statusValue = currentStatus.VE1; break; //VE 1 (%)
     case 20: statusValue = currentStatus.VE2; break; //VE 2 (%)
     case 21: statusValue = currentStatus.afrTarget; break;
-    case 22: statusValue = lowByte(currentStatus.tpsDOT); break; //TPS DOT
-    case 23: statusValue = highByte(currentStatus.tpsDOT); break; //TPS DOT
+    case 22: statusValue = lowByte(currentStatus.aeChangeRate); break; //ae rate change X variable
+    case 23: statusValue = highByte(currentStatus.aeChangeRate); break; //ae rate change X variable
     case 24: statusValue = currentStatus.advance; break;
     case 25: statusValue = currentStatus.TPS; break; // TPS (0% to 100%)
     case 26: statusValue = lowByte(currentStatus.loopsPerSecond); break;
@@ -128,7 +128,7 @@ byte getTSLogEntry(uint16_t byteNum)
     case 90: statusValue = lowByte(currentStatus.dwell); break;
     case 91: statusValue = highByte(currentStatus.dwell); break;
     case 92: statusValue = currentStatus.CLIdleTarget; break;
-    case 93: statusValue = (uint8_t)currentStatus.mapDOT; break;
+    case 93: statusValue = currentStatus.aeXVar; break; // was mapDOT
     case 94: statusValue = lowByte(currentStatus.vvt1Angle); break; //2 bytes for vvt1Angle
     case 95: statusValue = highByte(currentStatus.vvt1Angle); break;
     case 96: statusValue = currentStatus.vvt1TargetAngle; break;
@@ -206,7 +206,7 @@ int16_t getReadableLogEntry(uint16_t logIndex)
     case 16: statusValue = currentStatus.VE1; break; //VE 1 (%)
     case 17: statusValue = currentStatus.VE2; break; //VE 2 (%)
     case 18: statusValue = currentStatus.afrTarget; break;
-    case 19: statusValue = currentStatus.tpsDOT; break; //TPS DOT
+    case 19: statusValue = currentStatus.aeChangeRate; break; //change in ae X variable
     case 20: statusValue = currentStatus.advance; break;
     case 21: statusValue = currentStatus.TPS; break; // TPS (0% to 100%)
     
@@ -266,7 +266,7 @@ int16_t getReadableLogEntry(uint16_t logIndex)
     case 61: statusValue = currentStatus.ignLoad; break;
     case 62: statusValue = currentStatus.dwell; break;
     case 63: statusValue = currentStatus.CLIdleTarget; break;
-    case 64: statusValue = currentStatus.mapDOT; break;
+    case 64: statusValue = currentStatus.aeXVar; break;  // was mapDOT
     case 65: statusValue = currentStatus.vvt1Angle; break;
     case 66: statusValue = currentStatus.vvt1TargetAngle; break;
     case 67: statusValue = currentStatus.vvt1Duty; break;

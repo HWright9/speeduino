@@ -229,8 +229,8 @@ void sendcanValues(uint16_t offset, uint16_t packetLength, byte cmd, byte portTy
   fullStatus[19] = currentStatus.VE; //Current VE 1 (%)
   fullStatus[20] = currentStatus.VE2; //Current VE 2 (%)
   fullStatus[21] = currentStatus.afrTarget;
-  fullStatus[22] = lowByte(currentStatus.tpsDOT); //TPS DOT
-  fullStatus[23] = highByte(currentStatus.tpsDOT); //TPS DOT
+  fullStatus[22] = lowByte(currentStatus.aeChangeRate); // rate of change of accelleration enrichment x value
+  fullStatus[23] = highByte(currentStatus.aeChangeRate); // rate of change of accelleration enrichment x value
   fullStatus[24] = currentStatus.advance;
   fullStatus[25] = currentStatus.TPS; // TPS (0% to 100%)
   fullStatus[26] = lowByte(currentStatus.loopsPerSecond);
@@ -313,7 +313,7 @@ void sendcanValues(uint16_t offset, uint16_t packetLength, byte cmd, byte portTy
   fullStatus[90] = lowByte(currentStatus.dwell); 
   fullStatus[91] = highByte(currentStatus.dwell); 
   fullStatus[92] = currentStatus.CLIdleTarget;
-  fullStatus[93] = (uint8_t)(currentStatus.mapDOT); //rate of change of the map 
+  fullStatus[93] = currentStatus.aeXVar; //(used to be MAPDOT)
   fullStatus[94] = lowByte(currentStatus.vvt1Angle);
   fullStatus[95] = highByte(currentStatus.vvt1Angle);
   fullStatus[96] = currentStatus.vvt1TargetAngle;

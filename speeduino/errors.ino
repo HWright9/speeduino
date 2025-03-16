@@ -161,13 +161,23 @@ byte reportDTCs_TS()
 //This function checks to see if we need to set a DTC every sec
 void DTCSetter_1000ms(void)
 {
-  if (OBD_RunTimer_1s < 5) // 5 sec timer since power on
+  if ((BIT_CHECK(currentStatus.engine, BIT_ENGINE_RUN) == false) && (OBD_RunTimer_1s > 0))
+  {
+    OBD_RunTimer_1s --; // decrement timer, because we are also using this as the syncloss reset timer
+    
+    if (OBD_RunTimer_1s == 0)
+    {
+      BIT_CLEAR(currentStatus.OBD_DTC_Ready, OBD_READY_TIME);
+    }
+  }
+  if ((BIT_CHECK(currentStatus.engine, BIT_ENGINE_RUN) == true) && (OBD_RunTimer_1s < OBD_ENBL_AFTERSTARTTMR)) // 5 sec timer since power on
   {
     OBD_RunTimer_1s++;
   }
-  else
+  
+  if (OBD_RunTimer_1s > OBD_ENBL_AFTERSTARTTMR)
   {
-    BIT_SET(currentStatus.OBD_DTC_Ready, OBD_READY_TIME);
+    BIT_SET(currentStatus.OBD_DTC_Ready, OBD_READY_TIME); // timer expired.
   }
   
   // Syncloss is P0341 Camshaft Position Sensor Circuit Range/Performance
@@ -177,10 +187,10 @@ void DTCSetter_1000ms(void)
     {
       setDTC(BIT_DTC_P0341); // Camshaft Position Sensor Circuit Range/Performance
     }
-    if ((BIT_CHECK(currentStatus.engine, BIT_ENGINE_RUN) == false) && (BIT_CHECK(currentStatus.engine, BIT_ENGINE_CRANK) == false))
+    else if ((BIT_CHECK(currentStatus.engine, BIT_ENGINE_RUN) == false) && (BIT_CHECK(currentStatus.engine, BIT_ENGINE_CRANK) == false) && (OBD_RunTimer_1s >= 1))
     {
-      // not running or cranking, reset syncloss after 1 sec otherwise multiple stalls and starts without cycling the controller power will eventually set the DTC
-      currentStatus.syncLossCounter = 0; // reset after not running
+      // not running or cranking, but was previously. Reset non critical syncloss after 4 sec otherwise multiple stalls and starts without cycling the controller power will eventually set the DTC
+      currentStatus.syncLossCounter = 0; // reset after running and then stalled.
     }
   }
   

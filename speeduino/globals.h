@@ -326,6 +326,7 @@
 
 #define AE_MODE_TPS         0
 #define AE_MODE_MAP         1
+#define AE_MODE_DELTAVE     2
 
 #define AE_MODE_MULTIPLIER  0
 #define AE_MODE_ADDER       1
@@ -421,8 +422,6 @@
 #define INJ_BANK1 0
 #define INJ_BANK2 1
 
-#define AE_TPS_DOT_HIST_BINS 3
-
 #define CALIBRATION_TABLE_SIZE 512 ///< Calibration table size for CLT, IAT, O2
 #define CALIBRATION_TEMPERATURE_OFFSET 40 /**< All temperature measurements are stored offset by 40 degrees.
 This is so we can use an unsigned byte (0-255) to represent temperature ranges from -40 to 215 */
@@ -489,8 +488,8 @@ extern trimTable3d trim7Table; //6x6 Fuel trim 7 map
 extern trimTable3d trim8Table; //6x6 Fuel trim 8 map
 
 extern struct table3d4RpmLoad dwellTable; //4x4 Dwell map
-extern struct table2D taeTable; //4 bin TPS Acceleration Enrichment map (2D)
-extern struct table2D maeTable;
+extern struct table2D aeTable; //4 bin TPS Acceleration Enrichment map (2D)
+extern struct table2D aeNegTable;
 extern struct table2D WUETable; //10 bin Warm Up Enrichment map (2D)
 extern struct table2D ASETable; //4 bin After Start Enrichment map (2D)
 extern struct table2D ASECountTable; //4 bin After Start duration map (2D)
@@ -667,7 +666,7 @@ struct statuses {
   long longRPM;   ///< RPM as long int (gets assigned to / maintained in statuses.RPM as well)
   int mapADC;
   int baroADC;
-  long MAP;     ///< Manifold absolute pressure. Has to be a long for PID calcs (Boost control)
+  int16_t MAP;     ///< Manifold absolute pressure.
   int16_t EMAP; ///< EMAP ... (See @ref config6.useEMAP for EMAP enablement)
   int16_t EMAPADC;
   int16_t EGT; ///< EGT
@@ -675,8 +674,8 @@ struct statuses {
   byte TPS;    /**< The current TPS reading (0% - 100%). Is the tpsADC value after the calibration is applied */
   byte tpsADC; /**< byte (valued: 0-255) representation of the TPS. Downsampled from the original 10-bit (0-1023) reading, but before any calibration is applied */
   byte tps2ADC; /**< byte (valued: 0-255) representation of the TPS2 sensor. Downsampled from the original 10-bit (0-1023) reading, but before any calibration is applied */
-  int16_t tpsDOT; /**< TPS delta over time. Measures the % per second that the TPS is changing. Note that is signed value, because TPSdot can be also negative */
-  int16_t mapDOT; /**< MAP delta over time. Measures the kpa per second that the MAP is changing. Note that is signed value, because MAPdot can be also negative */
+  int16_t aeChangeRate; /**< Acceleration enrichment input variable change over time. Note that is signed value, because can be also negative */
+  uint8_t aeXVar; /**< X variable used for Acceleration enrichment. */
   volatile int rpmDOT; /**< RPM delta over time (RPM increase / s ?) */
   byte VE;     /**< The current VE value being used in the fuel calculation. Can be the same as VE1 or VE2, or a calculated value of both. */
   byte VE1;    /**< The VE value from fuel table 1 */
@@ -801,9 +800,9 @@ struct statuses {
 struct config2 {
 
   byte aseTaperTime;
-  byte aeColdPct;  //AE cold clt modifier %
+  byte aeColdPctRich;  //AE cold clt modifier %
   byte aeColdTaperMin; //AE cold modifier, taper start temp (full modifier, was ASE in early versions)
-  byte aeMode : 2;      /**< Acceleration Enrichment mode. 0 = TPS, 1 = MAP. Values 2 and 3 reserved for potential future use (ie blended TPS / MAP) */
+  byte aeMode : 2;      /**< Acceleration Enrichment mode. 0 = TPS, 1 = MAP. 2 = Change in VE. 3 reserved for potential future use (ie blended TPS / MAP) */
   byte battVCorMode : 1;
   byte SoftLimitMode : 1;
   byte TachoOutput : 1; /// Enable tachometer output signal
@@ -815,8 +814,8 @@ struct config2 {
   byte tachoPin : 6;    ///< Custom pin setting for tacho output (if != 0, override copied to pinTachOut, which defaults to board assigned tach pin)
   byte tachoMode : 2;    ///< Tacho output mode 0 = IGNPulse, 1 = IGNSkipPulse 2 = WhlToothSync,
   byte tachoDuration;   //The duration of the tacho pulse in mS
-  byte maeThresh;       /**< The MAPdot threshold that must be exceeded before AE is engaged */
-  byte taeThresh;       /**< The TPSdot threshold that must be exceeded before AE is engaged */
+  byte aeNegThresh;       /**< The Negative threshold of aeChangeRate that must be exceeded before AE is engaged */
+  byte aeThresh;       /**< The Postive threshold of aeChangeRate that must be exceeded before AE is engaged */
   byte aeTime;
   byte taeMinChange;    /**< The minimum change in TPS that must be made before AE is engaged */
   byte maeMinChange;    /**< The minimum change in MAP that must be made before AE is engaged */
@@ -954,7 +953,7 @@ struct config2 {
   byte enableCluster2 : 1;
   byte unusedClusterBits : 4;
 
-  byte decelAmount;
+  byte aeColdPctLean;
 
 #if defined(CORE_AVR)
   };
@@ -1009,8 +1008,8 @@ struct config4 {
   byte SoftLimRetard; ///< Amount soft limit (ignition) retard (degrees)
   byte SoftLimMax;    ///< Time the soft limit can run (units 0.1S)
   byte HardRevLim;    ///< Hard rev limit (RPM/100)
-  byte taeBins[4];    ///< TPS based acceleration enrichment bins (Unit: %/s)
-  byte taeValues[4];  ///< TPS based acceleration enrichment rates (Unit: % to add), values matched to thresholds of taeBins
+  byte aePosBins[4];    ///< Positive acceleration enrichment bins (Unit: %/s)
+  byte aeValues[4];  ///< Postive acceleration enrichment rates (Unit: % to add), values matched to thresholds of aePosBins
   byte wueBins[10];   ///< Warmup Enrichment bins (Values are in @ref configPage2.wueValues OLD:configTable1)
   byte dwellLimit;
   byte dwellCorrectionValues[6]; ///< Correction table for dwell vs battery voltage
@@ -1035,8 +1034,8 @@ struct config4 {
   byte cltAdvBins[6];   /**< Coolant Temp timing advance curve bins */
   byte cltAdvValues[6]; /**< Coolant timing advance curve values. These are translated by 15 to allow for negative values */
 
-  byte maeBins[4];      /**< MAP based AE MAPdot bins */
-  byte maeRates[4];     /**< MAP based AE values */
+  byte aeNegBins[4];      /**< Negative acceleration enrichment values */
+  byte aeNegValues[4];     /**< negative AE values */
 
   int8_t batVoltCorrect; /**< Battery voltage calibration offset (Given as 10x value, e.g. 2v => 20) */
 
@@ -1515,7 +1514,7 @@ struct config15 {
   byte tpsType : 2; ///< TPS Sensor Type 
   byte egoResetwAFR : 1;  ///<ego freeze or reset output when AFR target less than min
   byte egoResetwfuelLoad : 1;  ///<ego freeze or reset output when fuel load greater than max
-  byte tpsDOTTimeFilt : 2; /// Time base for calculating TPS Dot, 0 = 3 loops ago, 1 = 2 loops ago, 2 = previous loop.
+  byte aeXDOTTimeFilt : 2; /// Time base for calculating TPS Dot, 0 = 3 loops ago, 1 = 2 loops ago, 2 = previous loop.
   byte injPrimewCrank : 1; /// Injector prime mode, if 0 then priming with igntion on. if 1 priming when engine cranking, only once per power cycle.
   byte unused15_246 : 1; //1 bit unused
   

@@ -57,6 +57,7 @@ void can0_Maintainance(void);
 
 uint8_t sendCAN_Speeduino_100Hz(void);
 uint8_t recieveCAN_BroadCast(void);
+void canRXErrHandler(void);
 
 uint8_t canTx_EngineSensor1(void);
 uint8_t canTx_EnginePosition1(void);

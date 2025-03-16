@@ -12,7 +12,7 @@ A full copy of the license may be found in the projects root directory
 
 //Old PID method. Retained in case the new one has issues
 //integerPID boostPID(&MAPx100, &boost_pwm_target_value, &boostTargetx100, configPage6.boostKP, configPage6.boostKI, configPage6.boostKD, DIRECT);
-integerPID_ideal boostPID(&currentStatus.MAP, &currentStatus.boostDuty , &currentStatus.boostTarget, &configPage10.boostSens, &configPage10.boostIntv, configPage6.boostKP, configPage6.boostKI, configPage6.boostKD, DIRECT); //This is the PID object if that algorithm is used. Needs to be global as it maintains state outside of each function call
+integerPID_ideal boostPID(&boostMAPLong, &currentStatus.boostDuty , &currentStatus.boostTarget, &configPage10.boostSens, &configPage10.boostIntv, configPage6.boostKP, configPage6.boostKI, configPage6.boostKD, DIRECT); //This is the PID object if that algorithm is used. Needs to be global as it maintains state outside of each function call
 integerPID vvtPID(&vvt_pid_current_angle, &currentStatus.vvt1Duty, &vvt_pid_target_angle, configPage10.vvtCLKP, configPage10.vvtCLKI, configPage10.vvtCLKD, configPage6.vvtPWMdir); //This is the PID object if that algorithm is used. Needs to be global as it maintains state outside of each function call
 integerPID vvt2PID(&vvt2_pid_current_angle, &currentStatus.vvt2Duty, &vvt2_pid_target_angle, configPage10.vvtCLKP, configPage10.vvtCLKI, configPage10.vvtCLKD, configPage4.vvt2PWMdir); //This is the PID object if that algorithm is used. Needs to be global as it maintains state outside of each function call
 
@@ -255,6 +255,7 @@ void boostByGear()
 {
   if(configPage4.boostType == OPEN_LOOP_BOOST)
   {
+    boostMAPLong = currentStatus.MAP; // needed because PID only accepts long types.
     if( configPage9.boostByGearEnabled == 1 )
     {
       uint16_t combinedBoost = 0;
@@ -323,6 +324,7 @@ void boostByGear()
   }
   else if (configPage4.boostType == CLOSED_LOOP_BOOST)
   {
+    boostMAPLong = currentStatus.MAP; // needed because PID only accepts long types.
     if( configPage9.boostByGearEnabled == 1 )
     {
       uint16_t combinedBoost = 0;

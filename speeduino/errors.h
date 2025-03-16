@@ -36,6 +36,8 @@
 
 #define OBD_MAX_DTCS  16 //The number of DTCs in memory
 
+#define OBD_ENBL_AFTERSTARTTMR 5 // 5 sec after start.
+
 /*
  * This struct is a single byte in length and is sent to TS
  * The first 2 bits are used to define the current error (0-3)

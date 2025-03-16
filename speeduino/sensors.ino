@@ -166,9 +166,9 @@ static inline void instanteneousMAPReading(bool useFilter)
   if (configPage10.useSensorMAP == true)
   {
     //Update the calculation times and last value. These are used by the MAP based Accel enrich
-    MAPlast = currentStatus.MAP;
-    MAPlast_time = MAP_time;
-    MAP_time = micros();
+    //MAPlast = currentStatus.MAP;
+    //MAPlast_time = MAP_time;
+    //MAP_time = micros();
 
     //Instantaneous MAP readings
     #if defined(ANALOG_ISR_MAP)
@@ -191,7 +191,10 @@ static inline void instanteneousMAPReading(bool useFilter)
   else 
   { 
     currentStatus.mapADC = 0;
-    currentStatus.MAP = 101; 
+    currentStatus.MAP = 101;
+    //MAPlast = currentStatus.MAP;
+    //MAPlast_time = MAP_time;
+    //MAP_time = micros();
   } // MAP not used so set to default value
     
   //Repeat for EMAP if it's enabled
@@ -274,9 +277,9 @@ static inline void readMAP()
           if( (MAPrunningValue != 0) && (MAPcount != 0) )
           {
             //Update the calculation times and last value. These are used by the MAP based Accel enrich
-            MAPlast = currentStatus.MAP;
-            MAPlast_time = MAP_time;
-            MAP_time = micros();
+            //MAPlast = currentStatus.MAP;
+            //MAPlast_time = MAP_time;
+            //MAP_time = micros();
 
             currentStatus.mapADC = ldiv(MAPrunningValue, MAPcount).quot;
             currentStatus.MAP = fastMap10Bit(currentStatus.mapADC, configPage2.mapMin, configPage2.mapMax); //Get the current MAP value
@@ -334,9 +337,9 @@ static inline void readMAP()
           //Reaching here means that the last cycle has completed and the MAP value should be calculated
 
           //Update the calculation times and last value. These are used by the MAP based Accel enrich
-          MAPlast = currentStatus.MAP;
-          MAPlast_time = MAP_time;
-          MAP_time = micros();
+          //MAPlast = currentStatus.MAP;
+          //MAPlast_time = MAP_time;
+          //MAP_time = micros();
 
           currentStatus.mapADC = MAPrunningValue;
           currentStatus.MAP = fastMap10Bit(currentStatus.mapADC, configPage2.mapMin, configPage2.mapMax); //Get the current MAP value
@@ -390,9 +393,9 @@ static inline void readMAP()
           if( (MAPrunningValue != 0) && (MAPcount != 0) )
           {
             //Update the calculation times and last value. These are used by the MAP based Accel enrich
-            MAPlast = currentStatus.MAP;
-            MAPlast_time = MAP_time;
-            MAP_time = micros();
+            //MAPlast = currentStatus.MAP;
+            //MAPlast_time = MAP_time;
+            //MAP_time = micros();
 
             currentStatus.mapADC = ldiv(MAPrunningValue, MAPcount).quot;
             currentStatus.MAP = fastMap10Bit(currentStatus.mapADC, configPage2.mapMin, configPage2.mapMax); //Get the current MAP value
@@ -423,14 +426,6 @@ static inline void readMAP()
 
 void readTPS(bool useFilter)
 {
-  if(tpsReadCntr < (TPS_READ_FREQUENCY - 1)) { tpsReadCntr++; } else { tpsReadCntr = 0; }
-  
-  if (tpsReadCntr % TPSDOT_DIVIDER == 0) // This makes AE consistant, 1/5 update rate of TPS read frequency. See TPSDOT_READ_FREQUENCY
-  { 
-    tpsHistory[0] = tpsHistory[1]; //oldest
-    tpsHistory[1] = tpsHistory[2];
-    tpsHistory[2] = currentStatus.TPS; //newest - Check AE_TPS_DOT_HIST_BINS to make sure array is indexed correctly.
-  }
   
   //Check whether the closed throttle position sensor is active (shared calibrations with dual sensor so can only have one or the other.)
   if ( (configPage2.CTPSEnabled == true) && (configPage15.tpsType != TPS_MODE_DUALSENSOR) )

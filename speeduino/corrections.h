@@ -6,6 +6,7 @@ All functions in the gamma file return
 #define CORRECTIONS_H
 
 #define IGN_IDLE_THRESHOLD 200 //RPM threshold (below CL idle target) for when ign based idle control will engage
+#define AE_X_DOT_HIST_BINS 3
 
 void initialiseCorrections();
 
@@ -13,6 +14,9 @@ uint16_t correctionsFuel();
 byte correctionWUE(); //Warmup enrichment
 uint16_t correctionCrankingASE(); // Cranking and After Start Enrichment
 uint16_t correctionAccel(); //Acceleration Enrichment
+uint8_t aeTaperRPM(uint16_t RPM); // AE Utility for RPM taper
+uint8_t aeTaperCLT(int16_t coolant); // AE Utility for coolant taper
+//uint8_t aeTaperCLT(int16_t coolant, uint8_t enrichment); // AE Utility for coolant taper
 byte correctionFloodClear(); //Check for flood clear on cranking
 byte correctionAFRClosedLoop(); //Closed loop AFR adjustment
 byte correctionFlex(); //Flex fuel adjustment
@@ -48,9 +52,6 @@ void correctionFuelTrim(void);
 void correctionFuelInjOpen(void);
 void correctionFuelPWLimit(void);
 
-extern byte activateMAPDOT; //The mapDOT value seen when the MAE was activated. 
-extern byte activateTPSDOT; //The tpsDOT value seen when the MAE was activated. 
-
 extern unsigned long knockStartTime;
 extern byte lastKnockCount;
 extern int16_t knockWindowMin; //The current minimum crank angle for a knock pulse to be valid
@@ -59,6 +60,7 @@ extern uint8_t aseTaper;
 extern uint8_t idleAdvTaper;
 extern uint8_t crankingEnrichTaper;
 
+uint8_t aeXHistory[AE_X_DOT_HIST_BINS]; // History of ae X variable used for moving average
 
 #define DFCO_OFF 0
 #define DFCO_ENABLE_DELAY 1

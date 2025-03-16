@@ -188,10 +188,14 @@ void loop()
       #endif
       
       #if defined CAN_AVR_MCP2515
-      if ((configPage2.enableAeroSSCAN == true) && 
-          (BIT_CHECK(currentStatus.status4, BIT_STATUS4_CAN_ERROR) == false))
+      if (configPage2.enableAeroSSCAN == true)
       {
-        recieveCAN_BroadCast();
+        if (BIT_CHECK(currentStatus.status4, BIT_STATUS4_CAN_ERROR) == false)
+        {
+          recieveCAN_BroadCast();
+        }
+        
+        canRXErrHandler();
       }
       #endif
       

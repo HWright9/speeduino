@@ -108,6 +108,7 @@ long vvt_pid_target_angle;
 long vvt2_pid_target_angle;
 long vvt_pid_current_angle;
 long vvt2_pid_current_angle;
+long boostMAPLong;
 
 byte fpOffDelay;
 

@@ -110,7 +110,7 @@ void doUpdates()
     //Convert whatever flex fuel settings are there into the new tables
 
     configPage10.flexBoostBins[0] = 0;
-    configPage10.flexBoostAdj[0]  = (int8_t)configPage2.aeColdPct;
+    configPage10.flexBoostAdj[0]  = (int8_t)configPage2.aeColdPctRich;
 
     configPage10.flexFuelBins[0] = 0;
     configPage10.flexFuelAdj[0]  = configPage2.idleUpPin;
@@ -125,7 +125,7 @@ void doUpdates()
       configPage10.flexFuelBins[x] = pct;
       configPage10.flexAdvBins[x] = pct;
 
-      int16_t boostAdder = (((configPage2.aeColdTaperMin - (int8_t)configPage2.aeColdPct) * pct) / 100) + (int8_t)configPage2.aeColdPct;
+      int16_t boostAdder = (((configPage2.aeColdTaperMin - (int8_t)configPage2.aeColdPctRich) * pct) / 100) + (int8_t)configPage2.aeColdPctRich;
       configPage10.flexBoostAdj[x] = boostAdder;
 
       uint8_t fuelAdder = (((configPage2.idleUpAdder - configPage2.idleUpPin) * pct) / 100) + configPage2.idleUpPin;
@@ -225,16 +225,16 @@ void doUpdates()
 
     //MAP based AE was introduced, force the AE mode to be TPS for all existing tunes
     configPage2.aeMode = AE_MODE_TPS;
-    configPage2.maeThresh = configPage2.taeThresh;
+    configPage2.aeNegThresh = configPage2.aeThresh;
     //Set some sane values for the MAP AE curve
-    configPage4.maeRates[0] = 75;
-    configPage4.maeRates[1] = 75;
-    configPage4.maeRates[2] = 75;
-    configPage4.maeRates[3] = 75;
-    configPage4.maeBins[0] = 7;
-    configPage4.maeBins[1] = 12;
-    configPage4.maeBins[2] = 20;
-    configPage4.maeBins[3] = 40;
+    configPage4.aeNegValues[0] = 75;
+    configPage4.aeNegValues[1] = 75;
+    configPage4.aeNegValues[2] = 75;
+    configPage4.aeNegValues[3] = 75;
+    configPage4.aeNegBins[0] = 7;
+    configPage4.aeNegBins[1] = 12;
+    configPage4.aeNegBins[2] = 20;
+    configPage4.aeNegBins[3] = 40;
 
     //The 2nd fuel table was added. To prevent issues, force it to be disabled.
     configPage10.fuel2Mode = 0;
@@ -341,7 +341,7 @@ void doUpdates()
     }
     
     //AE cold modifier added. Default to sane values
-    configPage2.aeColdPct = 100;
+    configPage2.aeColdPctRich = 100;
     configPage2.aeColdTaperMin = 40;
     configPage2.aeColdTaperMax = 100;
 
@@ -513,7 +513,7 @@ void doUpdates()
 
     //TPS resolution increased to 0.5%
     configPage9.tpsMidPoint *=2;
-    //configPage2.taeThresh *= 2;
+    //configPage2.aeThresh *= 2;
     configPage2.idleAdvTPS *= 2;
     configPage2.iacTPSlimit *= 2;
     configPage4.floodClear *= 2;
@@ -659,7 +659,7 @@ void doUpdates()
     configPage2.taeMinChange = 4; //Default is 2% minimum change to match prior behaviour. (4 = 2% account for 0.5 resolution)
     configPage2.maeMinChange = 2; //Default is 2% minimum change to match prior behaviour.
 
-    configPage2.decelAmount = 100; //Default decel fuel amount is 100%, so no change in fueling in decel as before.
+    configPage2.aeColdPctLean = 100; //Default decel fuel amount is 100%, so no change in fueling in decel as before.
     //full status structure has been changed. Update programmable outputs settings to match.
     for (uint8_t y = 0; y < sizeof(configPage13.outputPin); y++)
     {

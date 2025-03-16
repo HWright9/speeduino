@@ -115,16 +115,16 @@ void initialiseAll()
     #endif
     
     //Repoint the 2D table structs to the config pages that were just loaded
-    taeTable.valueSize = SIZE_BYTE; //Set this table to use byte values
-    taeTable.axisSize = SIZE_BYTE; //Set this table to use byte axis bins
-    taeTable.xSize = 4;
-    taeTable.values = configPage4.taeValues;
-    taeTable.axisX = configPage4.taeBins;
-    maeTable.valueSize = SIZE_BYTE; //Set this table to use byte values
-    maeTable.axisSize = SIZE_BYTE; //Set this table to use byte axis bins
-    maeTable.xSize = 4;
-    maeTable.values = configPage4.maeRates;
-    maeTable.axisX = configPage4.maeBins;
+    aeTable.valueSize = SIZE_BYTE; //Set this table to use byte values
+    aeTable.axisSize = SIZE_BYTE; //Set this table to use byte axis bins
+    aeTable.xSize = 4;
+    aeTable.values = configPage4.aeValues;
+    aeTable.axisX = configPage4.aePosBins;
+    aeNegTable.valueSize = SIZE_BYTE; //Set this table to use byte values
+    aeNegTable.axisSize = SIZE_BYTE; //Set this table to use byte axis bins
+    aeNegTable.xSize = 4;
+    aeNegTable.values = configPage4.aeNegValues;
+    aeNegTable.axisX = configPage4.aeNegBins;
     WUETable.valueSize = SIZE_BYTE; //Set this table to use byte values
     WUETable.axisSize = SIZE_BYTE; //Set this table to use byte axis bins
     WUETable.xSize = 10;

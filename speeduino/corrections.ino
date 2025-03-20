@@ -57,8 +57,6 @@ uint16_t dfcoFuelStartIgns;
 unsigned long pwLimit;
 uint8_t TPSLast;
 uint16_t MAPLast;
-uint8_t VELast;
-uint8_t aeMAP_TPSCheck;
 uint8_t cltTaperPct = 100;
 uint8_t rpmTaperPct = 100;
 uint8_t aeTimer_100hz = 0;
@@ -258,28 +256,10 @@ uint16_t correctionCrankingASE()
 uint16_t correctionAccel()
 {
   int16_t accelValue = currentStatus.AEamount;
-
+  
   if(BIT_CHECK(LOOP_TIMER, BIT_TIMER_30HZ) == true) // AE X variables updated at 30hz.
   {
     int16_t aeChngRateRaw = 0;
-    int16_t TPS_change = 0;
-    int16_t MAP_change = 0;
-    int16_t VE_change = 0;
-    // change variables are in units of X/sec
-    TPS_change = (((int16_t)(currentStatus.TPS - TPSLast)) * 30) >> 1; // 30% per sec is minimum value. This is 15/2 because TPS is scaled 0.5% per bit.
-    TPSLast = currentStatus.TPS;
-    MAP_change = ((int16_t)(currentStatus.MAP - MAPLast)) * 30; // 30% per sec is minimum value.currentStatus.
-    MAPLast = currentStatus.MAP;
-    //MAP_change = ldiv(1000000, (MAP_time - MAPlast_time)).quot * (currentStatus.MAP - MAPlast); //This is the % per second that the MAP has moved - Old calc for reference
-    if (configPage2.aeMode == AE_MODE_DELTAVE) 
-    {
-      VE_change = ((int16_t)(currentStatus.VE - VELast)) * 30; // 30% per sec is minimum value.
-    }
-    VELast = currentStatus.VE;
-    
-    if((abs(MAP_change) >= configPage2.maeMinChange) && (abs(TPS_change) >= configPage2.taeMinChange)) { aeMAP_TPSCheck = true; }
-    else { aeMAP_TPSCheck = false; }
-    
     // Select the lookup variable for AE.
     if (configPage2.aeMode == AE_MODE_TPS) { currentStatus.aeXVar = currentStatus.TPS; }
     else if (configPage2.aeMode == AE_MODE_MAP) { currentStatus.aeXVar = currentStatus.MAP; }
@@ -305,60 +285,71 @@ uint16_t correctionAccel()
     {
       cltTaperPct = aeTaperCLT(currentStatus.coolant); // Coolant only updates slowly.
     }
-      
-    if ((BIT_CHECK(LOOP_TIMER, BIT_TIMER_30HZ) == true) &&
-        (aeMAP_TPSCheck == true) && // These give the oppertunity to mix inputs, i.e. have BOTH MAP and TPS change by some ammount.
-        ((currentStatus.aeChangeRate >= (int16_t)configPage2.aeThresh) || 
-        (currentStatus.aeChangeRate <= -(int16_t)configPage2.aeNegThresh))) // over minimum thresholds
-    {
-      uint8_t cltColdFactor = 100;
-      if (currentStatus.aeChangeRate > 0) // positive increasing load
-      {
-        if (BIT_CHECK(currentStatus.engine, BIT_ENGINE_ACC) == false) // not currently in acc
-        {
-          rpmTaperPct = aeTaperRPM(currentStatus.RPMdiv100); // Only need to update this on entry to ACC
-        }
-        accelValue = table2D_getValue(&aeTable, currentStatus.aeChangeRate / 10); //The x-axis of ae table is divided by 10 to fit values in byte.
-        accelValue = percentage(rpmTaperPct, accelValue); //Scale with RPM factor
-        cltColdFactor = percentage(cltTaperPct, (configPage2.aeColdPctRich - 100)); // Scale the max cold modifier.
-        cltColdFactor = 100 + cltColdFactor; // normalise to 100%
-        accelValue = percentage(cltColdFactor, accelValue); //Scale with coolant factor
-        accelValue = 100 + accelValue; // offset to get to 100% mean for postive accel
-        
-        if (accelValue > currentStatus.AEamount) { aeTimer_100hz = 0; } // reset timer to extend ae time only if more AE is required.
-        else { accelValue = currentStatus.AEamount; } // new value not greater than current AE, so use current until timer expires. 
-        
-      }
-      else // negative decreasing load
-      {
-        if (BIT_CHECK(currentStatus.engine, BIT_ENGINE_DCC) == false) // not currently in dcc
-        {
-          rpmTaperPct = aeTaperRPM(currentStatus.RPMdiv100); // Only need to update this on entry to DCC
-        }
-        accelValue = table2D_getValue(&aeNegTable, -currentStatus.aeChangeRate / 10); //The x-axis of ae table is divided by -10 to fit values in byte. Negative table values stored as postive numbers.
-        accelValue = percentage(rpmTaperPct, accelValue); //Scale with RPM factor
-        cltColdFactor = percentage(cltTaperPct, (configPage2.aeColdPctLean - 100)); // Scale the max cold modifier.
-        cltColdFactor = 100 + cltColdFactor; // normalise to 100%
-        accelValue = percentage(cltColdFactor, accelValue); //Scale with coolant factor
-        if (accelValue > 100) { accelValue = 100; } // limiting enleanment to 0%.
-        accelValue = 100 - accelValue; // offset to get to 100% mean for negative accel
-        
-        if (accelValue < currentStatus.AEamount) { aeTimer_100hz = 0; } // reset timer to extend ae time only if more AE is required.
-        else { accelValue = currentStatus.AEamount; } // new value not less than current AE, so use current until timer expires. 
-      }
-    }
-    //Else not moving the load signal. AccelValue will be equal to currentStatus.AEamount until the timer expires.
     
-    if (aeTimer_100hz >= configPage2.aeTime) //Time is stored as mS / 10, so units of 0.01 sec or 100Hz, max is 2.55 sec.
+    if (BIT_CHECK(LOOP_TIMER, BIT_TIMER_30HZ) == true)
     {
-      accelValue = 100; // disable correction if timer expired.
+      int16_t TPS_change = 0;
+      int16_t MAP_change = 0;
+      
+      // change variables are in units of X/sec - these are used for maeMinChange and taeMinChange only.
+      TPS_change = (((int16_t)(currentStatus.TPS - TPSLast)) * 30) >> 1; // 30% per sec is minimum value. This is 15/2 because TPS is scaled 0.5% per bit.
+      TPSLast = currentStatus.TPS;
+      MAP_change = ((int16_t)(currentStatus.MAP - MAPLast)) * 30; // 30% per sec is minimum value.currentStatus.
+      MAPLast = currentStatus.MAP;
+      
+      if (((abs(MAP_change) >= configPage2.maeMinChange) && (abs(TPS_change) >= configPage2.taeMinChange)) && // These give the oppertunity to mix inputs, i.e. have BOTH MAP and TPS change by some ammount.
+          ((currentStatus.aeChangeRate >= (int16_t)configPage2.aeThresh) || 
+          (currentStatus.aeChangeRate <= -(int16_t)configPage2.aeNegThresh))) // over minimum thresholds
+      {
+        uint8_t cltColdFactor = 100;
+        if (currentStatus.aeChangeRate > 0) // positive increasing load
+        {
+          if (BIT_CHECK(currentStatus.engine, BIT_ENGINE_ACC) == false) // not currently in acc
+          {
+            rpmTaperPct = aeTaperRPM(currentStatus.RPMdiv100); // Only need to update this on entry to ACC
+          }
+          accelValue = table2D_getValue(&aeTable, currentStatus.aeChangeRate / 10); //The x-axis of ae table is divided by 10 to fit values in byte.
+          accelValue = percentage(rpmTaperPct, accelValue); //Scale with RPM factor
+          cltColdFactor = percentage(cltTaperPct, (configPage2.aeColdPctRich - 100)); // Scale the max cold modifier.
+          cltColdFactor = 100 + cltColdFactor; // normalise to 100%
+          accelValue = percentage(cltColdFactor, accelValue); //Scale with coolant factor
+          accelValue = 100 + accelValue; // offset to get to 100% mean for postive accel
+          
+          if (accelValue > currentStatus.AEamount) { aeTimer_100hz = 0; } // reset timer to extend ae time only if more AE is required.
+          else { accelValue = currentStatus.AEamount; } // new value not greater than current AE, so use current until timer expires. 
+          
+        }
+        else // negative decreasing load
+        {
+          if (BIT_CHECK(currentStatus.engine, BIT_ENGINE_DCC) == false) // not currently in dcc
+          {
+            rpmTaperPct = aeTaperRPM(currentStatus.RPMdiv100); // Only need to update this on entry to DCC
+          }
+          accelValue = table2D_getValue(&aeNegTable, -currentStatus.aeChangeRate / 10); //The x-axis of ae table is divided by -10 to fit values in byte. Negative table values stored as postive numbers.
+          accelValue = percentage(rpmTaperPct, accelValue); //Scale with RPM factor
+          cltColdFactor = percentage(cltTaperPct, (configPage2.aeColdPctLean - 100)); // Scale the max cold modifier.
+          cltColdFactor = 100 + cltColdFactor; // normalise to 100%
+          accelValue = percentage(cltColdFactor, accelValue); //Scale with coolant factor
+          if (accelValue > 100) { accelValue = 100; } // limiting enleanment to 0%.
+          accelValue = 100 - accelValue; // offset to get to 100% mean for negative accel
+          
+          if (accelValue < currentStatus.AEamount) { aeTimer_100hz = 0; } // reset timer to extend ae time only if more AE is required.
+          else { accelValue = currentStatus.AEamount; } // new value not less than current AE, so use current until timer expires. 
+        }
+      }
+      //Else not moving the load signal. AccelValue will be equal to currentStatus.AEamount until the timer expires.
+      
+      if (aeTimer_100hz >= configPage2.aeTime) //Time is stored as mS / 10, so units of 0.01 sec or 100Hz, max is 2.55 sec.
+      {
+        accelValue = 100; // disable correction if timer expired.
+      }
     }
   }
   else 
   { 
     accelValue = 100;  // no correction.
     aeTimer_100hz = 255; // expire timer.
-  } 
+  }
   
   // update timer
   if((BIT_CHECK(LOOP_TIMER, BIT_TIMER_100HZ) == true) && (aeTimer_100hz < 255)) { aeTimer_100hz++; }
@@ -863,7 +854,13 @@ byte correctionAFRClosedLoop()
             ego2_AdjustPct = currentStatus.egoCorrection; // If ego2 out of range or not available, assume the same adjustment as ego1.           
           } 
         } // End Conditions to not freeze ego correction
-        else { ego_AdjustPct = currentStatus.egoCorrection; ego2_AdjustPct = currentStatus.ego2Correction; BIT_CLEAR(currentStatus.status4, BIT_STATUS4_EGO1_INTCORR); BIT_CLEAR(currentStatus.status4, BIT_STATUS4_EGO2_INTCORR);} // ego frozen at last values
+        else 
+        { 
+          ego_AdjustPct = currentStatus.egoCorrection; 
+          ego2_AdjustPct = currentStatus.ego2Correction; 
+          BIT_CLEAR(currentStatus.status4, BIT_STATUS4_EGO1_INTCORR); 
+          BIT_CLEAR(currentStatus.status4, BIT_STATUS4_EGO2_INTCORR);
+        } // ego frozen at last values
   	  } // End Conditions not to reset ego
   	  else 
       { //Reset closed loop. Also activate freeze delay to for when we re-enable.

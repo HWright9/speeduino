@@ -248,7 +248,7 @@ uint16_t correctionCrankingASE()
  * systems, the smaller we make the timesteps (to get fast response), the less resolution in the change in X variable there is.
  * This leads to poor resolution (jumpy) signals at slow changes in the X value. 
  * This algorithm performs most of its calculations at 30Hz, but the X factor can be compared to one from up to 3 loops ago
- * which will tradeoff response time for better resolution and filtering.
+ * using aeXDOTTimeFilt. Higher values will tradeoff response time for better resolution and filtering.
  *
  * As the maximum enrichment amount is +255% and maximum cold adjustment for this is 255%, the overall return value
  * from this function can be 100+(255*255/100)=750. Hence this function returns a uint16_t rather than byte.
@@ -291,10 +291,10 @@ uint16_t correctionAccel()
       int16_t TPS_change = 0;
       int16_t MAP_change = 0;
       
-      // change variables are in units of X/sec - these are used for maeMinChange and taeMinChange only.
-      TPS_change = (((int16_t)(currentStatus.TPS - TPSLast)) * 30) >> 1; // 30% per sec is minimum value. This is 15/2 because TPS is scaled 0.5% per bit.
+      // change variables are in units of X value difference per loop - these are used for maeMinChange and taeMinChange only.
+      TPS_change = (int16_t)(currentStatus.TPS - TPSLast); // These values are "change since last loop"
       TPSLast = currentStatus.TPS;
-      MAP_change = ((int16_t)(currentStatus.MAP - MAPLast)) * 30; // 30% per sec is minimum value.currentStatus.
+      MAP_change = (int16_t)(currentStatus.MAP - MAPLast); // These values are "change since last loop"
       MAPLast = currentStatus.MAP;
       
       if (((abs(MAP_change) >= configPage2.maeMinChange) && (abs(TPS_change) >= configPage2.taeMinChange)) && // These give the oppertunity to mix inputs, i.e. have BOTH MAP and TPS change by some ammount.

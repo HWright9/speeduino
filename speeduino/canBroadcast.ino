@@ -376,28 +376,27 @@ uint8_t recieveCAN_BroadCast(void)
 void canRXErrHandler(void)
 {
   if (BIT_CHECK(LOOP_TIMER, BIT_TIMER_10HZ)) // Time out variables to check if messages not recieved, sec x10
-  { 
-    if (canO2TimeSinceLast < 255) { canO2TimeSinceLast++; }
-    if (canO22TimeSinceLast < 255) { canO22TimeSinceLast++; }
-    if (canEPBTimeSinceLast < 255) { canEPBTimeSinceLast++; }
-    
+  {
     if(BIT_CHECK(currentStatus.status4, BIT_STATUS4_CAN_ERROR) == true) // fast fail
     {
-      canRx_MotecPLM_O2_Dflt();
-      canRx_MotecPLM_O22_Dflt();
-      canRx_EPB_Status1_Dflt();
-      canRx_EPBAccelGyro1_Dflt();
+      canO22TimeSinceLast = 255;
+      canO2TimeSinceLast = 255;
+      canEPBTimeSinceLast = 255;
     }
     else
     {
-      // Timeout error handling
-      if ((configPage6.egoType == 2) && (canO2TimeSinceLast > 10)) { canRx_MotecPLM_O2_Dflt(); }
-      if ((configPage6.egoType == 2) && (canO22TimeSinceLast > 10)) { canRx_MotecPLM_O22_Dflt();}
-      if ((configPage2.vssMode == 1) && (canEPBTimeSinceLast > 10)) 
-      { 
-         canRx_EPB_Status1_Dflt();  
-         canRx_EPBAccelGyro1_Dflt();
-      }
+      if (canO2TimeSinceLast < 255) { canO2TimeSinceLast++; }
+      if (canO22TimeSinceLast < 255) { canO22TimeSinceLast++; }
+      if (canEPBTimeSinceLast < 255) { canEPBTimeSinceLast++; }
+    }
+    
+    //Timeout error handling
+    if ((configPage6.egoType == 2) && (canO2TimeSinceLast > 10)) { canRx_MotecPLM_O2_Dflt(); }
+    if ((configPage6.egoType == 2) && (canO22TimeSinceLast > 10)) { canRx_MotecPLM_O22_Dflt();}
+    if ((configPage2.vssMode == 1) && (canEPBTimeSinceLast > 10)) 
+    { 
+       canRx_EPB_Status1_Dflt();  
+       canRx_EPBAccelGyro1_Dflt();
     }
   }  
 }

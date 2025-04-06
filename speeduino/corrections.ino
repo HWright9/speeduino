@@ -653,6 +653,10 @@ byte correctionAFRClosedLoop()
   int8_t ego2_Prop;
   bool ego_EngineCycleCheck = false;
   
+  int16_t ego_FuelLoad = currentStatus.fuelLoad;
+  
+  if (configPage2.fuelAlgorithm == LOAD_SOURCE_TPS) { ego_FuelLoad = currentStatus.TPS; } // Bypass TPS*2. It's complicated, but the workaround to double the axis res for table lookups doesn't work for single value comparisons.
+  
   /*Note that this should only run after the sensor warmup delay when using Include AFR option, but this is protected in the main loop where it's used so really don't need this.
    * When using Incorporate AFR option it needs to be done at all times
   */
@@ -670,16 +674,16 @@ byte correctionAFRClosedLoop()
     {
       ego_EngineCycleCheck = true;
       // Scale the revolution counts between the two values linearly based on load value used in VE table.
-      ego_NextCycleCount = (currentStatus.startRevolutions >> 1) + (uint16_t)map(currentStatus.fuelLoad, 0, (int16_t)configPage6.egoFuelLoadMax, (int16_t)configPage6.egoCountL, (int16_t)configPage6.egoCountH); 
+      ego_NextCycleCount = (currentStatus.startRevolutions >> 1) + (uint16_t)map(ego_FuelLoad, 0, (int16_t)configPage6.egoFuelLoadMax, (int16_t)configPage6.egoCountL, (int16_t)configPage6.egoCountH); 
     }
   
   //General Enable Condtions for closed loop ego. egoType of 0 means no O2 sensor and no point having O2 closed loop and cannot use include AFR from sensor since this would be 2x proportional controls.
   if( (configPage6.egoType > 0) && (configPage6.egoAlgorithm <= EGO_ALGORITHM_DUALO2) && (configPage2.includeAFR == false) ) 
   {
     //Requirements to inhibit O2 adjustment (Freeze) check this rapidly so we don't miss freeze events.
-    if ((abs(currentStatus.fuelLoad - ego_FuelLoadPrev) > (int16_t)configPage9.egoFuelLoadChngMax ) || //Change in fuel load (MAP or TPS) since last time algo ran to see if we need to freeze algo due to load change.
+    if ((abs(ego_FuelLoad - ego_FuelLoadPrev) > (int16_t)configPage9.egoFuelLoadChngMax ) || //Change in fuel load (MAP or TPS) since last time algo ran to see if we need to freeze algo due to load change.
         (currentStatus.afrTarget < configPage6.egoAFRTargetMin) || // Target too rich - good for inhibiting O2 correction using AFR Target Table
-        (currentStatus.fuelLoad > (int16_t)configPage6.egoFuelLoadMax) || // Too much load
+        (ego_FuelLoad > (int16_t)configPage6.egoFuelLoadMax) || // Too much load
         (currentStatus.launchCorrection != 100) || // Launch Control Active
         (BIT_CHECK(currentStatus.status1, BIT_STATUS1_DFCO) == 1)) //Fuel Cut
     { 
@@ -695,7 +699,7 @@ byte correctionAFRClosedLoop()
       readO2();
       readO2_2();
       O2_Readflag = true; // Used for informing the time based O2 sensor read function that we read the O2 value here.
-      ego_FuelLoadPrev = currentStatus.fuelLoad; // save last value to check for load change
+      ego_FuelLoadPrev = ego_FuelLoad; // save last value to check for load change
 
       //Requirements to run Closed Loop else its reset to 100pct. These are effectively errors where closed loop cannot run.
       if( (currentStatus.coolant > (int)(configPage6.egoTemp - CALIBRATION_TEMPERATURE_OFFSET)) && 
@@ -705,7 +709,7 @@ byte correctionAFRClosedLoop()
           ((configPage15.egoResetwAFR == false) ||
            (currentStatus.afrTarget >= configPage6.egoAFRTargetMin)) && // Ignore this criteria if cal set to freeze (false).
           ((configPage15.egoResetwfuelLoad == false) ||
-           (currentStatus.fuelLoad <= (int16_t)configPage6.egoFuelLoadMax))) // Ignore this criteria if cal set to freeze (false).
+           (ego_FuelLoad <= (int16_t)configPage6.egoFuelLoadMax))) // Ignore this criteria if cal set to freeze (false).
       {
         
         if(runSecsX10 >= ego_FreezeEndTime) // Check the algo freeze conditions are not active.

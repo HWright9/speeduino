@@ -138,6 +138,7 @@ uint8_t OBD_FlowCtrl_PendingINFTYP = 0x00; // Stores state of infotype pending f
 void can0_Init(void)
 {
   uint8_t canErr = CAN0.begin(MCP_ANY, CAN_500KBPS, MCP_8MHZ); // init can bus : baudrate = CAN_500KBPS, frequency MCP_8MHZ
+  CAN_ErrorTmr = 0;
   
   if(canErr == CAN_OK)  
   {
@@ -152,7 +153,6 @@ void can0_Init(void)
   else
   {
     BIT_SET(currentStatus.status4, BIT_STATUS4_CAN_ERROR);
-    CAN_ErrorTmr = 0;
   }
     
 }
@@ -195,14 +195,12 @@ uint8_t sendCAN_Speeduino_100Hz(void)
     if(canErr == CAN_FAIL) // No comms with controller
     {
       BIT_SET(currentStatus.status4, BIT_STATUS4_CAN_ERROR);
-      CAN_ErrorTmr = 0;
     }
     else if ((canErr == CAN_GETTXBFTIMEOUT) || (canErr == CAN_SENDMSGTIMEOUT))
     {
       CAN0.abortTX(); // clear tx buffer
       BIT_SET(currentStatus.status5, BIT_STATUS5_CAN_RXEPBDFLT);
       BIT_SET(currentStatus.status4, BIT_STATUS4_CAN_ERROR);
-      CAN_ErrorTmr = 0;
     }
     else if(canErr == CAN_CTRLERROR)
     {
@@ -214,13 +212,13 @@ uint8_t sendCAN_Speeduino_100Hz(void)
     else // some other error
     {
       BIT_SET(currentStatus.status4, BIT_STATUS4_CAN_ERROR);
-      CAN_ErrorTmr = 0;
     }          
   } 
   else 
   { 
     BIT_CLEAR(currentStatus.status4, BIT_STATUS4_CAN_ERROR);
-    currentStatus.status5 = 0x00 & 0b11111000; // clear error flags     
+    currentStatus.status5 = 0x00 & 0b11111000; // clear error flags 
+    CAN_ErrorTmr = 0;   // keep resetting the error timer. 
   }
   
   if (canMSGSeq < 2) { canMSGSeq++; }
@@ -366,7 +364,6 @@ uint8_t recieveCAN_BroadCast(void)
   if(canErr == CAN_FAIL) // No comms with controller
       {
         BIT_SET(currentStatus.status4, BIT_STATUS4_CAN_ERROR);
-        CAN_ErrorTmr = 0;
       }
       
   return canErr;
@@ -614,13 +611,17 @@ void canRx_EPB_Status1 (void)
   BIT_CLEAR(currentStatus.status5, BIT_STATUS5_CAN_RXEPBDFLT); 
   
   // Bytes 0 and 1 are vss X
-  currentStatus.vss = (CAN_Rx_Msgdata[0] << 8) | CAN_Rx_Msgdata[1]; //(highByte << 8) | lowByte
+  //currentStatus.vss = (CAN_Rx_Msgdata[0] << 8) | CAN_Rx_Msgdata[1]; //(highByte << 8) | lowByte
+  currentStatus.vss = (uint16_t)CAN_Rx_Msgdata[0];
   if (currentStatus.vss > 512) { currentStatus.vss = 512; } //basic error checking.
-
+  
+  //Byte 1 is VSS from rear sensor via the dash gauge
 
   // Byte 2 is gear
+    currentStatus.gear = CAN_Rx_Msgdata[2]; // Raw gear from EPB.
+    
   // Byte 3 is reverse gearbox state, need to resolve both of them.
-  currentStatus.gear = CAN_Rx_Msgdata[2]; // Raw gear from EPB.
+
   if ( currentStatus.gear == 6) { currentStatus.gear = 0; } // 0 and 6 are both neutral in speeduino gear logic.
   if ((CAN_Rx_Msgdata[3] == 0) && (currentStatus.gear >= 2 )){ currentStatus.gear = 1; } // Reverse gearbox is in reverse, limit speeduino gear to 1st
   else if (CAN_Rx_Msgdata[3] >= 2){ currentStatus.gear = 0; } // All other states of reverse gearbox are neutral
